@@ -26,7 +26,10 @@ import {
   matchesFilter,
   type Filter,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import type { LiveCutKey } from "@plugins/network/plugins/live/core";
+import type {
+  LiveCutKey,
+  LiveSourceRead,
+} from "@plugins/network/plugins/live/core";
 import { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
@@ -2000,9 +2003,12 @@ export function createMailCache(deps: MailCacheDeps) {
    */
   async function window(
     w: MailWindowQuery,
-    read?: { signal: AbortSignal },
+    read?: Pick<LiveSourceRead, "signal"> & Partial<LiveSourceRead>,
   ): Promise<MailThreadRow[]> {
     const signal = read?.signal;
+    // A provider call held by its quota tells the view's readers so: they
+    // read "waiting on …", not a bare spinner (live's `LiveSourceRead.wait`).
+    const waiting = read?.wait;
     const a = await account();
     const mailboxes = await mailboxesOf(a);
     const canonical = canonicalizeFilter(
@@ -2044,7 +2050,7 @@ export function createMailCache(deps: MailCacheDeps) {
         signal?.throwIfAborted();
         const uncovered = current.floorAt === null && !current.exhausted;
         const filled = await orRefuse("this view", () =>
-        fill(a, queryId, (q) => missing(q, w), { ...fg, signal }),
+        fill(a, queryId, (q) => missing(q, w), { ...fg, signal, waiting }),
         );
         if (!uncovered) return filled;
         // Listed from the head just now: the provider's answer as of (at least)

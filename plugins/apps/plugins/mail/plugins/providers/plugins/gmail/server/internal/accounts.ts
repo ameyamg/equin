@@ -2,6 +2,8 @@ import {
   createQuotaPacer,
   GMAIL_QUOTA,
   GMAIL_USER_UNITS_PER_MINUTE,
+  type PacerClock,
+  type QuotaPacer,
 } from "@plugins/integrations/plugins/gmail/plugins/api/core";
 import {
   createGmailClient,
@@ -46,6 +48,23 @@ const FOREGROUND_RESERVE_UNITS =
  */
 const SPECULATIVE_UNITS = 6 * GMAIL_QUOTA["threads.get"].full;
 
+/**
+ * An account's quota pacer, as every Gmail account is paced: lower tiers
+ * together never hold more than what the foreground reserve leaves (~1,660
+ * units): background's own ~940, speculative's 720. `clock` for a test.
+ */
+export function createAccountPacer(clock?: PacerClock): QuotaPacer {
+  return createQuotaPacer({
+    backgroundShare:
+      (GMAIL_USER_UNITS_PER_MINUTE -
+        FOREGROUND_RESERVE_UNITS -
+        SPECULATIVE_UNITS) /
+      GMAIL_USER_UNITS_PER_MINUTE,
+    speculativeShare: SPECULATIVE_UNITS / GMAIL_USER_UNITS_PER_MINUTE,
+    ...(clock === undefined ? {} : { clock }),
+  });
+}
+
 const opened = new Map<
   string,
   { client: GmailClient; provider: MailProvider }
@@ -67,16 +86,7 @@ function openAccount(accountId: string) {
     },
     // ONE pacer per account per process: every read and write of this
     // account goes through this provider instance (opened once, kept).
-    pacer: createQuotaPacer({
-      // Lower tiers together never hold more than what the reserve leaves
-      // (~1,660 units): background's own ~940, speculative's 720.
-      backgroundShare:
-        (GMAIL_USER_UNITS_PER_MINUTE -
-          FOREGROUND_RESERVE_UNITS -
-          SPECULATIVE_UNITS) /
-        GMAIL_USER_UNITS_PER_MINUTE,
-      speculativeShare: SPECULATIVE_UNITS / GMAIL_USER_UNITS_PER_MINUTE,
-    }),
+    pacer: createAccountPacer(),
   });
   const entry = {
     client,

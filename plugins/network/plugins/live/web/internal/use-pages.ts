@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useResources,
+  type LoadWait,
   type PagedResourceResult,
   type ResourceDerivation,
   type ResourceError,
@@ -149,7 +150,8 @@ export interface LivePagePlaceholder {
  * error arm.
  */
 export type LivePagesResult<Row, C extends string = string> =
-  | { status: "loading" }
+  /** `waiting`: what the server says the first page's answer waits on (live-state's `LoadWait`). */
+  | { status: "loading"; waiting?: LoadWait }
   | { status: "error"; error: ResourceError<C>; refetch: () => Promise<void> }
   | {
       status: "ready";
@@ -478,7 +480,9 @@ function listResultOf<Row>(read: PagesRead<Row>): PagedResourceResult<Row> {
   const { pages, refetch } = read;
   switch (pages.status) {
     case "loading":
-      return { status: "loading", refetch };
+      return pages.waiting === undefined
+        ? { status: "loading", refetch }
+        : { status: "loading", refetch, waiting: pages.waiting };
     case "error":
       return { status: "error", error: pages.error, refetch: pages.refetch };
     case "ready": {
@@ -923,7 +927,17 @@ function usePages<Row, Q, P extends Record<string, string>>(
         segments: null,
       };
     }
-    if (!a.loaded) return { result: { status: "loading" }, segments: null };
+    if (!a.loaded) {
+      // Not on screen yet: say what the first page's answer waits on, if known.
+      const head = read(shown, shown.state.pages[0]!.page)?.result;
+      return {
+        result:
+          head?.status === "loading" && head.waiting !== undefined
+            ? { status: "loading", waiting: head.waiting }
+            : { status: "loading" },
+        segments: null,
+      };
+    }
     const served = a.entries.map((e) => withoutWindowFields(e.row as Row));
     // The predicted writes drawn over the served rows: a row they move out of
     // this question's filter left out (segments keep the served cut, read

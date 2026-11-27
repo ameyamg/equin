@@ -37,6 +37,14 @@ export type MailCallPriority = "foreground" | "background" | "speculative";
 export type MailCallOptions = {
   priority?: MailCallPriority;
   signal?: AbortSignal;
+  /**
+   * Told when a call has to wait on the provider's own limit (its per-minute
+   * quota, a rate pause it was asked for) — never for a call that goes at
+   * once — with a sentence a person can read ("Waiting on Gmail's per-minute
+   * quota"); its return is called when the wait ends. How a view filling
+   * from the provider shows the wait instead of looking stuck.
+   */
+  waiting?: (on: string) => () => void;
 };
 
 export type MailProviderCapabilities = {

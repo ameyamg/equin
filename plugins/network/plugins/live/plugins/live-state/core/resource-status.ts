@@ -68,13 +68,26 @@ export class ResourceError<C extends string = string> extends Error {
 }
 
 /**
+ * A read's KNOWN wait: what the server says its answer is waiting on — a
+ * sentence its loader named (`on`: "Waiting on Gmail's per-minute quota"),
+ * since `since` (the server's wall clock, epoch ms). Carried by the `loading`
+ * arm while it stands (resource-protocol's `waiting` frame; a loader's
+ * `LiveSourceRead.wait`), so a surface says what it waits on instead of a
+ * bare spinner. Absent: nothing known — the read is simply loading.
+ */
+export interface LoadWait {
+  on: string;
+  since: number;
+}
+
+/**
  * The readiness half of a resource result — what a surface needs to render
  * loading / error / ready chrome WITHOUT the data (DataView takes it as
  * `readiness`, next to its own `rows`). Every `ResourceResult`, `LiveListResult`
  * and `LiveRowResult` is assignable to it, so a caller passes the read itself.
  */
 export type ResourceReadiness =
-  | { status: "loading" }
+  | { status: "loading"; waiting?: LoadWait }
   | { status: "error"; error: ResourceError; refetch: () => Promise<void> }
   | { status: "ready" };
 

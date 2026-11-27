@@ -46,6 +46,7 @@ import type {
 import { canonicalParams } from "@plugins/network/plugins/live/plugins/canonical-params/core";
 import type { FailingResource } from "./resource-error-reporter";
 import type {
+  LoadWait,
   ResourceDescriptor,
   ResourceError,
   ResourceOrigin,
@@ -430,6 +431,11 @@ export type ResourceResult<T, C extends string = string> =
   | {
       status: "loading";
       refetch: () => Promise<void>;
+      /**
+       * What the server says the answer waits on (a provider's quota), while
+       * it does — show it instead of a bare spinner. Absent: nothing known.
+       */
+      waiting?: LoadWait;
     }
   | {
       status: "error";
@@ -847,10 +853,43 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // error arm's `stale` is the SELECTED slice once a value has landed — a
   // first-load failure has no trustworthy value to expose. A skipped read
   // (`params === null`, no subject yet) is `loading` with nothing to refetch.
+  const waiting = useLoadWait(notifications, key, skipped ? null : p, origin);
   return useMemo((): ResourceResult<T | S> => {
     if (skipped) return { status: "loading", refetch: SKIPPED_REFETCH };
-    return queryResult(data, error, refetchQuery, hasValue);
-  }, [skipped, hasValue, data, error, refetchQuery]);
+    return withWait(queryResult(data, error, refetchQuery, hasValue), waiting);
+  }, [skipped, hasValue, data, error, refetchQuery, waiting]);
+}
+
+/**
+ * The tuple's known wait (`NotificationsClient.loadWait`), read live: null
+ * while nothing known holds its read, or for a skipped read.
+ */
+function useLoadWait(
+  notifications: NotificationsClient,
+  key: string,
+  params: ResourceParams | null,
+  origin: ResourceOrigin | undefined,
+): LoadWait | null {
+  return useSyncExternalStore(
+    useCallback(
+      (onChange: () => void) => notifications.subscribeLoadWaits(onChange),
+      [notifications],
+    ),
+    () =>
+      params === null ? null : notifications.loadWait(key, params, origin),
+    // A static render holds no socket: nothing it reads is known to wait.
+    () => null,
+  );
+}
+
+/** A `loading` result carrying the tuple's known wait, when there is one. */
+function withWait<R extends { status: string }>(
+  result: R,
+  waiting: LoadWait | null,
+): R {
+  return waiting === null || result.status !== "loading"
+    ? result
+    : { ...result, waiting };
 }
 
 /** One tuple's read state, as `useResources`' combine reads it off its query. */
@@ -1129,16 +1168,36 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     () =>
       new WeakMap<
         TupleState,
-        { appliedSeq: number; result: ResourceTupleResult<T> }
+        {
+          appliedSeq: number;
+          waiting: LoadWait | null;
+          result: ResourceTupleResult<T>;
+        }
       >(),
   );
+  // Moves whenever any tuple's known wait does: the results below re-read theirs.
+  const waitSeq = useSyncExternalStore(
+    useCallback(
+      (onChange: () => void) => notifications.subscribeLoadWaits(onChange),
+      [notifications],
+    ),
+    () => notifications.loadWaitSeq(),
+    () => notifications.loadWaitSeq(),
+  );
   return useMemo(() => {
+    // Read only so the memo re-runs when a wait moves.
+    void waitSeq;
     return states.map((st, i): ResourceTupleResult<T> => {
       // Read beside the value it describes: the apply that wrote this
       // tuple's value bumped it before the render this value reaches.
       const appliedSeq = notifications.appliedSeq(key, list[i]!, origin);
+      const waiting = notifications.loadWait(key, list[i]!, origin);
       const cached = byState.get(st);
-      if (cached !== undefined && cached.appliedSeq === appliedSeq)
+      if (
+        cached !== undefined &&
+        cached.appliedSeq === appliedSeq &&
+        cached.waiting === waiting
+      )
         return cached.result;
       // A manual refetch ignores `enabled` and starts a NEW read even while
       // one is in flight (`cancelRefetch`), as `useResource`'s `q.refetch()`
@@ -1164,12 +1223,15 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
             }
           : { status: "error", error, refetch, appliedSeq };
       } else if (!st.hasValue) {
-        result = { status: "loading", refetch, appliedSeq };
+        result =
+          waiting === null
+            ? { status: "loading", refetch, appliedSeq }
+            : { status: "loading", refetch, appliedSeq, waiting };
       } else {
         result = { status: "ready", data: st.data as T, refetch, appliedSeq };
       }
-      byState.set(st, { appliedSeq, result });
+      byState.set(st, { appliedSeq, waiting, result });
       return result;
     });
-  }, [states, list, key, queryClient, notifications, origin, byState]);
+  }, [states, list, key, queryClient, notifications, origin, byState, waitSeq]);
 }

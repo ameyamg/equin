@@ -315,14 +315,29 @@ type Answer<T> = Promise<T> | T;
  * whatever it already stored. For a read nobody can abandon (a push re-read,
  * an HTTP read) it never aborts.
  */
-export type LiveSourceRead = { readonly signal: AbortSignal };
+export type LiveSourceRead = {
+  readonly signal: AbortSignal;
+  /**
+   * Say the answer is waiting on something outside this server (a provider's
+   * per-minute quota), as a sentence a reader can show: every reader of the
+   * tuple reads `loading` with that wait (`waiting`) instead of a bare
+   * spinner, and a tab does not report it as an unanswered sub. Returns the
+   * wait's end; one still open when the answer lands ends with it. Told to
+   * the tuple's subscribers, whoever's read it is (a subscription's, or an
+   * HTTP read they may join); a no-op for a push re-read.
+   */
+  readonly wait: (on: string) => () => void;
+};
 
 /** The signal of a read no one can abandon. */
 const NEVER_CUT: AbortSignal = new AbortController().signal;
+const NO_WAIT_END = () => {};
+const NOBODY_SHOWN = () => NO_WAIT_END;
 const sourceRead = (
-  run: { signal?: AbortSignal } | undefined,
+  run: { signal?: AbortSignal; wait?: (on: string) => () => void } | undefined,
 ): LiveSourceRead => ({
   signal: run?.signal ?? NEVER_CUT,
+  wait: run?.wait ?? NOBODY_SHOWN,
 });
 
 /**

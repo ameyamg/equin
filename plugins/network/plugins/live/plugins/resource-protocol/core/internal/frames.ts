@@ -397,6 +397,21 @@ const SERVER_FRAMES = {
     params: w.params,
     version: w.number,
   }),
+  /**
+   * A known wait: the tuple's read is running and waiting on something
+   * outside this server, named by its loader (`on`: a sentence a reader can
+   * show — "Waiting on Gmail's per-minute quota"), since `since` (the
+   * server's wall clock, epoch ms). `on: null` says the wait ended while the
+   * read still runs. Sent to every holder of the tuple while its read is
+   * still unanswered; the value that answers it ends the wait on the tab.
+   * Never an answer: the read's sub-ack still settles the request.
+   */
+  waiting: s("waiting", {
+    key: w.string,
+    params: w.params,
+    on: w.nullable(w.string),
+    since: w.number,
+  }),
   /** A version-less mutation ack: a recompute changed nothing, but the writer's ack must not hang. */
   ack: s("ack", {
     key: w.string,

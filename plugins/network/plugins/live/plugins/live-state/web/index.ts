@@ -91,6 +91,7 @@ export { resourceDescriptorByKey, ResourceError } from "../core";
 export type {
   ResourceDescriptor,
   ResourceErrorKind,
+  LoadWait,
   ResourceReadiness,
   ResourceUnavailable,
   ResourceStatus,

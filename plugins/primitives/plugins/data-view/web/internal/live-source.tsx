@@ -23,7 +23,10 @@ import type {
   LiveSortDirection,
 } from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
+import type {
+  LoadWait,
+  ResourceReadiness,
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type {
   DataViewDeclaredSection,
@@ -101,6 +104,8 @@ interface SourceViewBase<TRow> {
    * a stale tab needs).
    */
   readError: Extract<ResourceReadiness, { status: "error" }> | null;
+  /** While loading: what the server says the read's answer waits on (a provider's quota), if known. */
+  waiting: LoadWait | null;
 }
 
 /** One paged read over the whole query; any grouping partitions its loaded rows. */
@@ -551,6 +556,7 @@ export function useLiveSource<TRow>(args: {
             loading: false,
             error: loweringError,
             readError: null,
+            waiting: null,
             paging: NOT_PAGING as DataViewPaging<TRow>,
             sectionOrder: "bucket",
           },
@@ -558,6 +564,7 @@ export function useLiveSource<TRow>(args: {
   );
   const loading = lowering.kind !== "ok" || pages.status === "loading";
   const readError = pages.status === "error" ? pages : null;
+  const waiting = pages.status === "loading" ? (pages.waiting ?? null) : null;
   const sectionOrder =
     lowering.kind === "ok" && lowering.grouped.kind === "rows"
       ? lowering.grouped.sectionOrder
@@ -571,6 +578,7 @@ export function useLiveSource<TRow>(args: {
       loading,
       error: null,
       readError,
+      waiting,
       paging: paging as DataViewPaging<TRow>,
       sectionOrder,
     }),
@@ -580,6 +588,7 @@ export function useLiveSource<TRow>(args: {
       ancestorsPending,
       loading,
       readError,
+      waiting,
       paging,
       sectionOrder,
     ],
@@ -793,6 +802,7 @@ function useSectionedReads<TRow>(args: {
 
   const loading = shown === null || shown.status === "loading";
   const readError = shown?.status === "error" ? shown : null;
+  const waiting = shown?.status === "loading" ? (shown.waiting ?? null) : null;
   // The reads and the answer keep their identity while what they say does
   // not change (see `useLiveSource`).
   const readers = useMemo(
@@ -831,8 +841,9 @@ function useSectionedReads<TRow>(args: {
       loading,
       error: null,
       readError,
+      waiting,
     }),
-    [rows, sections, groupsPaging, readers, loading, readError],
+    [rows, sections, groupsPaging, readers, loading, readError, waiting],
   );
   if (lowering === null || source === undefined || groupsKey === null) {
     return null;

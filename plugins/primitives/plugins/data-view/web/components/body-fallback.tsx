@@ -36,7 +36,8 @@ import { UnavailableFilterRuleError } from "../internal/live-filter";
  *
  * A function `errorState` is handed the failure, and its `undefined` falls
  * back to the default rendering.
- * - `loading`: the host's `loadingState`, else the view type's skeleton.
+ * - `loading`: the host's `loadingState`, else the view type's skeleton —
+ *   labelled with what the read waits on, when the server said (`LoadWait`).
  */
 export function BodyFallback(props: {
   state: Exclude<BodyState, { kind: "view" }>;
@@ -124,6 +125,9 @@ export function BodyFallback(props: {
           <Loading
             variant={props.loadingVariant ?? "rows"}
             count={props.loadingCount}
+            {...(state.waiting === undefined
+              ? {}
+              : { label: `${state.waiting.on}…` })}
           />
         )
       );

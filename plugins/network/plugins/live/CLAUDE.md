@@ -422,6 +422,16 @@ with no same-named column is bound in `columns: { name: (j) => j.base.col }`
     computed (resource-runtime's `LoadRun.signal`); never for a read nobody
     can abandon. A source doing paced or slow work passes it on and stops,
     keeping what it stored (Mail's fill and Gmail's quota pacer).
+  - **A known wait is said, not hidden — `read.wait(on)`.** A source
+    waiting on something outside the server (a provider's per-minute
+    quota) calls `const end = read.wait("Waiting on Gmail's per-minute
+    quota")` and `end()` when it stops: every reader of the tuple reads
+    `loading` with `waiting: { on, since }` (a DataView's loading body
+    shows it), and a tab does not report the unanswered sub. A wait still
+    open when the answer lands ends with it. A no-op where no tuple holder
+    is shown one (resource-runtime's `LoadRun.wait`, the protocol's
+    `waiting` frame). Mail's fill passes it to Gmail's pacer
+    (report-1795721286-0gc0z2).
   - **Every answer is checked** (loud loader error): rows against the schema,
     string ids, no duplicates, ≤ `q.limit`, strictly ascending `$key` order
     within `(after, until]`; `keyText.<field>` must give text whose code-point
@@ -1651,6 +1661,7 @@ handler — declare it live and use `useLiveReader`. The rule is `noDebt`
     - `FieldPresentation.Register` ×43
     - `ClientFields.Resolve` ×4
   - Uses:
+    - `network/live/live-state.LoadWait`
     - `network/live/live-state.PagedResourceResult`
     - `network/live/live-state.ResourceDerivation`
     - `network/live/live-state.ResourceDescriptor`

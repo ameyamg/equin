@@ -8,6 +8,7 @@ export {
 export {
   createQuotaPacer,
   type GmailPriority,
+  type PacerClock,
   type PacerWaitReason,
   type QuotaPacer,
   type QuotaPacerOptions,

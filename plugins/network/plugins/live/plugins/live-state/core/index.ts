@@ -22,6 +22,7 @@ export { ResourceError } from "./resource-status";
 export type {
   ResourceStatus,
   ResourceErrorKind,
+  LoadWait,
   ResourceReadiness,
   ResourceUnavailable,
 } from "./resource-status";

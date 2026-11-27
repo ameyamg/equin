@@ -18,6 +18,7 @@ import {
   newBatchBoundary,
   type BatchRequestPart,
   type GmailPriority,
+  type PacerWaitReason,
   type QuotaPacer,
 } from "../../core";
 
@@ -48,10 +49,18 @@ const API_WAIT = "gmail-api";
 /** Root of Gmail's REST API host; every path below hangs off it. */
 export const GMAIL_API_ROOT = "https://gmail.googleapis.com";
 
-/** How a call waits: its priority in the pacer, and a way to give up. */
+/** How a call waits: its priority in the pacer, a way to give up, and who to tell when it must wait. */
 export type GmailCallOptions = {
   priority?: GmailPriority;
   signal?: AbortSignal;
+  /**
+   * Called when the call has to wait in the account's pacer — never for one
+   * admitted at once — with what holds it (`budget`: the minute's quota is
+   * spent; `paused`: Google refused a call for rate); its return is called
+   * once the wait ends. For a caller that shows the wait to a person (a
+   * Mail view filling).
+   */
+  onWait?: (why: PacerWaitReason) => () => void;
 };
 
 export type GmailTransportOptions = {
@@ -263,12 +272,25 @@ export function createGmailTransport(
   const { pacer } = opts;
 
   /** The pacer's admission, metered when it has to wait: `gmail-quota` (its minute spent) or `gmail-rate-pause` (Google's refusal). */
-  function admit(units: number, priority: GmailPriority, signal?: AbortSignal) {
+  function admit(
+    units: number,
+    priority: GmailPriority,
+    callOpts: GmailCallOptions,
+  ) {
     return pacer.acquire(units, {
       priority,
-      signal,
-      onQueued: (why) =>
-        beginWait(why === "paused" ? RATE_PAUSE_WAIT : QUOTA_WAIT, "queue"),
+      signal: callOpts.signal,
+      onQueued: (why) => {
+        const metered = beginWait(
+          why === "paused" ? RATE_PAUSE_WAIT : QUOTA_WAIT,
+          "queue",
+        );
+        const told = callOpts.onWait?.(why);
+        return () => {
+          metered();
+          told?.();
+        };
+      },
     });
   }
 
@@ -352,7 +374,7 @@ export function createGmailTransport(
       body = spec.body.bytes as Uint8Array<ArrayBuffer>;
     }
     for (let attempt = 0; ; attempt++) {
-      await admit(spec.units, priority, callOpts.signal);
+      await admit(spec.units, priority, callOpts);
       let res: Response;
       let text: string;
       try {
@@ -418,7 +440,7 @@ export function createGmailTransport(
     for (let attempt = 0; pending.length > 0; attempt++) {
       const last = attempt + 1 >= attempts;
       const units = pending.reduce((sum, i) => sum + items[i]!.units, 0);
-      await admit(units, priority, callOpts.signal);
+      await admit(units, priority, callOpts);
       const boundary = newBatchBoundary();
       const label = `${what} (batch of ${pending.length})`;
       let res: Response;

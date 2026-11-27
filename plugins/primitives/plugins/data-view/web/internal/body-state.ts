@@ -1,4 +1,7 @@
-import type { ResourceReadiness } from "@plugins/network/plugins/live/plugins/live-state/core";
+import type {
+  LoadWait,
+  ResourceReadiness,
+} from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { FieldDef, FilterNode, FoldRule, ViewState } from "../../core";
 import type { UnavailableRule } from "./evaluate-filter";
 import type { RowOrderState } from "./row-order";
@@ -67,7 +70,8 @@ export type BodyState =
       error: Error;
       refetch?: () => Promise<void>;
     }
-  | { kind: "loading" }
+  /** `waiting`: what the read's answer is known to wait on (a provider's quota). */
+  | { kind: "loading"; waiting?: LoadWait }
   | { kind: "view" };
 
 export function resolveBodyState(input: {
@@ -75,6 +79,7 @@ export function resolveBodyState(input: {
     loading: boolean;
     error: Error | null;
     readError: Extract<ResourceReadiness, { status: "error" }> | null;
+    waiting?: LoadWait | null;
   } | null;
   readiness: ResourceReadiness | undefined;
   rowOrder?: RowOrderState;
@@ -146,7 +151,7 @@ export function resolveBodyState(input: {
       fieldPending ||
       rowOrderPending ||
       local === "pending"
-      ? { kind: "loading" }
+      ? loadingState(server.loading ? server.waiting : undefined)
       : { kind: "view" };
   }
   if (readiness?.status === "error") return { kind: "error", error: readiness };
@@ -159,8 +164,15 @@ export function resolveBodyState(input: {
     fieldPending ||
     rowOrderPending ||
     local === "pending"
-    ? { kind: "loading" }
+    ? loadingState(
+        readiness?.status === "loading" ? readiness.waiting : undefined,
+      )
     : { kind: "view" };
+}
+
+/** The loading body, saying what the read waits on when that is known. */
+function loadingState(waiting: LoadWait | null | undefined): BodyState {
+  return waiting == null ? { kind: "loading" } : { kind: "loading", waiting };
 }
 
 /**

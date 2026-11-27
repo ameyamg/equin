@@ -765,4 +765,121 @@ describe("NotificationsClient — unanswered subs", () => {
       expect.objectContaining({ count: 1, oldestKey: "k" }),
     ]);
   });
+  test("a known wait (the server's `waiting` frame) is the read's, not reported; its end restarts the clock", async () => {
+    const { client, socket } = await setup({ open: true });
+    client.observe("k", { a: "1" }, undefined, { schema: pushSchema });
+    await flush();
+    const { id } = requestOf(socket, "k", "tab-a");
+    expect(client.loadWait("k", { a: "1" })).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS / 2);
+    socket.serverSend({
+      kind: "waiting",
+      key: "k",
+      params: { a: "1" },
+      on: "Waiting on Gmail's per-minute quota",
+      since: 1,
+    });
+    await flush();
+    expect(client.loadWait("k", { a: "1" })).toEqual({
+      on: "Waiting on Gmail's per-minute quota",
+      since: 1,
+    });
+    // Waiting well past the deadline: answered "still working", not lost.
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 4);
+    expect(reports).toHaveLength(0);
+
+    // The wait ends while the read goes on: judged afresh from now.
+    socket.serverSend({
+      kind: "waiting",
+      key: "k",
+      params: { a: "1" },
+      on: null,
+      since: 2,
+    });
+    await flush();
+    expect(client.loadWait("k", { a: "1" })).toBeNull();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS - 1);
+    expect(reports).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(reports).toHaveLength(1);
+
+    // A value answers the read: no wait shown after it, even a late frame.
+    socket.serverSend({
+      kind: "sub-ack",
+      id,
+      tabId: "tab-a",
+      key: "k",
+      params: { a: "1" },
+      value: { status: "ok" },
+      version: 1,
+    });
+    socket.serverSend({
+      kind: "waiting",
+      key: "k",
+      params: { a: "1" },
+      on: "Waiting on Gmail's per-minute quota",
+      since: 3,
+    });
+    await flush();
+    expect(client.loadWait("k", { a: "1" })).toBeNull();
+  });
+
+  test("a pushed value clearing the wait restarts the deadline of a request still owed", async () => {
+    const { client, socket } = await setup({ open: true });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    socket.serverSend({
+      kind: "waiting",
+      key: "k",
+      params: {},
+      on: "Waiting on the quota",
+      since: 1,
+    });
+    await flush();
+    // The deadline passes while it waits: skipped, and nothing else is armed.
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 2);
+    expect(reports).toHaveLength(0);
+    // A push lands (not this request's answer): the wait is over.
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "ok" },
+      version: 5,
+    });
+    await flush();
+    expect(client.loadWait("k", {})).toBeNull();
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(reports).toEqual([
+      expect.objectContaining({ count: 1, oldestKey: "k" }),
+    ]);
+  });
+
+  test("an applied value clears the wait", async () => {
+    const { client, socket } = await setup({ open: true });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    const { id } = requestOf(socket, "k", "tab-a");
+    socket.serverSend({
+      kind: "waiting",
+      key: "k",
+      params: {},
+      on: "Waiting on the quota",
+      since: 1,
+    });
+    await flush();
+    expect(client.loadWait("k", {})?.on).toBe("Waiting on the quota");
+    socket.serverSend({
+      kind: "sub-ack",
+      id,
+      tabId: "tab-a",
+      key: "k",
+      params: {},
+      value: { status: "ok" },
+      version: 1,
+    });
+    await flush();
+    expect(client.loadWait("k", {})).toBeNull();
+  });
 });

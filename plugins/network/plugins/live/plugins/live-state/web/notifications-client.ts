@@ -22,7 +22,7 @@ import {
   type TaskMarkText,
 } from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
-import type { ResourceDescriptor, ResourceOrigin } from "../core";
+import type { LoadWait, ResourceDescriptor, ResourceOrigin } from "../core";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
 import { applyValuePatch } from "@plugins/packages/plugins/value-patch/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
@@ -576,6 +576,15 @@ interface ActiveSub {
    */
   awaiting?: { id: number; since: number };
   /**
+   * What the server said this tuple's read is waiting on (its `waiting`
+   * frame: a loader's known wait, a provider's quota), while no value
+   * answered it. The read's `loading` arm carries it (`loadWait`), and the
+   * unanswered-sub deadline leaves the request alone meanwhile: the server
+   * answered "still working, on this". Cleared by the wait's end (its clock
+   * then restarts), any applied value, a `sub-error`, or a resend.
+   */
+  waiting?: LoadWait;
+  /**
    * The request `awaiting` named while the server's answer trail for its
    * deadline's batch is being asked (`reportUnanswered`): set when it stops
    * awaiting, cleared by an answer to it (`noteAnswered`), a resend
@@ -907,6 +916,8 @@ export class NotificationsClient {
   private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
   /** Fired on any sub/version/socket/transport change for the Layer-2 inspector. */
   private debugListeners = new Set<() => void>();
+  private readonly loadWaitListeners = new Set<() => void>();
+  private loadWaitChanges = 0;
   private unsubscribeFromBus: () => void;
   /** Net-diag bus unsubscriber, captured so `destroy()` can release it (a test
    *  constructs many clients; the module-level bus would otherwise leak). */
@@ -2793,11 +2804,64 @@ export class NotificationsClient {
     id: number,
   ): void {
     sub.judging = undefined;
+    // A resent request is told afresh: a read still waiting says so again.
+    this.setWaiting(sub, undefined);
     if (channel.ws.connection === null) {
       sub.awaiting = undefined;
       return;
     }
     sub.awaiting = { id, since: Date.now() };
+  }
+
+  /**
+   * (key, params)'s known wait (`ActiveSub.waiting`), or null: nothing known
+   * holds its read. The same object while it stands, so a store snapshot can
+   * return it as is.
+   */
+  loadWait(
+    key: string,
+    params: ResourceParams = {},
+    origin?: ResourceOrigin,
+  ): LoadWait | null {
+    const channel = this.channels[socketKindFor(origin)];
+    return channel?.subs.get(`${key}\0${paramsKey(params)}`)?.waiting ?? null;
+  }
+
+  /** Moves whenever some tuple's known wait starts, changes or ends — a store snapshot for a read of many tuples. */
+  loadWaitSeq(): number {
+    return this.loadWaitChanges;
+  }
+
+  /** The channel `sub` is held on. */
+  private channelHolding(sub: ActiveSub): SocketChannel | undefined {
+    const k = `${sub.key}\0${paramsKey(sub.params)}`;
+    for (const channel of Object.values(this.channels)) {
+      if (channel?.subs.get(k) === sub) return channel;
+    }
+    return undefined;
+  }
+
+  /** Fires whenever some tuple's known wait starts, changes or ends (`loadWait`). */
+  subscribeLoadWaits(listener: () => void): () => void {
+    this.loadWaitListeners.add(listener);
+    return () => this.loadWaitListeners.delete(listener);
+  }
+
+  private setWaiting(sub: ActiveSub, waiting: LoadWait | undefined): void {
+    if (sub.waiting === waiting) return;
+    if (waiting === undefined) {
+      delete sub.waiting;
+      // A request still owed is judged afresh from the wait's end: the
+      // deadline skipped it while it waited, so nothing else re-arms it.
+      if (sub.awaiting !== undefined) {
+        sub.awaiting = { id: sub.awaiting.id, since: Date.now() };
+        const channel = this.channelHolding(sub);
+        if (channel !== undefined) this.armUnansweredCheck(channel);
+      }
+    } else sub.waiting = waiting;
+    this.loadWaitChanges++;
+    if (this.loadWaitListeners.size > 0)
+      fanOutMarked("load-wait listeners", this.loadWaitListeners, undefined);
   }
 
   /**
@@ -2837,7 +2901,7 @@ export class NotificationsClient {
     if (channel.unansweredTimer !== undefined) return;
     let oldest: number | undefined;
     for (const sub of channel.subs.values()) {
-      if (sub.awaiting === undefined) continue;
+      if (sub.awaiting === undefined || sub.waiting !== undefined) continue;
       const from = this.judgedFrom(channel, sub.awaiting.since);
       if (oldest === undefined || from < oldest) oldest = from;
     }
@@ -2865,6 +2929,8 @@ export class NotificationsClient {
     const late: ActiveSub[] = [];
     for (const sub of channel.subs.values()) {
       if (sub.awaiting === undefined) continue;
+      // The server said what the read waits on: answered "still working".
+      if (sub.waiting !== undefined && open) continue;
       // The socket dropped since: the replay on its next open re-sends and
       // restarts the clock, so these are not unanswered on this connection.
       if (!open) sub.awaiting = undefined;
@@ -3166,12 +3232,35 @@ export class NotificationsClient {
         return;
       }
       this.noteAnswered(channel, entry, msg);
+      this.setWaiting(entry, undefined);
       // Mark the store first (a contract refusal means this bundle is out of
       // date), then heal through the one error channel: the HTTP read now gets
       // the typed 409/404 body, so `q.error` names the reason.
       noteContractRefusal(msg.key, msg.params, msg.reason, verdict);
       entry.derivation = undefined;
       this.fetchAfterSubError(channel, msg.key, msg.params);
+      return;
+    }
+    if (msg.kind === "waiting") {
+      // A known wait on the tuple's read (a loader waiting on a provider's
+      // quota), shown on the read's `loading` arm. Gated on the local entry
+      // like every frame; a tuple this tab already holds a value of has no
+      // loading arm to show it on (another tab's read of it waits).
+      const pk = paramsKey(msg.params);
+      const entry = channel.subs.get(`${msg.key}\0${pk}`);
+      if (!entry) {
+        trace(`drop key=${msg.key} params=${pk} reason=no-sub source=waiting`);
+        return;
+      }
+      if (this.hasAppliedValue(msg.key, msg.params)) return;
+      trace(`waiting key=${msg.key} params=${pk} on=${msg.on ?? "-"}`);
+      if (msg.on === null) {
+        // The wait ended and the read goes on: judged afresh from now
+        // (`setWaiting` re-arms the deadline).
+        this.setWaiting(entry, undefined);
+        return;
+      }
+      this.setWaiting(entry, { on: msg.on, since: msg.since });
       return;
     }
     if (msg.kind === "ack") {
@@ -3605,6 +3694,8 @@ export class NotificationsClient {
    *  is reset on a successful apply. */
   private markApplied(entry: ActiveSub, key: string): void {
     entry.lastAppliedAt = Date.now();
+    // The value answered the read: whatever it waited on is over.
+    this.setWaiting(entry, undefined);
     entry.undecodable = undefined;
     // The server answered this tuple, so it no longer refuses it — a refusal
     // from a backend that has since caught up must not keep the advice up.

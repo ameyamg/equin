@@ -44518,6 +44518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GmailThreadList`
               - `GmailThreadRef`
               - `GmailWatch`
+              - `PacerClock`
               - `PacerWaitReason`
               - `QuotaPacer`
               - `QuotaPacerOptions`
@@ -45682,6 +45683,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldPresentation.Register` ×43
           - `ClientFields.Resolve` ×4
         - Uses:
+          - `network/live/live-state.LoadWait`
           - `network/live/live-state.PagedResourceResult`
           - `network/live/live-state.ResourceDerivation`
           - `network/live/live-state.ResourceDescriptor`
@@ -46411,6 +46413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HttpStaleDropReport`
               - `LiveRegistries`
               - `LiveStateSocketKind`
+              - `LoadWait`
               - `MatchResourceHandlers`
               - `MissedFrame`
               - `PagedResourceResult`
@@ -46484,6 +46487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses: `packages/zod-introspect.fallbackTo`
             - Exports (types):
+              - `LoadWait`
               - `PointParams`
               - `PointResourceDescriptor`
               - `Resolvable`

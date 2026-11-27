@@ -252,10 +252,15 @@ describe("loaded follow routes", () => {
     await h.subscribe("follower", { owner: "o1" });
     await h.subscribe("plain", {});
     expect(f.runs[0]).toBeDefined();
-    // A subscription's read gets its cut signal (`LoadRun.signal`); nothing
-    // of the loaded-route bookkeeping (a no-op `noteLoaded`, no follows).
+    // A subscription's read gets its cut signal (`LoadRun.signal`) and its
+    // known-wait announcer (`LoadRun.wait`); nothing of the loaded-route
+    // bookkeeping (a no-op `noteLoaded`, no follows).
     expect(plain).toHaveLength(1);
-    expect(Object.keys(plain[0]!).sort()).toEqual(["noteLoaded", "signal"]);
+    expect(Object.keys(plain[0]!).sort()).toEqual([
+      "noteLoaded",
+      "signal",
+      "wait",
+    ]);
     expect(plain[0]!.signal).toBeInstanceOf(AbortSignal);
   });
 

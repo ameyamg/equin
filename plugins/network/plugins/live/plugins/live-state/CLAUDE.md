@@ -783,6 +783,15 @@ Details:
   is the tuple's, not the request's (residual, held by stuck-spans' `sub`
   span). Mail's cold `mail.threads` windows on Gmail's quota pacer (36–56 s)
   were filed as a wedge (report-1795721286-0gc0z2).
+- **A known wait is a state, not a hang** (`ActiveSub.waiting`). The
+  server's `waiting` frame (a loader's `LiveSourceRead.wait`: Mail's fill
+  held by Gmail's quota) sets the tuple's wait — `loadWait(key, params)`,
+  `subscribeLoadWaits` — which `useResource` / `useResources` put on the
+  `loading` arm as `waiting: LoadWait` (and `useLive`'s paged reads from
+  their first page). The deadline leaves a waiting sub alone; `on: null`
+  restarts its clock. Cleared by an applied value, a `sub-error` or a
+  resend; ignored for a tuple already holding a value. Pinned by
+  `notifications-unanswered.test.ts` (*a known wait*).
 - **Update latency sample** (`clientLatencySink`, signal `update`): one sample
   per applied pushed frame carrying `timing`
   (`{ changedAt, sentAt, deliverMs }`).
@@ -843,6 +852,7 @@ Details:
     - `HttpStaleDropReport`
     - `LiveRegistries`
     - `LiveStateSocketKind`
+    - `LoadWait`
     - `MatchResourceHandlers`
     - `MissedFrame`
     - `PagedResourceResult`
@@ -916,6 +926,7 @@ Details:
 - Core:
   - Uses: `packages/zod-introspect.fallbackTo`
   - Exports (types):
+    - `LoadWait`
     - `PointParams`
     - `PointResourceDescriptor`
     - `Resolvable`

@@ -34,6 +34,33 @@ describe("resolveBodyState", () => {
     expect(state.error.refetch).toBe(refetch);
   });
 
+  test("a known wait rides the loading state — from a live source or a readiness", () => {
+    const waiting = { on: "Waiting on Gmail's per-minute quota", since: 1 };
+    const base = { readFields: [], unavailable: NONE, deferredComplete: true };
+    expect(
+      resolveBodyState({
+        ...base,
+        server: { loading: true, error: null, readError: null, waiting },
+        readiness: undefined,
+      }),
+    ).toEqual({ kind: "loading", waiting });
+    expect(
+      resolveBodyState({
+        ...base,
+        server: null,
+        readiness: { status: "loading", waiting },
+      }),
+    ).toEqual({ kind: "loading", waiting });
+    // Nothing known: a bare loading state.
+    expect(
+      resolveBodyState({
+        ...base,
+        server: { loading: true, error: null, readError: null, waiting: null },
+        readiness: undefined,
+      }),
+    ).toEqual({ kind: "loading" });
+  });
+
   test("readiness loading → loading; ready → the view", () => {
     expect(
       resolveBodyState({

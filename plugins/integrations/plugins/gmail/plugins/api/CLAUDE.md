@@ -188,6 +188,7 @@ that account. Two pacers over one account would each spend the whole budget.
     - `GmailThreadList`
     - `GmailThreadRef`
     - `GmailWatch`
+    - `PacerClock`
     - `PacerWaitReason`
     - `QuotaPacer`
     - `QuotaPacerOptions`

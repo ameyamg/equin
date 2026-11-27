@@ -1577,6 +1577,17 @@ export interface LoadRun {
    * its end, as before, and its answer is dropped.
    */
   readonly signal?: AbortSignal;
+  /**
+   * Announce a KNOWN wait: this load is waiting on something outside the
+   * server (a provider's per-minute quota), named as a sentence a reader can
+   * show (`on`). Every holder of the tuple is told (a `waiting` frame) and its
+   * read reads `loading` with that wait, instead of looking wedged — and a tab
+   * does not report the unanswered sub. Returns the wait's end (idempotent);
+   * a wait still open when the load settles ends with it, its answer telling
+   * the tab. Present exactly with `signal` (a gated read): told to the
+   * tuple's holders, whoever started the read.
+   */
+  readonly wait?: (on: string) => () => void;
 }
 
 /**
@@ -1968,6 +1979,14 @@ interface SocketSubRecord {
 
 interface SocketState {
   ws: RuntimeSocket;
+  /**
+   * Its tabs read this server's frame vocabulary: the latest `sub` /
+   * `sub-batch` named `PROTOCOL` (a socket's tabs share one — live-state's
+   * dialect splits the shared socket by it). Only such a socket is sent a
+   * frame kind an older bundle cannot read (`waiting`: an older client would
+   * take it for an `invalidate`).
+   */
+  readsProtocol?: boolean;
   /** Who opened it (`RuntimeSocket.data`), read once at `open`. */
   caller: LiveCaller;
   /** key -> paramsKey -> record (subscriptions this socket holds, tagged by tab). */
@@ -4013,13 +4032,15 @@ export function createResourceRuntime(
             },
           )
         : null;
+    // The known waits this load announced (`LoadRun.wait`), ended with it.
+    const waits = signal === undefined ? null : loadWaitScope(entry, params);
     const loadRun: LoadRun | undefined =
-      held === undefined && signal === undefined
+      held === undefined && waits === null
         ? bracket?.run
         : {
             noteLoaded: bracket?.run.noteLoaded ?? (() => {}),
             ...(held === undefined ? {} : { follows: held }),
-            ...(signal === undefined ? {} : { signal }),
+            ...(waits === null ? {} : { signal, wait: waits.wait }),
           };
     const run = async () => {
       const raw = await declaredLoad(entry, params, ctx, loadRun);
@@ -4053,6 +4074,10 @@ export function createResourceRuntime(
     if (leaveLoading !== null) {
       // Observes only — the caller handles the load's own rejection.
       void load.then(leaveLoading, leaveLoading);
+    }
+    if (waits !== null) {
+      // Observes only, as above: the answer (or its failure) ends the waits.
+      void load.then(waits.settle, waits.settle);
     }
     const judged = driftGuarded(entry)
       ? load.then((value) => checkRouteDrift(entry, own)(value))
@@ -5224,6 +5249,98 @@ export function createResourceRuntime(
         throw err;
       },
     );
+  }
+
+  // Known waits of running subscription reads (`LoadRun.wait`), per tuple
+  // flight key: what the tuple's holders were last told (`sent`) and the
+  // waits open now, the latest announced first in line. A tuple's holders
+  // are told when the wait they would be shown changes, and a sub arriving
+  // while one is open is told at once (`tellLoadWait`).
+  const loadWaits = new Map<
+    string,
+    {
+      key: string;
+      params: ResourceParams;
+      open: { on: string; since: number }[];
+      sent: string | null;
+    }
+  >();
+
+  function loadWaitFrame(rec: {
+    key: string;
+    params: ResourceParams;
+    open: readonly { on: string; since: number }[];
+  }) {
+    const cur = rec.open.at(-1);
+    return {
+      kind: "waiting" as const,
+      key: rec.key,
+      params: rec.params,
+      on: cur?.on ?? null,
+      since: cur?.since ?? Date.now(),
+    };
+  }
+
+  // One load's wait scope: `wait` opens a wait (telling every holder when
+  // the wait shown changes), `settle` closes every wait it left open —
+  // silently, since the load's own answer tells the tab it ended.
+  function loadWaitScope(
+    entry: RegistryEntry,
+    params: ResourceParams,
+  ): { wait: (on: string) => () => void; settle: () => void } {
+    const pk = paramsKey(params);
+    const flightKey = flightKeyOf(entry.key, pk);
+    const mine = new Set<{ on: string; since: number }>();
+    let settled = false;
+    const close = (w: { on: string; since: number }, tell: boolean) => {
+      if (!mine.delete(w)) return;
+      const rec = loadWaits.get(flightKey);
+      if (rec === undefined) return;
+      const i = rec.open.indexOf(w);
+      if (i >= 0) rec.open.splice(i, 1);
+      if (rec.open.length === 0) loadWaits.delete(flightKey);
+      const now = rec.open.at(-1)?.on ?? null;
+      if (tell && now !== rec.sent) {
+        rec.sent = now;
+        broadcastJson(waitReadersFor(entry.key, pk), loadWaitFrame(rec));
+      }
+    };
+    return {
+      wait(on) {
+        if (settled) return () => {};
+        let rec = loadWaits.get(flightKey);
+        if (rec === undefined) {
+          rec = { key: entry.key, params, open: [], sent: null };
+          loadWaits.set(flightKey, rec);
+        }
+        const w = { on, since: Date.now() };
+        rec.open.push(w);
+        mine.add(w);
+        if (rec.sent !== on) {
+          rec.sent = on;
+          broadcastJson(waitReadersFor(entry.key, pk), loadWaitFrame(rec));
+        }
+        return () => close(w, true);
+      },
+      settle() {
+        settled = true;
+        for (const w of [...mine]) close(w, false);
+      },
+    };
+  }
+
+  // A sub arriving while its tuple's read waits on something known is told
+  // at once, as the holders before it were.
+  function tellLoadWait(state: SocketState, key: string, pk: string): void {
+    if (state.readsProtocol !== true) return;
+    const rec = loadWaits.get(flightKeyOf(key, pk));
+    if (rec === undefined || rec.open.length === 0) return;
+    sendJson(state.ws, loadWaitFrame(rec));
+  }
+
+  // The tuple's holders whose tabs read a `waiting` frame (`readsProtocol`).
+  function waitReadersFor(key: string, pk: string): SocketState[] {
+    return subscribersFor(key, pk).filter((s) => s.readsProtocol === true);
   }
 
   // Cut every running load of (entry, pk) nobody is owed any more.
@@ -7035,6 +7152,7 @@ export function createResourceRuntime(
       case "invalidate":
       case "ack":
       case "ping":
+      case "waiting":
         return;
     }
   }
@@ -7062,6 +7180,7 @@ export function createResourceRuntime(
       case "invalidate":
       case "ack":
       case "ping":
+      case "waiting":
         return;
     }
   }
@@ -7119,6 +7238,7 @@ export function createResourceRuntime(
         return;
       case "up-to-date":
       case "ack":
+      case "waiting":
         return; // no value: the holders keep what they hold
     }
   }
@@ -10146,6 +10266,7 @@ export function createResourceRuntime(
   ): Promise<void> {
     const { key, params = {}, etag: clientEtag } = m;
     if (!key) return;
+    state.readsProtocol = m.protocol === PROTOCOL;
     const req = subRequestOf(m);
     const build = typeof m.build === "string" ? m.build : undefined;
     noteClientBuild(build);
@@ -10520,15 +10641,12 @@ export function createResourceRuntime(
       // Origin = the subscription: establishes an entry context so the loader
       // span (and any gate waits it charges) is attributed to this `sub` request
       // instead of running with `parent: null`. Gated by the read-admission cap.
-      ({ value, raw, etag, watermark } = await gatedRead(
-        entry,
-        params,
-        "sub",
-        freshEtag,
-        (ms) => {
-          joinedMs = ms;
-        },
-      ));
+      // A read already waiting on something known says so at once.
+      const read = gatedRead(entry, params, "sub", freshEtag, (ms) => {
+        joinedMs = ms;
+      });
+      tellLoadWait(state, key, pk);
+      ({ value, raw, etag, watermark } = await read);
     } catch (err) {
       // Every holder of the tuple left while this read queued: nobody to
       // answer, and nothing was loaded.
@@ -10657,6 +10775,7 @@ export function createResourceRuntime(
     const tabId = typeof m.tabId === "string" ? m.tabId : "";
     const build = typeof m.build === "string" ? m.build : undefined;
     noteClientBuild(build);
+    state.readsProtocol = m.protocol === PROTOCOL;
     const entries = Array.isArray(m.entries) ? m.entries : [];
     // Where in this socket's frame stream the batch arrived (`alreadyShipped`).
     const arrivedAt = state.framesSent;

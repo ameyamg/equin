@@ -14,7 +14,11 @@ export type LoadingVariant = "text" | "spinner" | "rows" | "cards" | "block";
 export interface LoadingProps {
   /** Visual shape of the loading state. Default `"text"`. */
   variant?: LoadingVariant;
-  /** Text shown by the `text` and `spinner` variants. Default `"Loading…"` (text only). */
+  /**
+   * Text shown by the `text` and `spinner` variants (default `"Loading…"`,
+   * text only), and above a `rows` skeleton when given — what the load is
+   * waiting on.
+   */
   label?: ReactNode;
   /** Skeleton item count for `rows` (default 6) and `cards` (default 8). */
   count?: number;
@@ -110,6 +114,7 @@ export function Loading({
           gap="sm"
           className={cn("loading-delayed rail-follow py-sm", className)}
         >
+          {label !== undefined && <Placeholder>{label}</Placeholder>}
           {Array.from({ length: count ?? 6 }, (_, i) => (
             <Shimmer key={i} className="h-8 w-full" />
           ))}

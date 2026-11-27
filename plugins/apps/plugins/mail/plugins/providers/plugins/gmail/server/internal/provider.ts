@@ -3,6 +3,7 @@ import {
   GmailOutcomeUnknownError,
   GmailUnreachableError,
   type GmailLabel,
+  type PacerWaitReason,
 } from "@plugins/integrations/plugins/gmail/plugins/api/core";
 import type {
   GmailCallOptions,
@@ -112,10 +113,22 @@ async function neutral<T>(what: string, run: () => Promise<T>): Promise<T> {
   }
 }
 
-const gmailOpts = (o?: MailCallOptions): GmailCallOptions => ({
-  priority: o?.priority,
-  signal: o?.signal,
-});
+/** What a call held by the account's pacer is waiting on, in a reader's words. */
+const GMAIL_WAIT: Record<PacerWaitReason, string> = {
+  budget: "Waiting on Gmail's per-minute quota",
+  paused: "Waiting on Gmail — it asked to slow down",
+};
+
+const gmailOpts = (o?: MailCallOptions): GmailCallOptions => {
+  const waiting = o?.waiting;
+  return {
+    priority: o?.priority,
+    signal: o?.signal,
+    ...(waiting === undefined
+      ? {}
+      : { onWait: (why: PacerWaitReason) => waiting(GMAIL_WAIT[why]) }),
+  };
+};
 
 /** Gmail's `rfc822msgid:` term for a Message-ID (it takes the id without angle brackets). */
 function rfc822Term(id: string): string {

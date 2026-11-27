@@ -796,6 +796,16 @@ All but the version are co-produced by the starter. A push drain mints
   Counted per key in `_debug.cutLoads`. Mail's cold fills, paced by Gmail's
   quota, kept running for views the person had left (task-1795724905-sk9a06).
   Pinned by `runtime-read-abandon.test.ts` (*a running read*).
+- **A running read may say what it waits on (`LoadRun.wait`).** Handed
+  with `signal` to every gated read. `wait(on)` sends the tuple's holders a
+  `waiting { key, params, on, since }` frame when the wait shown changes
+  (the latest open one), `on: null` when the last ends while the read goes
+  on; a sub arriving while one stands is told at once (`tellLoadWait`); a
+  wait still open when the load settles closes silently (its answer tells
+  the tab). Never an answer: the sub-ack still settles the request. Sent
+  only to a socket whose latest `sub` / `sub-batch` named this server's
+  `PROTOCOL` (`SocketState.readsProtocol`): an older client would take the
+  unknown frame for an `invalidate`. Pinned by `runtime-load-wait.test.ts`.
 - **The gate names its holders.** Every gated read is labelled (`<key>
   <params>`, a probe `revalidate <key> <params>`), so `readGateStats().holders`
   says who holds the slots; the profiler stamps them on a filed `wait

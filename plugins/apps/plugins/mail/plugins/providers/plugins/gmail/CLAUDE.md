@@ -141,6 +141,14 @@ rounded up>` — a superset, never fewer.
   what the reserve leaves, less the 720), so a sync step never waits behind
   a prefetched body. Before it, prefetch filled the whole background share and a
   sync step waited 53 s behind it (task-1795743099-v6pv5z).
+  `accounts-pacing.test.ts` replays report-1795721286-0gc0z2's minute (18
+  bodies prefetched, a 94-summary scroll, then a new view): under the old
+  split the view's fill waited 4 s for the prefetch to age out; now 6
+  bodies are admitted, the rest held, and the fill goes at once.
+- **A held call says so.** `MailCallOptions.waiting` becomes the client's
+  `onWait`: a call the pacer holds tells the caller "Waiting on Gmail's
+  per-minute quota" (or "… it asked to slow down" under a rate pause), so
+  Mail's view shows it instead of a bare spinner.
 
 ## Push ("instant updates", `server/internal/push/`)
 
