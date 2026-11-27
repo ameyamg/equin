@@ -82,7 +82,14 @@ export function FilterRuleRow(props: {
         ValueInput && field ? (
           <ValueInput
             value={rule.value}
-            onChange={(value) => editor.setRuleValue(rule.id, value)}
+            // A locked rule's value is a viewer: it opens to be read
+            // ("2 selected" → which two), never written.
+            {...(rule.locked === true
+              ? {}
+              : {
+                  onChange: (value: unknown) =>
+                    editor.setRuleValue(rule.id, value),
+                })}
             field={field}
           />
         ) : null

@@ -1439,9 +1439,11 @@ filter write path (`useDataViewModel`'s `setFilter`) runs `keepLockedRules`
 (`web/internal/locked-rules.ts`): the current locked rules lead the root
 whatever the edit — a remove, Clear, a quick filter, a preset, a chip's × —
 and a node of the edit naming a locked rule's id, or marked locked, is
-dropped, so no edit drops, changes or adds one. The Filter panel draws it
-dimmed and inert with a lock where remove would be (`ControlPanel.RuleRow
-locked`), and its root's conjunction stays And; it is no chip
+dropped, so no edit drops, changes or adds one. The Filter panel draws its
+field and operator dimmed and inert with a lock where remove would be
+(`ControlPanel.RuleRow locked`); its value is the operator's `ValueInput`
+handed no `onChange` — a viewer that still opens ("2 selected" → which two),
+read-only (`FilterValueInputProps.onChange`) — and its root's conjunction stays And; it is no chip
 (`DataViewFilterChips`), no badge count, no summary (`ruleCount`,
 `summarizeFilter`), so "Clear filter" leaves the view's base.
 

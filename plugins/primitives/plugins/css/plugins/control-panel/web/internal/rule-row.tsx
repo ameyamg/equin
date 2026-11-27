@@ -38,8 +38,11 @@ export interface ControlPanelRuleRowProps {
   removeLabel?: string;
   /**
    * A rule the builder shows but cannot change (a view's base rule): its
-   * cells are drawn dimmed and inert, and a lock stands where remove would
-   * be — `onRemove` / `actions` beside it are a mistake (thrown).
+   * field and operator cells are drawn dimmed and inert, and a lock stands
+   * where remove would be — `onRemove` / `actions` beside it are a mistake
+   * (thrown). The VALUE cell stays live: a value often hides behind a summary
+   * ("2 selected") that must open to be read, so the caller hands a viewer
+   * there (a read-only editor), never an editor.
    */
   locked?: { label: string };
   /** Shows the drag handle in the gutter track (revealed on row hover/focus). */
@@ -99,7 +102,8 @@ export function ControlPanelRuleRow({
       "ControlPanel.RuleRow: a locked rule takes no onRemove or actions — it cannot be changed.",
     );
   }
-  // Inert and dimmed: the pickers show the rule, never edit it.
+  // Inert and dimmed: the pickers show the rule, never edit it. The value
+  // cell is exempt — it holds a viewer, which must open to be read.
   const cell = locked !== undefined ? "min-w-0 opacity-55" : "min-w-0";
   const inert = locked !== undefined ? true : undefined;
   return (
@@ -145,7 +149,7 @@ export function ControlPanelRuleRow({
           {operator}
         </span>
       ) : null}
-      <span data-cp-cell="value" className={cell} inert={inert}>
+      <span data-cp-cell="value" className="min-w-0">
         {value}
       </span>
       {/* Two clusters in the one reserved trailing track — the shape the

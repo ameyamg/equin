@@ -60,6 +60,10 @@ const helpIcon = symbol("help");
  * it, run by the server, never filtered from a partial list here. A
  * window with more past it says so; a selected value outside the window
  * still gets its chip first (to be clicked off), never marked "not listed".
+ *
+ * Without `onChange` it is a viewer (a view's locked rule): the trigger still
+ * opens, and the popover lists exactly the selected values — read-only chips,
+ * no search, no other options — so "2 selected" can be read, never changed.
  */
 export function ChipSelectFilterInput(
   props: FilterValueInputProps & { multiple: boolean },
@@ -84,14 +88,15 @@ export function ChipSelectFilterInput(
   const labelFor = (v: string) =>
     options.find((o) => o.value === v)?.label ?? v;
 
-  function pick(v: string) {
+  const onChange = props.onChange;
+  function pick(onChange: (value: unknown) => void, v: string) {
     if (multiple) {
       const next = selected.includes(v)
         ? selected.filter((x) => x !== v)
         : [...selected, v];
-      props.onChange(next.length > 0 ? next : undefined);
+      onChange(next.length > 0 ? next : undefined);
     } else {
-      props.onChange(selected[0] === v ? undefined : v);
+      onChange(selected[0] === v ? undefined : v);
       setOpen(false);
     }
   }
@@ -122,15 +127,85 @@ export function ChipSelectFilterInput(
         />
       }
     >
-      {window !== undefined ? (
+      {onChange === undefined ? (
+        <SelectedChoices
+          state={state}
+          selected={selected}
+          // An open set's window is not read here: a value it would label
+          // shows as itself, never "not listed".
+          markUnlisted={window === undefined}
+        />
+      ) : window !== undefined ? (
         // Read only while open: a closed picker holds no window.
         open && (
-          <WindowedChoices window={window} selected={selected} onPick={pick} />
+          <WindowedChoices
+            window={window}
+            selected={selected}
+            onPick={(v) => pick(onChange, v)}
+          />
         )
       ) : (
-        <ClosedChoices state={state} selected={selected} onPick={pick} />
+        <ClosedChoices
+          state={state}
+          selected={selected}
+          onPick={(v) => pick(onChange, v)}
+        />
       )}
     </InlinePopover>
+  );
+}
+
+/** The viewer's popover: the selected values alone, as chips nothing toggles. */
+function SelectedChoices({
+  state,
+  selected,
+  markUnlisted,
+}: {
+  state: FieldOptionsResult;
+  selected: readonly string[];
+  markUnlisted: boolean;
+}): ReactNode {
+  if (state.status === "loading") return <Loading label="Loading options…" />;
+  if (state.status === "error")
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        error={state.error}
+        refetch={state.refetch}
+        subject="this field's values"
+      />
+    );
+  const choices = selectChoices(state.options, selected).filter(({ option }) =>
+    selected.includes(option.value),
+  );
+  return (
+    <Stack gap="sm">
+      {choices.length === 0 ? (
+        <Placeholder tone="muted">No values</Placeholder>
+      ) : (
+        <Stack direction="row" gap="xs" wrap>
+          {choices.map(({ option, listed }) => (
+            <ToggleChip
+              key={option.value}
+              as="span"
+              active
+              variant="ghost"
+              icon={
+                listed || !markUnlisted ? undefined : <Icon icon={helpIcon} />
+              }
+              tooltip={
+                listed || !markUnlisted
+                  ? undefined
+                  : `${option.value} — not one of this field's listed options`
+              }
+            >
+              {option.label}
+            </ToggleChip>
+          ))}
+        </Stack>
+      )}
+      <Placeholder tone="muted">Read only</Placeholder>
+    </Stack>
   );
 }
 

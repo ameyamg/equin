@@ -1824,10 +1824,16 @@ export interface CellEditorProps {
  * Props passed to an operator's `ValueInput` editor — the operand editor for a
  * single filter rule. `value` is the rule's stored operand (JSON-safe); the
  * editor writes new operands through `onChange`.
+ *
+ * WITHOUT `onChange` the editor is a VIEWER (a view's locked base rule): it
+ * shows the operand and still opens whatever it hides behind a summary
+ * ("2 selected" → the two values), but offers no way to change it. Optional
+ * rather than a separate flag so an editor cannot write to a rule it was
+ * handed read-only: every call site must handle its absence (tsc).
  */
 export interface FilterValueInputProps {
   value: unknown;
-  onChange: (value: unknown) => void;
+  onChange?: (value: unknown) => void;
   field: FieldDef<unknown>;
   /** What the editor shows with no operand (an operand quick filter's
    *  "All pages"); absent → the editor's own. */

@@ -37,14 +37,17 @@ function parsePlain(raw: string): number | undefined {
 function PlainInput(props: {
   value: number | undefined;
   placeholder: string;
-  onChange: (n: number | undefined) => void;
+  /** Absent → read-only (a view's locked rule). */
+  onChange: ((n: number | undefined) => void) | undefined;
 }): ReactNode {
+  const { onChange } = props;
   return (
     <FilterValueInput
       type="number"
       placeholder={props.placeholder}
       value={props.value ?? ""}
-      onChange={(e) => props.onChange(parsePlain(e.target.value))}
+      readOnly={onChange === undefined}
+      onChange={(e) => onChange?.(parsePlain(e.target.value))}
     />
   );
 }
@@ -59,7 +62,8 @@ function UnitInput(props: {
   value: number | undefined;
   placeholder: string;
   units: NumberOperandUnits;
-  onChange: (n: number | undefined) => void;
+  /** Absent → read-only (a view's locked rule). */
+  onChange: ((n: number | undefined) => void) | undefined;
 }): ReactNode {
   const { value, units } = props;
   const shown = (n: number | undefined) =>
@@ -78,12 +82,13 @@ function UnitInput(props: {
       placeholder={props.placeholder}
       value={text}
       aria-invalid={invalid || undefined}
+      readOnly={props.onChange === undefined}
       onChange={(e) => {
         const next = e.target.value;
         const n = next.trim() === "" ? null : units.parse(next);
         setText(next);
         setSynced(n ?? undefined);
-        props.onChange(n ?? undefined);
+        props.onChange?.(n ?? undefined);
       }}
     />
   );
@@ -104,7 +109,7 @@ export function numberOperandInputs(
   function One(p: {
     value: number | undefined;
     placeholder: string;
-    onChange: (n: number | undefined) => void;
+    onChange: ((n: number | undefined) => void) | undefined;
   }): ReactNode {
     return units ? <UnitInput {...p} units={units} /> : <PlainInput {...p} />;
   }
@@ -115,7 +120,7 @@ export function numberOperandInputs(
       <One
         value={asNumber(props.value)}
         placeholder={units?.placeholder ?? "Value"}
-        onChange={(n) => props.onChange(n)}
+        onChange={props.onChange}
       />
     );
   }
@@ -123,15 +128,18 @@ export function numberOperandInputs(
   /** Two operands forming an inclusive [min, max] range for `between`. */
   function RangeInput(props: FilterValueInputProps): ReactNode {
     const range = (props.value ?? {}) as NumberRange;
-    function update(patch: Partial<NumberRange>) {
-      props.onChange({ ...range, ...patch });
-    }
+    const { onChange } = props;
+    // Absent → read-only (a view's locked rule): neither bound is editable.
+    const update =
+      onChange === undefined
+        ? undefined
+        : (patch: Partial<NumberRange>) => onChange({ ...range, ...patch });
     return (
       <Stack direction="row" gap="xs" align="center">
         <One
           value={range.min}
           placeholder="Min"
-          onChange={(min) => update({ min })}
+          onChange={update && ((min) => update({ min }))}
         />
         <Text as="span" variant="body" tone="muted">
           –
@@ -139,7 +147,7 @@ export function numberOperandInputs(
         <One
           value={range.max}
           placeholder="Max"
-          onChange={(max) => update({ max })}
+          onChange={update && ((max) => update({ max }))}
         />
       </Stack>
     );

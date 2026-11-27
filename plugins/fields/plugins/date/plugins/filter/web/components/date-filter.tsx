@@ -117,7 +117,8 @@ function RelativeAnchorBuilder({
 /**
  * The popover-driven anchor chooser used by single and range date inputs.
  * Presets (Today/Yesterday/Tomorrow), a custom-relative builder, and an exact
- * date picker — each writes a `DateAnchor`.
+ * date picker — each writes a `DateAnchor`. Without `onChange` (a view's
+ * locked rule) the popover shows the anchor in full, read-only.
  */
 function AnchorChooser({
   anchor,
@@ -125,7 +126,7 @@ function AnchorChooser({
   placeholder = "Select date",
 }: {
   anchor?: DateAnchor;
-  onChange: (anchor: DateAnchor) => void;
+  onChange: ((anchor: DateAnchor) => void) | undefined;
   placeholder?: string;
 }): ReactNode {
   const [open, setOpen] = useState(false);
@@ -133,8 +134,34 @@ function AnchorChooser({
   const label = formatAnchor(anchor, fmt);
   const exactIso = anchor?.kind === "date" ? anchor.iso : "";
 
-  function pick(next: DateAnchor) {
-    onChange(next);
+  const trigger = (
+    // The rule row's one control shape: it fills its value cell and
+    // truncates its label. A hand-built outline button here was rigid — wider
+    // than the builder's value track, it reached into the next cell (and, in
+    // a menu-wide panel, drew over the remove button).
+    <ControlPanel.Field
+      icon={<Icon icon={calendarTodayIcon} />}
+      label={label || null}
+      placeholder={placeholder}
+    />
+  );
+
+  if (onChange === undefined)
+    return (
+      <ControlPanelPopover
+        open={open}
+        onOpenChange={setOpen}
+        label="Date"
+        trigger={trigger}
+      >
+        <ControlPanel.Section label="Read only">
+          <Text variant="body">{label || placeholder}</Text>
+        </ControlPanel.Section>
+      </ControlPanelPopover>
+    );
+
+  function pick(write: (anchor: DateAnchor) => void, next: DateAnchor) {
+    write(next);
     setOpen(false);
   }
 
@@ -147,21 +174,14 @@ function AnchorChooser({
       // showing: the panel resized under the user as the operator changed,
       // which is exactly what a width ROLE exists to delete.
       label="Choose a date"
-      // The rule row's one control shape: it fills its value cell and
-      // truncates its label. A hand-built outline button here was rigid — wider
-      // than the builder's value track, it reached into the next cell (and, in
-      // a menu-wide panel, drew over the remove button).
-      trigger={
-        <ControlPanel.Field
-          icon={<Icon icon={calendarTodayIcon} />}
-          label={label || null}
-          placeholder={placeholder}
-        />
-      }
+      trigger={trigger}
     >
       <ControlPanel.Section label="Relative">
         {PRESETS.map((p) => (
-          <ControlPanel.Row key={p.label} onSelect={() => pick(p.anchor)}>
+          <ControlPanel.Row
+            key={p.label}
+            onSelect={() => pick(onChange, p.anchor)}
+          >
             {p.label}
           </ControlPanel.Row>
         ))}
@@ -179,7 +199,7 @@ function AnchorChooser({
         */}
         <Calendar
           value={fromISODay(exactIso)}
-          onSelect={(d) => pick({ kind: "date", iso: toISODay(d) })}
+          onSelect={(d) => pick(onChange, { kind: "date", iso: toISODay(d) })}
         />
       </ControlPanel.Section>
     </ControlPanelPopover>
@@ -189,24 +209,24 @@ function AnchorChooser({
 /** Single anchor chooser for the day-comparison operators (is / before / …). */
 export function DateValueInput(props: FilterValueInputProps): ReactNode {
   const anchor = toAnchor(props.value);
-  return (
-    <AnchorChooser anchor={anchor} onChange={(next) => props.onChange(next)} />
-  );
+  return <AnchorChooser anchor={anchor} onChange={props.onChange} />;
 }
 
 /** Two anchor choosers forming an inclusive [from, to] range for `is-between`. */
 export function DateRangeInput(props: FilterValueInputProps): ReactNode {
   const range = (props.value ?? {}) as DateRange;
-
-  function update(patch: Partial<DateRange>) {
-    props.onChange({ ...range, ...patch });
-  }
+  const { onChange } = props;
+  // Absent → read-only (a view's locked rule): both choosers only show.
+  const update =
+    onChange === undefined
+      ? undefined
+      : (patch: Partial<DateRange>) => onChange({ ...range, ...patch });
 
   return (
     <Stack direction="row" gap="xs" align="center">
       <AnchorChooser
         anchor={toAnchor(range.from)}
-        onChange={(next) => update({ from: next })}
+        onChange={update && ((next) => update({ from: next }))}
         placeholder="Start"
       />
       <Text variant="body" tone="muted">
@@ -214,7 +234,7 @@ export function DateRangeInput(props: FilterValueInputProps): ReactNode {
       </Text>
       <AnchorChooser
         anchor={toAnchor(range.to)}
-        onChange={(next) => update({ to: next })}
+        onChange={update && ((next) => update({ to: next }))}
         placeholder="End"
       />
     </Stack>
@@ -232,8 +252,10 @@ export function RelativeRangeInput(props: FilterValueInputProps): ReactNode {
   const amount =
     typeof range.amount === "number" && range.amount > 0 ? range.amount : 1;
 
+  // Without `onChange`: a view's locked rule, shown, never changed.
+  const readOnly = props.onChange === undefined;
   function emit(next: { amount?: number; unit?: DateUnit }) {
-    props.onChange({
+    props.onChange?.({
       unit: next.unit ?? unit,
       amount: next.amount ?? amount,
     } satisfies RelativeRange);
@@ -244,6 +266,7 @@ export function RelativeRangeInput(props: FilterValueInputProps): ReactNode {
       <input
         type="number"
         min={1}
+        readOnly={readOnly}
         className={`${NATIVE_CONTROL} w-16`}
         value={amount}
         onChange={(e) =>
@@ -251,6 +274,7 @@ export function RelativeRangeInput(props: FilterValueInputProps): ReactNode {
         }
       />
       <select
+        disabled={readOnly}
         className={NATIVE_CONTROL}
         value={unit}
         onChange={(e) => emit({ unit: e.target.value as DateUnit })}

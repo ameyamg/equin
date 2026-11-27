@@ -13,6 +13,7 @@ import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-vie
  */
 export function BoolValueInput(props: FilterValueInputProps): ReactNode {
   const checked = props.value === true;
+  const { onChange } = props;
   return (
     <Stack
       direction="row"
@@ -23,7 +24,9 @@ export function BoolValueInput(props: FilterValueInputProps): ReactNode {
       <input
         type="checkbox"
         checked={checked}
-        onChange={(e) => props.onChange(e.target.checked)}
+        // Without `onChange`: a view's locked rule, shown, never changed.
+        disabled={onChange === undefined}
+        onChange={(e) => onChange?.(e.target.checked)}
         aria-label={checked ? "Checked" : "Unchecked"}
         className="size-4 accent-primary"
       />
