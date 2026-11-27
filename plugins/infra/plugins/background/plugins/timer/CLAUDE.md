@@ -18,7 +18,11 @@ export const sweeperTimer = defineTimer({
 
 - **Registered, then started.** Mount the timer in its plugin's `register`
   (that is what lists it); `start()` throws on an unregistered timer, and on a
-  `mainOnly` one outside main. `stop()` is idempotent.
+  `mainOnly` one outside main. `stop()` is idempotent; a tick in flight
+  finishes. `settled()` resolves once no tick is in flight: a shutdown awaits
+  it after `stop()` before tearing down what the ticks use (a worker, a pool),
+  so no tick outlives its resources and fails the shutdown as a crash. A
+  failed tick is still surfaced. Never await it from inside a tick.
 - **Tracked.** Each tick is a `timer:<name>` span (`profile: "invisible"` only
   for a sampler of the profiler's own host). Runs are recorded in memory — last
   run, runs/failures, a ring of `RECENT_RUNS_MAX` — and listed under **Timers**

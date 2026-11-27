@@ -114,6 +114,40 @@ describe("defineTimerIn", () => {
     ).toMatchObject({ runs: 1, failures: 1 });
   });
 
+  test("settled resolves only once the tick in flight is recorded, and leaves its failure to onFailure", async () => {
+    const rt = runtime();
+    const boom = new Error("boom");
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const t = defineTimerIn(
+      {
+        name: "t.draining",
+        description: "Fails late.",
+        everyMs: 60_000,
+        immediate: true,
+        profile: "invisible",
+        run: async () => {
+          await gate;
+          throw boom;
+        },
+      },
+      rt,
+    );
+    t.register();
+    t.start();
+    let stopped = false;
+    t.stop();
+    const stopping = t.settled().then(() => (stopped = true));
+    await settle();
+    expect(stopped).toBe(false);
+    expect(t.running).toBe(false);
+    release();
+    await stopping;
+    expect(rt.failures).toEqual([boom]);
+    const [run] = await timerRecentRuns("t.draining");
+    expect(run?.outcome).toBe("failed");
+  });
+
   test("a duplicate name is refused at registration", () => {
     const spec = {
       name: "t.dup",

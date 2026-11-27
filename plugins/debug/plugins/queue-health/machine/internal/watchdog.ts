@@ -143,9 +143,11 @@ export function startQueueHealthWatchdog(): void {
   queueHealthTimer.start();
 }
 
-export function stopQueueHealthWatchdog(): void {
+export async function stopQueueHealthWatchdog(): Promise<void> {
   if (queueHealthTimer.running) {
+    // The tick in flight writes the evidence dropped below: let it land first.
     queueHealthTimer.stop();
+    await queueHealthTimer.settled();
     // Drop the evidence with the timer. A restarted watchdog has not observed
     // anything yet, and a set of ids (or a head timestamp, or a counter
     // baseline) captured before a shutdown says nothing about the queue after

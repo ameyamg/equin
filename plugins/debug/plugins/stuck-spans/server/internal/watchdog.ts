@@ -92,9 +92,10 @@ export function startStuckSpanWatchdog(): void {
   stuckSpanTimer.start();
 }
 
-export function stopStuckSpanWatchdog(): void {
+export async function stopStuckSpanWatchdog(): Promise<void> {
   if (!stuckSpanTimer.running) return;
   stuckSpanTimer.stop();
+  await stuckSpanTimer.settled();
   // A restarted watchdog has not reported anything yet.
   watcher.reset();
 }

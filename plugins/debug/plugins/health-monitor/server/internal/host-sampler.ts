@@ -160,6 +160,7 @@ export function startHostSampler(): void {
   hostSamplerTimer.start();
 }
 
-export function stopHostSampler(): void {
+export function stopHostSampler(): Promise<void> {
   hostSamplerTimer.stop();
+  return hostSamplerTimer.settled();
 }

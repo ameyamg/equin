@@ -37,9 +37,12 @@ export default {
     startProcessSampler();
     if (isMain()) startHostSampler();
   },
-  onShutdown: () => {
+  onShutdown: async () => {
     loopProbeTimer.stop();
-    stopProcessSampler();
-    if (isMain()) stopHostSampler();
+    await Promise.all([
+      loopProbeTimer.settled(),
+      stopProcessSampler(),
+      isMain() ? stopHostSampler() : undefined,
+    ]);
   },
 } satisfies ServerPluginDefinition;

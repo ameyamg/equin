@@ -261,8 +261,10 @@ export function startProcessSampler(): void {
   processSamplerTimer.start();
 }
 
-export function stopProcessSampler(): void {
+export async function stopProcessSampler(): Promise<void> {
+  // The tick in flight reads the profiler and observers torn down below.
   processSamplerTimer.stop();
+  await processSamplerTimer.settled();
   if (stallArmed) {
     stopStallProfiler();
     stallArmed = false;

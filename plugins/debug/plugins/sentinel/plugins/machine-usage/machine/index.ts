@@ -20,7 +20,9 @@ export default {
     if (isMain()) startOwnerSampler();
   },
   onShutdown: async () => {
-    if (isMain()) stopOwnerSampler();
+    // The sampler's tick in flight measures through the worker: let it finish
+    // first, so a stop never fails it (reported as a crash, 2026-11-25..27).
+    if (isMain()) await stopOwnerSampler();
     await stopForkMemoryWorker();
   },
 } satisfies MachinePluginDefinition;

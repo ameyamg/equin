@@ -53,7 +53,5 @@ export default {
   onReady: () => {
     startQueueHealthWatchdog();
   },
-  onShutdown: () => {
-    stopQueueHealthWatchdog();
-  },
+  onShutdown: () => stopQueueHealthWatchdog(),
 } satisfies MachinePluginDefinition;

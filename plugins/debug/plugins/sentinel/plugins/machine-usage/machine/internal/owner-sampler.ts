@@ -168,6 +168,8 @@ export function startOwnerSampler(): void {
   ownerSamplerTimer.start();
 }
 
-export function stopOwnerSampler(): void {
+/** Settles once the tick in flight (if any) has finished. */
+export function stopOwnerSampler(): Promise<void> {
   ownerSamplerTimer.stop();
+  return ownerSamplerTimer.settled();
 }

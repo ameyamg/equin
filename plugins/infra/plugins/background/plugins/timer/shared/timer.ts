@@ -48,8 +48,16 @@ export interface Timer {
    * without appearing in the catalog) or if its runtime says it must not run
    * here. Idempotent while running. */
   start(): void;
-  /** Stop ticking (idempotent). A tick in flight finishes. */
+  /** Stop ticking (idempotent). A tick in flight finishes: see `settled`. */
   stop(): void;
+  /**
+   * Settles once no tick is in flight (each recorded). After `stop()`, await
+   * it before tearing down what the ticks use (a worker, a pool), so no tick
+   * outlives it and fails a shutdown as a crash. A tick that failed is still
+   * surfaced (the runtime's `onFailure`), never absorbed by the wait. Never
+   * await it from inside a tick: it would wait on itself.
+   */
+  settled(): Promise<void>;
   /** Whether it is ticking. */
   readonly running: boolean;
 }
@@ -77,6 +85,8 @@ interface TimerState {
   declaredIn: string | null;
   handle: ReturnType<typeof setInterval> | null;
   inFlightSince: Date | null;
+  /** One per tick in flight: resolves once it is recorded, never rejects. */
+  inFlight: Set<Promise<void>>;
   /** Newest first, at most RECENT_RUNS_MAX. */
   ring: BackgroundRun[];
   runs: number;
@@ -103,6 +113,7 @@ export function defineTimerIn(spec: TimerSpec, runtime: TimerRuntime): Timer {
     declaredIn: null,
     handle: null,
     inFlightSince: null,
+    inFlight: new Set(),
     ring: [],
     runs: 0,
     failures: 0,
@@ -111,6 +122,9 @@ export function defineTimerIn(spec: TimerSpec, runtime: TimerRuntime): Timer {
   };
 
   const tick = async (): Promise<void> => {
+    let recorded!: () => void;
+    const done = new Promise<void>((resolve) => (recorded = resolve));
+    state.inFlight.add(done);
     const startedAt = new Date();
     const t0 = performance.now();
     state.inFlightSince = startedAt;
@@ -130,6 +144,8 @@ export function defineTimerIn(spec: TimerSpec, runtime: TimerRuntime): Timer {
       durationMs: Math.round((performance.now() - t0) * 10) / 10,
       error: failed ? errorText(error) : null,
     });
+    state.inFlight.delete(done);
+    recorded();
     if (failed) runtime.onFailure(spec.name, error);
   };
 
@@ -178,6 +194,10 @@ export function defineTimerIn(spec: TimerSpec, runtime: TimerRuntime): Timer {
       clearInterval(state.handle);
       state.handle = null;
       runtime.changed(spec.name);
+    },
+    async settled() {
+      // Resolve-only, so a failed tick's rejection stays the runtime's.
+      await Promise.all([...state.inFlight]);
     },
     get running() {
       return state.handle !== null;

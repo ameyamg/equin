@@ -106,6 +106,7 @@ export async function startOpStore(): Promise<void> {
 export async function stopOpStore(): Promise<void> {
   if (!watcher) return;
   deadOpSweepTimer.stop();
+  await deadOpSweepTimer.settled();
   await watcher.stop();
   watcher = null;
 }

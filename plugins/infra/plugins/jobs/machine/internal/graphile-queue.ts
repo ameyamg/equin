@@ -334,7 +334,8 @@ export const graphileQueue: JobQueueImpl = {
   schedule: installScheduledCronItems,
   refreshSchedules: refreshJobSchedules,
   async stop() {
-    stopStuckLockSweeper();
+    // Its sweep in flight reads the queue the workers' stop tears down.
+    await stopStuckLockSweeper();
     await stopWorkers();
   },
 };

@@ -100,8 +100,9 @@ export function startStuckLockSweeper(): void {
   stuckLockSweeperTimer.start();
 }
 
-export function stopStuckLockSweeper(): void {
+export function stopStuckLockSweeper(): Promise<void> {
   stuckLockSweeperTimer.stop();
+  return stuckLockSweeperTimer.settled();
 }
 
 const ReclaimedRowSchema = z.object({

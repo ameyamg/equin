@@ -16,7 +16,5 @@ export default {
   onReady: () => {
     startStuckSpanWatchdog();
   },
-  onShutdown: () => {
-    stopStuckSpanWatchdog();
-  },
+  onShutdown: () => stopStuckSpanWatchdog(),
 } satisfies ServerPluginDefinition;
