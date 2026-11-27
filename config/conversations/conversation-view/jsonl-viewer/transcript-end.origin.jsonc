@@ -1,4 +1,4 @@
-// @hash e9657cafbeb2
+// @hash df900c96699c
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "tasks.decisions.tray:decisions",
-    "tasks.outcome-report:outcome-report"
+    "tasks.decisions.tray:decisions"
   ]
 }

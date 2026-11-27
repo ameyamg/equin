@@ -949,7 +949,6 @@
   {"list":"conversations.conversation-view.jsonl-viewer.tool-call.renderer","plugin":"conversations.conversation-view.jsonl-viewer.tool-call.write","fact":{"component":{"$code":true},"icon":{"kind":"symbol","name":"edit"},"match":"Write"}},
   {"list":"conversations.conversation-view.jsonl-viewer.tool-call.workflow.workflow-node.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"conversations.conversation-view.jsonl-viewer.transcript-end","plugin":"tasks.decisions.tray","fact":{"component":{"$code":true},"id":"decisions"}},
-  {"list":"conversations.conversation-view.jsonl-viewer.transcript-end","plugin":"tasks.outcome-report","fact":{"component":{"$code":true},"id":"outcome-report"}},
   {"list":"conversations.conversation-view.jsonl-viewer.transcript-stats.item","plugin":"conversations.conversation-view.jsonl-viewer.transcript-stats.context","fact":{"component":{"$code":true},"id":"context"}},
   {"list":"conversations.conversation-view.jsonl-viewer.transcript-stats.item","plugin":"conversations.conversation-view.jsonl-viewer.transcript-stats.cost","fact":{"component":{"$code":true},"id":"cost"}},
   {"list":"conversations.conversation-view.jsonl-viewer.transcript-stats.item","plugin":"conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget","fact":{"component":{"$code":true},"id":"token-budget"}},

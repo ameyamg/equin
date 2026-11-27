@@ -1,4 +1,4 @@
-// @hash e9657cafbeb2
+// @hash df900c96699c
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -14,7 +14,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "tasks.outcome-report:outcome-report",
     // What the agent asked the user and waits on: last, nearest the composer,
     // but scrolling with the transcript so an open tray never hides it.
     "tasks.decisions.tray:decisions"

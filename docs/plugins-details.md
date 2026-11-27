@@ -21097,13 +21097,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.ContextRole`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 59 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 58 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
               - `JsonlViewer.EventRenderer` ×18
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPrompt` ×2
-              - `JsonlViewer.TranscriptEnd` ×2
+              - `JsonlViewer.TranscriptEnd` ← `tasks.decisions.tray`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
@@ -21248,12 +21248,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --measure-reading`
-            - Imported by: 54 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations` ×49
-              - `tasks` ×2
               - `active-data/plugin-link`
               - `apps/places/places-map`
               - `network/live`
+              - `tasks/decisions/tray`
           - Exemptions:
             - Exempts itself from:
               - `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
@@ -54201,11 +54201,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --pad-card`
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
               - `apps` ×14
-              - `tasks` ×4
               - `page` ×3
               - `primitives` ×3
+              - `tasks` ×3
               - `conversations` ×2
               - `debug` ×2
               - `active-data/task`
@@ -68196,20 +68196,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/watch`
                   - `tasks/supervisor-roles/sessions`
-    - **`outcome-report`** — The outcome report a supervisor's worker or an automation's run handed back (its last message of the run, captured at the turn's end): a card at the end of the transcript of the conversation that handed it back (scrolling with it, not pinned over it) — markdown body and pushed / branch-waiting / no-changes standing — and OutcomeReportDetail, the same report shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports: owns tasks_ext_outcome_report (one report per task — the agent's last message of the run it handed back, markdown, and the attempt's git-measured standing) and outcome_report_turn_addressees (whom an agent said its latest turn is for, `user` or `supervisor`), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a hand-back emits. The hand-back at the turn's end, the turn_for MCP tool and its stop gate, the question bell and the watch sources are the machine half.
+    - **`outcome-report`** — The outcome report a supervisor's worker or an automation's run handed back (its last message of the run, captured at the turn's end): OutcomeReportDetail — its markdown body and pushed / branch-waiting / no-changes standing — shown in an expanded row of an automation's History (Automations.TaskDetail). Not drawn in the conversation itself: the report is its last message, already shown just above. Outcome reports: owns tasks_ext_outcome_report (one report per task — the agent's last message of the run it handed back, markdown, and the attempt's git-measured standing) and outcome_report_turn_addressees (whom an agent said its latest turn is for, `user` or `supervisor`), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a hand-back emits. The hand-back at the turn's end, the turn_for MCP tool and its stop gate, the question bell and the watch sources are the machine half.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "agent-instructions"
-          - `JsonlViewer.TranscriptEnd` "outcome-report" → `OutcomeReportCard`
           - `Automations.TaskDetail` → `OutcomeReportDetail`
         - Uses:
           - `config_v2.ConfigV2`
-          - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
           - `network/live.useLive`
           - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/badge.Badge`
           - `primitives/css/badge.BadgeVariant`
-          - `primitives/css/card.Card`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/expandable.Expandable`
