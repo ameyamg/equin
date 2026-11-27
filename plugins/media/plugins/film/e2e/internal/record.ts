@@ -111,10 +111,12 @@ export interface Recorder {
     },
   ): Promise<void>;
   /**
-   * Move to a target (one gesture, see `move`), rest a beat, press, release.
-   * `modifiers` are held through the click (a ⌘-click): pressed once the hand
-   * has arrived, at the start of the beat, released a beat after the button
-   * — logged on the click (`modifiers`), so a film can show the keys.
+   * Move to a target and click it, as ONE gesture: the press follows the
+   * arrival at once (`dwell`, default two frames) — never move, stop, then
+   * click; a script pauses only after a result appears. `modifiers` are held
+   * through the click (a ⌘-click): pressed while the hand is still on its
+   * way, released a beat after the button — logged on the click
+   * (`modifiers`), so a film can show the keys.
    * `ControlOrMeta` is ⌘ on macOS and Ctrl elsewhere, as Playwright's.
    */
   click(
@@ -582,6 +584,66 @@ export async function record(
     await page.mouse.move(cx, cy);
   };
 
+  /**
+   * The hand's glide behind `move` and `click`: ONE eased gesture to a
+   * target. `onFrame(left)` runs on each frame before it is captured, with
+   * the page seconds of the glide still to go (a click presses its modifier
+   * keys from it, on the way in).
+   */
+  const glide = async (
+    target: RecTarget,
+    o: {
+      duration?: number;
+      arc?: number;
+      via?: readonly Point[];
+      profile?: MoveProfile;
+    },
+    onFrame?: (left: number) => Promise<void>,
+  ): Promise<void> => {
+    // An element target is re-aimed every frame: the page keeps moving
+    // while the hand travels (a popover sliding into place, a bar
+    // collapsing), and a hand follows what it reaches for. Aimed once, the
+    // pointer lands where the element WAS — outside a popover that has
+    // since moved on, which dismisses it.
+    const tracked = !isPoint(target);
+    let to = await pointOf(target);
+    const fx = cx;
+    const fy = cy;
+    const via = o.via ?? [];
+    assertOneGesture([{ x: fx, y: fy }, ...via, to]);
+    // The path's length (through its waypoints): what sets its duration.
+    const legs = [{ x: fx, y: fy }, ...via, to];
+    let dist = 0;
+    for (let i = 1; i < legs.length; i++)
+      dist += Math.hypot(
+        legs[i]!.x - legs[i - 1]!.x,
+        legs[i]!.y - legs[i - 1]!.y,
+      );
+    if (dist < 0.5 && !tracked) return;
+    const duration =
+      o.duration ?? Math.min(1.1, Math.max(0.35, 0.4 + dist / 2200));
+    const n = dist < 0.5 ? 0 : framesFor(duration);
+    for (let i = 1; i <= n; i++) {
+      if (tracked && i > 1) to = await pointOf(target);
+      const profile = o.profile ?? "ease";
+      const u = progressAt(profile, i / n);
+      const p =
+        via.length > 0
+          ? pathAt([{ x: fx, y: fy }, ...via, to], u)
+          : bowed({ x: fx, y: fy }, to, u, o.arc ?? 0.06);
+      if (profile === "performed" && dist >= 0.5) {
+        // Sideways to the straight line from start to target.
+        const w = waver(i / n, dist);
+        p.x += (-(to.y - fy) / dist) * w;
+        p.y += ((to.x - fx) / dist) * w;
+      }
+      cx = p.x;
+      cy = p.y;
+      await page.mouse.move(cx, cy);
+      if (onFrame) await onFrame(((n - i) / fps) * rate);
+      await capture();
+    }
+  };
   const rec: Recorder = {
     page,
     get t() {
@@ -605,51 +667,9 @@ export async function record(
       (log.rate ??= []).push([tNow(), to]);
     },
     async move(target, o = {}) {
-      // An element target is re-aimed every frame: the page keeps moving
-      // while the hand travels (a popover sliding into place, a bar
-      // collapsing), and a hand follows what it reaches for. Aimed once, the
-      // pointer lands where the element WAS — outside a popover that has
-      // since moved on, which dismisses it.
-      const tracked = !isPoint(target);
-      let to = await pointOf(target);
-      const fx = cx;
-      const fy = cy;
-      const via = o.via ?? [];
-      assertOneGesture([{ x: fx, y: fy }, ...via, to]);
-      // The path's length (through its waypoints): what sets its duration.
-      const legs = [{ x: fx, y: fy }, ...via, to];
-      let dist = 0;
-      for (let i = 1; i < legs.length; i++)
-        dist += Math.hypot(
-          legs[i]!.x - legs[i - 1]!.x,
-          legs[i]!.y - legs[i - 1]!.y,
-        );
-      if (dist < 0.5 && !tracked) return;
-      const duration =
-        o.duration ?? Math.min(1.1, Math.max(0.35, 0.4 + dist / 2200));
-      const n = dist < 0.5 ? 0 : framesFor(duration);
-      for (let i = 1; i <= n; i++) {
-        if (tracked && i > 1) to = await pointOf(target);
-        const profile = o.profile ?? "ease";
-        const u = progressAt(profile, i / n);
-        const p =
-          via.length > 0
-            ? pathAt([{ x: fx, y: fy }, ...via, to], u)
-            : bowed({ x: fx, y: fy }, to, u, o.arc ?? 0.06);
-        if (profile === "performed" && dist >= 0.5) {
-          // Sideways to the straight line from start to target.
-          const w = waver(i / n, dist);
-          p.x += (-(to.y - fy) / dist) * w;
-          p.y += ((to.x - fx) / dist) * w;
-        }
-        cx = p.x;
-        cy = p.y;
-        await page.mouse.move(cx, cy);
-        await capture();
-      }
+      await glide(target, o);
     },
     async click(target, o = {}) {
-      await rec.move(target, { duration: o.duration, via: o.via });
       // Each key once: ["Meta", "ControlOrMeta"] is one ⌘ on macOS.
       const keys = [
         ...new Set(
@@ -662,26 +682,54 @@ export async function record(
           ),
         ),
       ];
-      // The keys go down as the hand arrives: the beat before the press is
-      // also the beat they are seen held.
-      const downAt = tNow();
-      for (const k of keys) await page.keyboard.down(k);
-      // The beat before the press, still on target if it moves.
-      const dwell = Math.round(
-        (((o.dwell ?? 0.12) + (keys.length ? MODIFIER_LEAD : 0)) * fps) / rate,
-      );
-      for (let i = 0; i < dwell; i++) {
+      // One gesture: the keys go down while the hand is still on its way
+      // (MODIFIER_LEAD before it arrives, so they are seen held), and the
+      // press follows the arrival at once — a click is never move, stop,
+      // then click.
+      let downAt: number | null = null;
+      const pressKeys = async () => {
+        if (downAt !== null || keys.length === 0) return;
+        downAt = tNow();
+        for (const k of keys) await page.keyboard.down(k);
+      };
+      let t: number;
+      let upAt: number;
+      try {
+        await glide(
+          target,
+          { duration: o.duration, via: o.via },
+          async (left) => {
+            if (left <= MODIFIER_LEAD) await pressKeys();
+          },
+        );
+        await pressKeys();
+        // The beat before the press, still on target if it moves — at least
+        // MODIFIER_LEAD after the keys went down, so they are seen held even
+        // when the glide was shorter than that (the hand already there).
+        const dwellS = Math.max(
+          o.dwell ?? CLICK_DWELL,
+          downAt === null ? 0 : MODIFIER_LEAD - (tNow() - downAt),
+        );
+        const dwell = Math.round((dwellS * fps) / rate);
+        for (let i = 0; i < dwell; i++) {
+          await aim(target);
+          await capture();
+        }
         await aim(target);
-        await capture();
+        t = tNow();
+        await page.mouse.down();
+        const n = framesFor(o.press ?? 0.07);
+        for (let i = 0; i < n; i++) await capture();
+        upAt = tNow();
+        await page.mouse.up();
+      } catch (err) {
+        // Never leave a modifier held on the page (an attached session
+        // goes on with it).
+        if (downAt !== null)
+          for (const k of [...keys].reverse()) await page.keyboard.up(k);
+        throw err;
       }
-      await aim(target);
-      const t = tNow();
-      await page.mouse.down();
-      const n = framesFor(o.press ?? 0.07);
-      for (let i = 0; i < n; i++) await capture();
-      const upAt = tNow();
-      await page.mouse.up();
-      if (keys.length === 0) {
+      if (keys.length === 0 || downAt === null) {
         log.clicks.push({ t, upAt, x: round(cx), y: round(cy) });
         await capture();
         return;
@@ -969,8 +1017,15 @@ interface FrameTiming {
   shot: number;
 }
 
-/** How long (page s) a click's modifier keys are held before the press and after the release. */
+/** How long (page s) a click's modifier keys are held before the press (pressed while the hand is still on its way) and after the release. */
 const MODIFIER_LEAD = 0.25;
+
+/**
+ * A click's default beat between arriving and pressing (page s): two frames,
+ * so the press reads as the end of the reach — a confident hand does not
+ * stop on a target before clicking it.
+ */
+const CLICK_DWELL = 0.03;
 
 /** How many frames a move / click waits for its element target to appear. */
 const APPEAR_FRAMES = 300;

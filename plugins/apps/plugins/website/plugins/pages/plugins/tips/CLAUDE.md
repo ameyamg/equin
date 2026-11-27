@@ -91,9 +91,14 @@ Steps:
      tooltip (the model pill is `[aria-haspopup="menu"]` with text "Opus").
    The kit adds 0.6 s still before the script and 0.9 s after it (and waits
    for the last camera move), under the fades.
-4. Pacing: a fluent user's. Every `hold` is there for a reason (the viewer
-   reads, a menu opens); zoom on what the tip is about while it happens, and
-   pull back once the result is worth seeing whole. Aim for 8–15 s.
+4. Pacing: a fluent user's. `r.click(target)` is the whole gesture (the
+   hand travels and presses on arrival): never `move` + `hold` + `click`.
+   Go straight to what the hand acts on — never `move` onto something it
+   does not click on the way (a row before its Edit button: the button is
+   reachable directly, hovering it hovers the row). A `hold` comes only
+   after a result appears, just long enough to read it. Zoom on what the
+   tip is about while it happens, and pull back once the result is worth
+   seeing whole. Aim for 8–15 s.
 5. Record and review a preview (640×360) and stills, then the full render:
    ```bash
    T=plugins/apps/plugins/website/plugins/pages/plugins/tips/e2e/<slug>.ts

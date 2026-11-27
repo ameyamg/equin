@@ -123,8 +123,13 @@ whichever page renders it. So any split gives the same pictures.
   duration the script gives (holds, moves, scrolls, a click's dwell) is page
   time, so the page, the camera and the hand slow together, still one fresh
   frame per 1/fps — never a repeated frame. Logged as `input.rate`.
+- **A click is one gesture.** `click` presses as the hand arrives (a
+  two-frame `dwell` by default): move, stop, then click reads as hesitation.
+  Click a target directly — no `move` + `hold` before it; pause after a
+  result appears.
 - **A ⌘-click shows its key.** `click(target, { modifiers: ["ControlOrMeta"] })`
-  holds the keys from the hand's arrival to a beat after the release, logged
+  holds the keys from the last stretch of the hand's approach to a beat after
+  the release, logged
   on the click (`clicks[].modifiers`); `recordedKeyCaps` draws them as key caps
   riding beside the pointer (beside `recordedCursor`, same parent).
 - **`settledBox`** is `settledRect`'s box for an element in no scroller (a
