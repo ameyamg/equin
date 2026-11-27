@@ -435,6 +435,8 @@ export const browserHost = {
     "fields.enum.table",
     "fields.float",
     "fields.float.config",
+    "fields.formatted-text",
+    "fields.formatted-text.config",
     "fields.icon",
     "fields.icon.config",
     "fields.identifier",

@@ -6,6 +6,7 @@ import {
 } from "@plugins/fields/core";
 import { secretFieldType } from "@plugins/fields/plugins/secret/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { FormattedText } from "@plugins/fields/plugins/formatted-text/core";
 
 /** A target id: lowercase, URL- and SQL-safe, short. */
 export const SYNDICATION_TARGET_ID_PATTERN = /^[a-z][a-z0-9-]{0,31}$/;
@@ -73,15 +74,17 @@ export interface SyndicatedMedia {
 /**
  * One feed item as a post elsewhere — structured, so each target formats it
  * its own way (a chat's markdown, a plain-text network): the feed's first
- * `syndicate.text` field as `title` (null when empty), the others as
- * `paragraphs` (empty ones dropped), the `syndicate.media` field's files, and
- * the page showing the feed on the item's primary copy of the site — the
+ * `syndicate.text` field as `title` (plain, null when empty), the others as
+ * `paragraphs` (empty ones dropped) — each a `FormattedText` (bold, key caps,
+ * links: a formatted-text field's markup read, any other field's text one
+ * plain run) the target writes in its own format; the `syndicate.media`
+ * field's files; and the page showing the feed on the item's primary copy of the site — the
  * first deployment this instance publishes to, else this instance (null: that
  * copy has no address for it).
  */
 export interface SyndicatedPost {
   readonly title: string | null;
-  readonly paragraphs: readonly string[];
+  readonly paragraphs: readonly FormattedText[];
   readonly media: readonly SyndicatedMedia[];
   readonly url: string | null;
 }

@@ -16,8 +16,15 @@ own, so a plan that fits here fits there.
 
 ## A message (machine)
 
-- `content` (`discordContent`): the title in **bold** (its `*` escaped), then
-  each paragraph, then the post's `url` (the feed's page on the item's primary
+- `content` (`discordContent`): the title in **bold** (escaped), then each
+  paragraph in Discord markdown (`discordFormatted`: a formatted text's bold
+  stays `**bold**`, a key cap becomes `` `inline code` ``, a link a masked
+  link `[text](<url>)` — a site path resolved against the post's `url`, its
+  text alone without one, a mail link its text and the address (Discord
+  masks web links only); a key holding backticks fenced by a longer run;
+  plain text escaped by `discordEscape`, so a `*` or `_` in a tip never
+  formats — except inside a bare web address, which Discord links as
+  written), then the post's `url` (the feed's page on the item's primary
   copy of the site) in angle brackets — so no preview card covers the
   attached files — blank lines between; ≤ 2000 characters, else refused
   before anything is sent. `allowed_mentions: { parse: [] }`: a tip never pings.

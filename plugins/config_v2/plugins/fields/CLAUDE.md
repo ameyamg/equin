@@ -76,9 +76,9 @@ the config-only templates to mirror.
   - Slots:
     - `Fields.Renderer`
     - `Fields.Sample`
-  - Slot contributors: 42 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Renderer` ×21
-    - `Fields.Sample` ×21
+  - Slot contributors: 44 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Renderer` ×22
+    - `Fields.Sample` ×22
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/control-panel` ×8
     - `primitives/css/ui-kit` ×3
@@ -110,8 +110,8 @@ the config-only templates to mirror.
     - `useNumberFit`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×22
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×23
     - `apps` ×7
     - `config_v2/settings`
     - `primitives/data-view/view-core`

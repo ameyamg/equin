@@ -21,7 +21,7 @@ const fakeDecl = defineSyndicationTarget({
 
 const POST: SyndicatedPost = {
   title: "A tip",
-  paragraphs: ["Body"],
+  paragraphs: [[{ kind: "text", text: "Body" }]],
   media: [],
   url: "https://example.com/tips",
 };

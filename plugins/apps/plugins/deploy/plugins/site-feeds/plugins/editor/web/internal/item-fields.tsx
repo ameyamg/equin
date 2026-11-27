@@ -5,14 +5,23 @@ import {
   MediaRefSchema,
   mediaFieldType,
 } from "@plugins/fields/plugins/media/core";
+import {
+  formattedPlainText,
+  formattedTextFieldType,
+  parseFormattedText,
+} from "@plugins/fields/plugins/formatted-text/core";
 import type { SiteFeedDecl } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
 import type { SiteFeedItemRow } from "../../core";
 import { SiteFeedEditor } from "../slots";
 import { ItemPublicationChips } from "../components/destinations";
 
-/** A text value's first line, for a one-line cell. */
-function firstLine(value: unknown): string {
-  return typeof value === "string" ? (value.split(/\r?\n/, 1)[0] ?? "") : "";
+/** A text value's first line, for a one-line cell — a formatted text's as it reads, its markup dropped. */
+function firstLine(value: unknown, formatted: boolean): string {
+  if (typeof value !== "string") return "";
+  const text = formatted
+    ? formattedPlainText(parseFormattedText(value))
+    : value;
+  return text.split(/\r?\n/, 1)[0] ?? "";
 }
 
 /**
@@ -47,15 +56,16 @@ export function feedItemFields(
     // A defaultless field throws on `defaultValue`; it holds no text either way here.
     if (field.defaultless === true || typeof field.defaultValue !== "string")
       continue;
+    const formatted = field.type.id === formattedTextFieldType.id;
     const primary = !titled;
     titled = true;
     fields.push({
       id,
       label,
       type: "text",
-      value: (row) => firstLine(row.values[key]),
+      value: (row) => firstLine(row.values[key], formatted),
       cell: (row) => {
-        const text = firstLine(row.values[key]);
+        const text = firstLine(row.values[key], formatted);
         return text === "" ? (
           <Text tone="faint">{primary ? "Untitled" : ""}</Text>
         ) : (

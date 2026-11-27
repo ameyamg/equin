@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-fields-formatted-text-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Formatted text field type: config-render capability (a textarea with the syntax and a live preview) plus the formattedTextField factory."
+}

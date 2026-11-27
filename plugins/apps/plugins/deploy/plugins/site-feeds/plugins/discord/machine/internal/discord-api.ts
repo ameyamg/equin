@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  formattedPlainText,
+  type FormattedText,
+} from "@plugins/fields/plugins/formatted-text/core";
 import type { DiscordWebhook } from "../../core";
 
 /** Discord's API root the calls are made on (whatever spelling the webhook URL had). */
@@ -67,22 +71,101 @@ export function parseWebhookInfo(
     : null;
 }
 
+/** A web address in plain text: Discord links it as written, so it is never escaped. */
+const BARE_URL = /https?:\/\/\S+/g;
+
 /**
- * A post's text as one message: the title in bold (its asterisks escaped, so
- * it cannot close the bold early), then each paragraph, blank lines between,
- * then the link to the feed's page on the site — in angle brackets, so
- * Discord shows no preview card over the attached files.
+ * Plain text in a Discord message, read literally: every character Discord's
+ * markdown reads inline (backslash, `* _ ~ | [ ]` and the backtick) escaped,
+ * and the ones it reads at a line's start (a quote `>`, a heading `#`, a list
+ * `-` or `1.`) too — except inside a bare web address, which Discord links
+ * with any backslash in it (so `a_b` in a URL stays `a_b`).
+ */
+export function discordEscape(text: string): string {
+  let out = "";
+  let at = 0;
+  for (const m of text.matchAll(BARE_URL)) {
+    out += escapeInline(text.slice(at, m.index)) + m[0];
+    at = m.index + m[0].length;
+  }
+  out += escapeInline(text.slice(at));
+  return out.replace(
+    /^([ \t]*)([>#-]|\d+(?=\.))/gm,
+    (_, pad: string, mark: string) =>
+      /^\d/.test(mark) ? `${pad}${mark}\\` : `${pad}\\${mark}`,
+  );
+}
+
+function escapeInline(text: string): string {
+  return text.replace(/[\\*_~`|[\]]/g, "\\$&");
+}
+
+/**
+ * A key cap as inline code, fenced by one more backtick than the longest run
+ * of backticks in it (padded with spaces when it holds any), so no key closes
+ * its own fence.
+ */
+function discordKey(key: string): string {
+  const longest = Math.max(0, ...(key.match(/`+/g) ?? []).map((r) => r.length));
+  const fence = "`".repeat(longest + 1);
+  return longest === 0 ? `${fence}${key}${fence}` : `${fence} ${key} ${fence}`;
+}
+
+/**
+ * A formatted text as Discord markdown: bold stays bold, a key cap becomes
+ * inline code, a web link a masked link (`[text](<url>)`, no preview card) —
+ * a site path resolved against `base` (the post's page), or its text alone
+ * with no page to resolve it against. Discord masks web links only, so a mail
+ * link is its text and the address after it.
+ */
+export function discordFormatted(
+  text: FormattedText,
+  base: string | null = null,
+): string {
+  return text
+    .map((n) => {
+      switch (n.kind) {
+        case "text":
+          return discordEscape(n.text);
+        case "key":
+          return discordKey(n.text);
+        case "strong":
+          return `**${discordFormatted(n.children, base)}**`;
+        case "link": {
+          const label = discordFormatted(n.children, base);
+          if (n.href.startsWith("mailto:")) {
+            const address = n.href.slice("mailto:".length);
+            return formattedPlainText(n.children) === address
+              ? discordEscape(address)
+              : `${label} (${discordEscape(address)})`;
+          }
+          if (!n.href.startsWith("/")) return `[${label}](<${n.href}>)`;
+          return base === null
+            ? label
+            : `[${label}](<${new URL(n.href, base).href}>)`;
+        }
+      }
+    })
+    .join("");
+}
+
+/**
+ * A post's text as one message: the title in bold (escaped, so it cannot
+ * close the bold early or format), then each paragraph in Discord markdown
+ * (`discordFormatted`), blank lines between, then the link to the feed's page
+ * on the site — in angle brackets, so Discord shows no preview card over the
+ * attached files.
  */
 export function discordContent(text: {
   title: string | null;
-  paragraphs: readonly string[];
+  paragraphs: readonly FormattedText[];
   url?: string | null;
 }): string {
+  const url = text.url ?? null;
   const parts: string[] = [];
-  if (text.title !== null)
-    parts.push(`**${text.title.replace(/\*/g, "\\*")}**`);
-  parts.push(...text.paragraphs);
-  if (text.url !== undefined && text.url !== null) parts.push(`<${text.url}>`);
+  if (text.title !== null) parts.push(`**${discordEscape(text.title)}**`);
+  parts.push(...text.paragraphs.map((p) => discordFormatted(p, url)));
+  if (url !== null) parts.push(`<${url}>`);
   return parts.join("\n\n");
 }
 

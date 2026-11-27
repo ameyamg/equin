@@ -3,7 +3,9 @@
 Tips of the day on equin.ai — the ONLY code that knows what a tip is. The
 machinery is generic: [`apps/deploy/site-feeds`](../../../../../deploy/plugins/site-feeds/CLAUDE.md).
 
-- `core` — `tipsFeed`: a title (`textField`), the text (`multilineTextField`)
+- `core` — `tipsFeed`: a title (`textField`), the text (`formattedTextField`:
+  `**bold**` for a button's name, `<kbd>⌘</kbd>` key caps, links, line breaks —
+  [`fields/formatted-text`](../../../../../../../fields/plugins/formatted-text/CLAUDE.md))
   and up to 10 screenshots and videos (`mediaField`, `image/*` + `video/*`,
   500 MB a file); syndicated as title + text with the media as files; the
   newest 60 are public; `pagePath: "/tips"` on a deployed site,
@@ -16,11 +18,16 @@ machinery is generic: [`apps/deploy/site-feeds`](../../../../../deploy/plugins/s
   (built like `pages/story`: `actions: WebsiteHeader`, a `websitePagePart`
   body) and its `Website.LearnEntry` "Tips", after Story
   (`config/apps/website/shell/learn-entry.jsonc`). The page: the
-  `WebsiteHero`, then one card per tip, newest first — its date, title, text
-  (line breaks kept), then each image (`<img>`, its pixel size reserved when
+  `WebsiteHero`, then one card per tip, newest first (`TipCard`) — its date,
+  title, text (`FormattedTextView`), then each image (`<img>`, its pixel size reserved when
   known) and video (`MediaPlayer`, `autoPlay="in-view"` + `silent`: looping while on screen, always muted, no volume controls), loaded from the
   box's public media route. Loading and a failed read are shown; no tip
   published → a line saying so. **The homepage is not touched.**
+- `TipCard({ entry, ref?, onMediaOpen? })` (exported) — one tip as the page
+  draws it, presentation only: the page wraps it with its analytics
+  (`tip_seen` on the card's ref, `tip_media_open` on a screenshot opened), so
+  any other surface showing a tip as it will read (a proposed edit's
+  before/after) draws the same card without measuring anything.
 
 Tests: `core/internal/tips-feed.test.ts`, `web/__tests__/pane-route.test.ts`.
 End to end: `apps/deploy/site-feeds/editor`'s `e2e/publish-roundtrip.ts`
@@ -37,13 +44,14 @@ End to end: `apps/deploy/site-feeds/editor`'s `e2e/publish-roundtrip.ts`
     - `SiteFeeds.Feed` "tips"
     - `Pane.Register` "website-tips"
     - `Website.LearnEntry` "Tips" → `TipsNavItem`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×7
     - `apps/deploy/site-feeds/box` ×4
     - `primitives/pane` ×3
     - `apps/deploy/analytics/collect` ×2
     - `primitives/overlay/image-viewer` ×2
     - `fields/date/format.useDateFormatter`
+    - `fields/formatted-text.FormattedTextView`
     - `infra/endpoints.useAssetSrc`
     - `media/player.MediaPlayer`
     - `network/live/live-state.ResourceErrorInline`
@@ -55,6 +63,7 @@ End to end: `apps/deploy/site-feeds/editor`'s `e2e/publish-roundtrip.ts`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values):
+    - `TipCard`
     - `TipsBulb`
     - `tipsPane`
 - Server:
@@ -68,8 +77,8 @@ End to end: `apps/deploy/site-feeds/editor`'s `e2e/publish-roundtrip.ts`
   - Uses:
     - `apps/deploy/site-feeds.defineSiteFeed`
     - `apps/website/crawlable.defineWebsitePage`
+    - `fields/formatted-text/config.formattedTextField`
     - `fields/media.mediaField`
-    - `fields/multiline-text/config.multilineTextField`
     - `fields/text/config.textField`
   - Exports (types): `TipsFeed`
   - Exports (values):

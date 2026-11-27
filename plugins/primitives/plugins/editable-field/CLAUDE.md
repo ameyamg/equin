@@ -163,6 +163,7 @@ self-echo behavior that must keep holding.
     - `apps/pages/page-tree`
     - `apps/sonata/library`
     - `conversations/agents`
+    - `fields/formatted-text/config`
     - `fields/multiline-text/config`
     - `fields/text/config`
     - `primitives/side-note`

@@ -4299,27 +4299,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `POST /api/deploy/site-feeds/syndication/retry`
                   - `POST /api/deploy/site-feeds/syndication/test`
               - Core:
-                - Uses:
+                - Uses: 25 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-feeds/plugins/syndication/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-feeds/plugins/syndication/REFERENCE.md)
+                  - `fields/formatted-text` ×5
+                  - `fields` ×5
+                  - `network/live` ×3
+                  - `fields/media` ×2
+                  - `fields/text/config` ×2
+                  - `packages/list-bound` ×2
                   - `apps/deploy/site-feeds.siteFeedEntryIdKind`
-                  - `fields.FieldOptionMeta`
-                  - `fields.FieldsRecord`
-                  - `fields.fieldsToZodObject`
-                  - `fields.InferFieldsObject`
-                  - `fields.nullable`
                   - `fields/date/config.dateField`
-                  - `fields/media.MediaRef`
-                  - `fields/media.MediaRefSchema`
                   - `fields/secret.secretFieldType`
-                  - `fields/text/config.enumTextField`
-                  - `fields/text/config.textField`
                   - `ids.idKindField`
                   - `infra/entities.entityRef`
-                  - `network/live.liveCollection`
-                  - `network/live.LiveRowsCollection`
-                  - `network/live.liveValue`
                   - `network/live/query-resource.compositeKey`
-                  - `packages/list-bound.cappedRecord`
-                  - `packages/list-bound.wholeRecord`
                 - Exports (types):
                   - `SiteFeedSyndicationRow`
                   - `SyndicatedMedia`
@@ -14667,13 +14659,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteFeeds.Feed` "tips"
                   - `Pane.Register` "website-tips"
                   - `Website.LearnEntry` "Tips" → `TipsNavItem`
-                - Uses: 29 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md)
+                - Uses: 30 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/tips/REFERENCE.md)
                   - `apps/website/shell` ×7
                   - `apps/deploy/site-feeds/box` ×4
                   - `primitives/pane` ×3
                   - `apps/deploy/analytics/collect` ×2
                   - `primitives/overlay/image-viewer` ×2
                   - `fields/date/format.useDateFormatter`
+                  - `fields/formatted-text.FormattedTextView`
                   - `infra/endpoints.useAssetSrc`
                   - `media/player.MediaPlayer`
                   - `network/live/live-state.ResourceErrorInline`
@@ -14685,6 +14678,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/loading.Loading`
                   - `ui/icons.Icon`
                 - Exports (values):
+                  - `TipCard`
                   - `TipsBulb`
                   - `tipsPane`
               - Server:
@@ -14698,8 +14692,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/deploy/site-feeds.defineSiteFeed`
                   - `apps/website/crawlable.defineWebsitePage`
+                  - `fields/formatted-text/config.formattedTextField`
                   - `fields/media.mediaField`
-                  - `fields/multiline-text/config.multilineTextField`
                   - `fields/text/config.textField`
                 - Exports (types): `TipsFeed`
                 - Exports (values):
@@ -18777,9 +18771,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Fields.Renderer`
           - `Fields.Sample`
-        - Slot contributors: 42 contributors — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
-          - `Fields.Renderer` ×21
-          - `Fields.Sample` ×21
+        - Slot contributors: 44 contributors — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
+          - `Fields.Renderer` ×22
+          - `Fields.Sample` ×22
         - Uses: 23 symbols — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
           - `primitives/css/control-panel` ×8
           - `primitives/css/ui-kit` ×3
@@ -18811,8 +18805,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNumberFit`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 31 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
-          - `fields` ×22
+        - Imported by: 32 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
+          - `fields` ×23
           - `apps` ×7
           - `config_v2/settings`
           - `primitives/data-view/view-core`
@@ -31414,12 +31408,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
   - Web:
     - Slots: `Fields.Identity`
-    - Slot contributors: 36 contributors — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
-      - `Fields.Identity` ×36
+    - Slot contributors: 37 contributors — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+      - `Fields.Identity` ×37
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 151 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
-      - `fields` ×66
+    - Imported by: 153 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+      - `fields` ×68
       - `apps` ×28
       - `conversations` ×12
       - `tasks` ×9
@@ -32437,6 +32431,86 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `fields/server-capabilities.Fields`
           - Cross-plugin:
             - Imported by: `fields/server-capabilities-loader`
+    - **`formatted-text`** — Formatted text field type: plain text with a small, safe inline markup (bold, key caps, links, line breaks). Identity (extends multiline-text, so a table shows the source as long text), and FormattedTextView — the one renderer of a formatted text's source.
+      - Web:
+        - Contributes: `Fields.Identity` "formatted-text"
+        - Uses: `fields.Fields`
+        - Exports (values): `FormattedTextView`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `fields/multiline-text.multilineTextFieldType`
+          - `ui/icons.symbol`
+        - Exports (types):
+          - `FormattedInline`
+          - `FormattedText`
+        - Exports (values):
+          - `formattedPlainText`
+          - `formattedTextFieldType`
+          - `formattedTextIdentity`
+          - `isSafeFormattedHref`
+          - `parseFormattedText`
+          - `plainFormattedText`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --border`
+          - `ui/tokens/color-palette --foreground`
+          - `ui/tokens/color-palette --muted`
+          - `ui/tokens/color-palette --primary-text`
+          - `ui/tokens/font-family --font-mono`
+          - `ui/tokens/shape --radius`
+          - `ui/tokens/type-scale --font-weight-semibold`
+        - Imported by:
+          - `apps/deploy/site-feeds/discord`
+          - `apps/deploy/site-feeds/editor`
+          - `apps/deploy/site-feeds/syndication`
+          - `apps/website/pages/tips`
+          - `fields/formatted-text/config`
+      - Plugins:
+        - **`config`** — Formatted text field type: config-render capability (a textarea with the syntax and a live preview drawn by FormattedTextView) plus the formattedTextField factory.
+          - Web:
+            - Contributes:
+              - `Fields.Renderer` "formatted-text" → `Rendered`
+              - `Fields.Sample` "formatted-text"
+            - Uses:
+              - `config_v2/fields.ConfigFieldContext`
+              - `config_v2/fields.defineFieldShape`
+              - `config_v2/fields.Fields`
+              - `fields/formatted-text.FormattedTextView`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Textarea`
+              - `primitives/editable-field.useEditableField`
+          - Core:
+            - Uses:
+              - `config_v2/fields.fieldSample`
+              - `fields.declaredDefault`
+              - `fields.ExactOptions`
+              - `fields.FieldDef`
+              - `fields.FieldMarks`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/formatted-text.formattedTextFieldType`
+            - Exports (types): `FormattedTextFieldDef`
+            - Exports (values):
+              - `formattedTextField`
+              - `formattedTextSample`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --input`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/font-family --font-mono`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/type-scale --font-scale`
+              - `ui/tokens/type-scale --font-size-body`
+              - `ui/tokens/type-scale --font-weight-normal`
+              - `ui/tokens/type-scale --line-height-body`
+            - Imported by: `apps/website/pages/tips`
     - **`icon`** — Icon field type: identity only. The config-render capability and the iconField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "icon"
@@ -32999,7 +33073,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `multilineTextFieldType`
           - `multilineTextIdentity`
       - Cross-plugin:
-        - Imported by: `fields/multiline-text/config`
+        - Imported by:
+          - `fields/formatted-text`
+          - `fields/multiline-text/config`
       - Plugins:
         - **`config`** — Long-text field type: config-render capability (textarea for config-v2.fields.renderer) plus the multilineTextField factory.
           - Web:
@@ -33039,7 +33115,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by:
-              - `apps/website/pages/tips`
               - `config_v2/prompts`
               - `conversations/conversation-view/launch-prompts`
               - `conversations/conversation-view/prompt-templates`
@@ -54798,7 +54873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 482 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 483 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×117
               - `conversations` ×79
               - `primitives` ×57
@@ -54807,7 +54882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×26
               - `tasks` ×21
               - `plugin-meta` ×16
-              - `fields` ×14
+              - `fields` ×15
               - `infra` ×9
               - `apps-core` ×7
               - `stats` ×7
@@ -55061,7 +55136,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×38
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 455 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 456 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×116
               - `conversations` ×84
               - `primitives` ×50
@@ -55070,7 +55145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×21
               - `ui` ×18
               - `plugin-meta` ×15
-              - `fields` ×12
+              - `fields` ×13
               - `infra` ×9
               - `stats` ×7
               - `auth` ×5
@@ -55387,7 +55462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 492 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 493 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×117
               - `primitives` ×115
               - `conversations` ×53
@@ -55395,7 +55470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×25
               - `tasks` ×22
               - `ui` ×22
-              - `fields` ×13
+              - `fields` ×14
               - `apps-core` ×12
               - `plugin-meta` ×10
               - `infra` ×8
@@ -57660,6 +57735,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree`
           - `apps/sonata/library`
           - `conversations/agents`
+          - `fields/formatted-text/config`
           - `fields/multiline-text/config`
           - `fields/text/config`
           - `primitives/side-note`
@@ -58419,11 +58495,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `writeDraft`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --input`
-        - Imported by: 137 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
+        - Imported by: 138 plugins — full list in [`plugins/primitives/plugins/kept-state/REFERENCE.md`](../plugins/primitives/plugins/kept-state/REFERENCE.md)
           - `apps` ×39
           - `primitives` ×28
           - `conversations` ×13
-          - `fields` ×10
+          - `fields` ×11
           - `page` ×9
           - `tasks` ×6
           - `auth` ×5
@@ -70289,12 +70365,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 624 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 625 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×159
           - `conversations` ×123
           - `primitives` ×57
           - `page` ×51
-          - `fields` ×44
+          - `fields` ×45
           - `debug` ×30
           - `tasks` ×28
           - `plugin-meta` ×16
@@ -71636,7 +71712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 575 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 577 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×129
               - `conversations` ×94
               - `primitives` ×84
@@ -71646,7 +71722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×26
               - `tasks` ×21
               - `reports` ×17
-              - `fields` ×13
+              - `fields` ×15
               - `active-data` ×8
               - `apps-core` ×7
               - `stats` ×7
@@ -71797,7 +71873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 373 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 374 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×76
               - `primitives` ×76
               - `conversations` ×50
@@ -71806,7 +71882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×20
               - `plugin-meta` ×13
               - `tasks` ×13
-              - `fields` ×8
+              - `fields` ×9
               - `infra` ×5
               - `reorder` ×5
               - `review` ×5
@@ -71908,14 +71984,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Tokens used by: 160 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 162 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
               - `apps` ×24
               - `plugin-meta` ×23
               - `debug` ×20
               - `primitives` ×15
+              - `fields` ×7
               - `reports` ×7
-              - `fields` ×5
               - `infra` ×5
               - `tasks` ×5
               - `ui` ×3
@@ -72274,7 +72350,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 429 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 431 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×84
               - `primitives` ×64
@@ -72282,7 +72358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×28
               - `ui` ×25
               - `tasks` ×16
-              - `fields` ×12
+              - `fields` ×14
               - `plugin-meta` ×8
               - `infra` ×7
               - `companions` ×6
@@ -72477,7 +72553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 246 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 248 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×67
               - `conversations` ×39
               - `primitives` ×39
@@ -72485,8 +72561,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×14
               - `tasks` ×11
               - `page` ×10
+              - `fields` ×7
               - `ui` ×7
-              - `fields` ×5
               - `review` ×4
               - `stats` ×4
               - `auth` ×3

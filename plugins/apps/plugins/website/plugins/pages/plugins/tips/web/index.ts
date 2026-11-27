@@ -8,6 +8,7 @@ import { TipsNavItem } from "./components/tips-nav-item";
 
 export { tipsPane } from "./panes";
 export { TipsBulb } from "./components/tips-bulb";
+export { TipCard } from "./components/tip-card";
 
 export default {
   description:

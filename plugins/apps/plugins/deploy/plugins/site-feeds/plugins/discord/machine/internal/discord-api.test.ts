@@ -1,7 +1,13 @@
 import { describe, expect, it } from "bun:test";
+import {
+  parseFormattedText,
+  plainFormattedText,
+} from "@plugins/fields/plugins/formatted-text/core";
 import { parseDiscordWebhookUrl } from "../../core";
 import {
   discordContent,
+  discordEscape,
+  discordFormatted,
   discordForm,
   discordMessageLink,
   parseWebhookInfo,
@@ -74,11 +80,53 @@ describe("request builder", () => {
     expect(
       discordContent({
         title: "Use *two* panes",
-        paragraphs: ["One.", "Two."],
+        paragraphs: [plainFormattedText("One."), plainFormattedText("Two.")],
       }),
     ).toBe("**Use \\*two\\* panes**\n\nOne.\n\nTwo.");
-    expect(discordContent({ title: null, paragraphs: ["Only text"] })).toBe(
-      "Only text",
+    expect(
+      discordContent({
+        title: null,
+        paragraphs: [plainFormattedText("Only text")],
+      }),
+    ).toBe("Only text");
+  });
+
+  it("writes formatted text as Discord markdown: bold, keys as code, links masked", () => {
+    expect(
+      discordContent({
+        title: null,
+        paragraphs: [
+          parseFormattedText(
+            "Use the **note** button, <kbd>⌘</kbd>+Click, [docs](https://x.y/a) or [tips](/about/tips).",
+          ),
+        ],
+        url: "https://equin.ai/tips",
+      }),
+    ).toBe(
+      "Use the **note** button, `⌘`+Click, [docs](<https://x.y/a>) or [tips](<https://equin.ai/about/tips>).\n\n<https://equin.ai/tips>",
+    );
+    // No page to resolve a site path against: the link's text alone.
+    expect(discordFormatted(parseFormattedText("[tips](/t)"))).toBe("tips");
+    expect(discordFormatted(parseFormattedText("<kbd>`</kbd>"))).toBe(
+      "`` ` ``",
+    );
+  });
+
+  it("escapes what Discord would read as markdown in plain text", () => {
+    expect(discordEscape("2*3 is_six ~x~ `a` |b| [c]")).toBe(
+      "2\\*3 is\\_six \\~x\\~ \\`a\\` \\|b\\| \\[c\\]",
+    );
+    expect(discordEscape("# no\n> quote\n- item\nDrop & Close — done")).toBe(
+      "\\# no\n\\> quote\n\\- item\nDrop & Close — done",
+    );
+    expect(discordEscape("1. one\n 12. twelve")).toBe(
+      "1\\. one\n 12\\. twelve",
+    );
+  });
+
+  it("leaves a bare web address as written, escaping around it", () => {
+    expect(discordEscape("see https://x.com/a_b*c and *this*")).toBe(
+      "see https://x.com/a_b*c and \\*this\\*",
     );
   });
 
@@ -194,7 +242,7 @@ describe("the post's link and the message's", () => {
     expect(
       discordContent({
         title: "Split a pane",
-        paragraphs: ["Drag a tab."],
+        paragraphs: [plainFormattedText("Drag a tab.")],
         url: "https://equin.ai/tips",
       }),
     ).toBe("**Split a pane**\n\nDrag a tab.\n\n<https://equin.ai/tips>");

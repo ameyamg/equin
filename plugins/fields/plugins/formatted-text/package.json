@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-fields-formatted-text",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Formatted text field type: plain text with a small, safe inline markup (bold, key caps, links, line breaks) — the parser, the field identity (extends multiline-text) and the FormattedText renderer."
+}

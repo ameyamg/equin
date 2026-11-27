@@ -102,12 +102,12 @@ tokens, so anything that imports the barrels back would cycle.
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
   - Slots: `Fields.Identity`
-  - Slot contributors: 36 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Identity` ×36
+  - Slot contributors: 37 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` ×37
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 151 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×66
+  - Imported by: 153 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×68
     - `apps` ×28
     - `conversations` ×12
     - `tasks` ×9
@@ -182,6 +182,7 @@ tokens, so anything that imports the barrels back would cycle.
   - **`dynamic-flags`** [exempt] [1 sub-plugin] — Dynamic flags (toggles) field type: identity only. Options and their defaults are resolved at config-render time via the plugins/config sub-plugin's slot.
   - **`enum`** [6 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
   - **`float`** [2 sub-plugins] — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
+  - **`formatted-text`** [1 sub-plugin] — Formatted text field type: plain text with a small, safe inline markup (bold, key caps, links, line breaks). Identity (extends multiline-text, so a table shows the source as long text), and…
   - **`icon`** [1 sub-plugin] — Icon field type: identity only. The config-render capability and the iconField factory live in the plugins/config sub-plugin.
   - **`identifier`** [3 sub-plugins] — Identifier field type (a sha, run id, fingerprint, slug, tool name): extends text — text's sort, filter and editor via the extends chain, its own monospace cell.
   - **`image`** [1 sub-plugin] — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).

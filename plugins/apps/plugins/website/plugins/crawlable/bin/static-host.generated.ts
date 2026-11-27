@@ -102,6 +102,8 @@ export const staticHosts: Record<string, StaticHost> = {
       "fields/plugins/enum/plugins/table",
       "fields/plugins/float",
       "fields/plugins/float/plugins/config",
+      "fields/plugins/formatted-text",
+      "fields/plugins/formatted-text/plugins/config",
       "fields/plugins/icon",
       "fields/plugins/icon/plugins/config",
       "fields/plugins/identifier",

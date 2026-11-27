@@ -33,8 +33,11 @@ SyndicationTargets.Target(syndicationTarget(fooTarget, {  // syndication/server
   directory of the run's own (removed after it) for anything the target
   re-encodes.
 - `SyndicatedPost = { title, paragraphs, media, url }` — structured, the
-  target formats it: the first `syndicate.text` value is `title` (null when
-  empty), the others `paragraphs` (empty dropped), `media` the
+  target formats it: the first `syndicate.text` value is `title` (plain text,
+  null when empty), the others `paragraphs` (empty dropped), each a
+  `FormattedText` ([`fields/formatted-text`](../../../../../../../fields/plugins/formatted-text/CLAUDE.md):
+  a formatted-text field's markup parsed — bold, key caps, links — any other
+  field's text one plain run, never read as markup), `media` the
   `syndicate.media` field's files copied out of the attachment store
   (`{ path, mime, filename, size, durationMs? }`), `url` the feed's page on
   the item's **primary destination** (editor's `primarySiteFeedDestination`):
@@ -187,27 +190,19 @@ opened item each target's state, its last error and Retry.
     - `POST /api/deploy/site-feeds/syndication/retry`
     - `POST /api/deploy/site-feeds/syndication/test`
 - Core:
-  - Uses:
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields/formatted-text` ×5
+    - `fields` ×5
+    - `network/live` ×3
+    - `fields/media` ×2
+    - `fields/text/config` ×2
+    - `packages/list-bound` ×2
     - `apps/deploy/site-feeds.siteFeedEntryIdKind`
-    - `fields.FieldOptionMeta`
-    - `fields.FieldsRecord`
-    - `fields.fieldsToZodObject`
-    - `fields.InferFieldsObject`
-    - `fields.nullable`
     - `fields/date/config.dateField`
-    - `fields/media.MediaRef`
-    - `fields/media.MediaRefSchema`
     - `fields/secret.secretFieldType`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.textField`
     - `ids.idKindField`
     - `infra/entities.entityRef`
-    - `network/live.liveCollection`
-    - `network/live.LiveRowsCollection`
-    - `network/live.liveValue`
     - `network/live/query-resource.compositeKey`
-    - `packages/list-bound.cappedRecord`
-    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `SiteFeedSyndicationRow`
     - `SyndicatedMedia`

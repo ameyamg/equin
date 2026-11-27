@@ -3537,6 +3537,14 @@
       "name": "@equin/plugin-fields-float-storage",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/formatted-text": {
+      "name": "@equin/plugin-fields-formatted-text",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/formatted-text/plugins/config": {
+      "name": "@equin/plugin-fields-formatted-text-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/icon": {
       "name": "@equin/plugin-fields-icon",
       "version": "0.0.1",
@@ -10309,6 +10317,10 @@
     "@equin/plugin-fields-float-config": ["@equin/plugin-fields-float-config@workspace:plugins/fields/plugins/float/plugins/config"],
 
     "@equin/plugin-fields-float-storage": ["@equin/plugin-fields-float-storage@workspace:plugins/fields/plugins/float/plugins/storage"],
+
+    "@equin/plugin-fields-formatted-text": ["@equin/plugin-fields-formatted-text@workspace:plugins/fields/plugins/formatted-text"],
+
+    "@equin/plugin-fields-formatted-text-config": ["@equin/plugin-fields-formatted-text-config@workspace:plugins/fields/plugins/formatted-text/plugins/config"],
 
     "@equin/plugin-fields-icon": ["@equin/plugin-fields-icon@workspace:plugins/fields/plugins/icon"],
 

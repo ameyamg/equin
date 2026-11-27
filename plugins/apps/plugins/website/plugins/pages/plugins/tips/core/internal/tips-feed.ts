@@ -1,6 +1,6 @@
 import { defineSiteFeed } from "@plugins/apps/plugins/deploy/plugins/site-feeds/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
+import { formattedTextField } from "@plugins/fields/plugins/formatted-text/plugins/config/core";
 import { mediaField } from "@plugins/fields/plugins/media/core";
 import { tipsPage } from "../page";
 
@@ -18,7 +18,10 @@ export const tipsFeed = defineSiteFeed({
   label: "Tips of the day",
   fields: {
     title: textField({ label: "Title" }),
-    body: multilineTextField({ label: "Text" }),
+    // Formatted text: a button's name in **bold**, a shortcut as
+    // <kbd>⌘</kbd> key caps, links. Stored as its source, so a tip written
+    // before it existed (plain text) reads the same.
+    body: formattedTextField({ label: "Text" }),
     media: mediaField({
       label: "Screenshots and videos",
       accept: ["image/*", "video/*"],

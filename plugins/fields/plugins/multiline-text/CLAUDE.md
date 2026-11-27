@@ -25,7 +25,9 @@ resolves to `text` and reuses `TextCell` / the text `FilterContribution`.
     - `multilineTextFieldType`
     - `multilineTextIdentity`
 - Cross-plugin:
-  - Imported by: `fields/multiline-text/config`
+  - Imported by:
+    - `fields/formatted-text`
+    - `fields/multiline-text/config`
 - Sub-plugins:
   - **`config`** — Long-text field type: config-render capability (textarea for config-v2.fields.renderer) plus the multilineTextField factory.
 

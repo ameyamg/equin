@@ -55,7 +55,6 @@ table/filter capabilities from `text` via the identity `extends` chain.
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
   - Imported by:
-    - `apps/website/pages/tips`
     - `config_v2/prompts`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/prompt-templates`
