@@ -432,6 +432,7 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"tasks.decisions.inbox.decision-detail.actions","plugin":"tasks.decisions.inbox","key":"decision-detail.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.decisions.inbox.decisions.actions","plugin":"tasks.decisions.inbox","key":"decisions.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.decisions.inbox.sources","plugin":"tasks.decisions.inbox","key":"sources","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"tasks.decisions.tray.conv-decisions.actions","plugin":"tasks.decisions.tray","key":"conv-decisions.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.launch-options.option","plugin":"tasks.launch-options","key":"option","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.supervisor-roles.pane.adhoc-actions","plugin":"tasks.supervisor-roles.pane","key":"adhoc-actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.supervisor-roles.pane.backlog-actions","plugin":"tasks.supervisor-roles.pane","key":"backlog-actions","meta":{"kind":"render","reorderable":true},"inMain":true},

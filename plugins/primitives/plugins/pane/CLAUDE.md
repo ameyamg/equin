@@ -928,9 +928,9 @@ out of the way: **what it opens takes its column**.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 104 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×104
-  - Contributes: 135 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 105 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×105
+  - Contributes: 136 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -968,6 +968,7 @@ out of the way: **what it opens takes its column**.
     - `configOrphansPane.Actions` "title" → `PaneTitleItem`
     - `contributions.actions` "title" → `PaneTitleItem`
     - `conv-commits-graph.actions` "title" → `PaneTitleItem`
+    - `conv-decisions.actions` "title" → `PaneTitleItem`
     - `conv-push-profiling.actions` "title" → `PaneTitleItem`
     - `conv-summary.actions` "title" → `PaneTitleItem`
     - `convReviewPane.Actions` "title" → `PaneTitleItem`

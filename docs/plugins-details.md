@@ -699,9 +699,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AGENT_MANAGER_READY_ATTR`
               - `agentManagerApp`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
+            - Imported by: 42 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
               - `conversations` ×18
-              - `tasks` ×9
+              - `tasks` ×10
               - `apps` ×5
               - `stats` ×2
               - `active-data/plugin-link`
@@ -19331,9 +19331,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 92 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Imported by: 93 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×62
-      - `tasks` ×11
+      - `tasks` ×12
       - `apps` ×6
       - `infra` ×3
       - `review` ×3
@@ -46681,11 +46681,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 334 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 335 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×88
               - `conversations` ×49
               - `debug` ×31
-              - `tasks` ×30
+              - `tasks` ×31
               - `ui` ×26
               - `primitives` ×17
               - `page` ×16
@@ -55433,13 +55433,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×38
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 459 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 460 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×117
               - `conversations` ×84
               - `primitives` ×50
               - `debug` ×39
               - `page` ×26
-              - `tasks` ×22
+              - `tasks` ×23
               - `ui` ×18
               - `plugin-meta` ×15
               - `fields` ×13
@@ -59144,13 +59144,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 249 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 250 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×76
           - `conversations` ×26
           - `ui` ×24
+          - `tasks` ×21
           - `debug` ×20
           - `primitives` ×20
-          - `tasks` ×20
           - `page` ×11
           - `build` ×6
           - `companions` ×6
@@ -60410,9 +60410,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 104 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×104
-        - Contributes: 135 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 105 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×105
+        - Contributes: 136 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -60450,6 +60450,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `configOrphansPane.Actions` "title" → `PaneTitleItem`
           - `contributions.actions` "title" → `PaneTitleItem`
           - `conv-commits-graph.actions` "title" → `PaneTitleItem`
+          - `conv-decisions.actions` "title" → `PaneTitleItem`
           - `conv-push-profiling.actions` "title" → `PaneTitleItem`
           - `conv-summary.actions` "title" → `PaneTitleItem`
           - `convReviewPane.Actions` "title" → `PaneTitleItem`
@@ -63268,8 +63269,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 318 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×318
+    - Contributes: 319 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×319
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -63293,8 +63294,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 317 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×317
+    - Contributes: 318 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×318
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -67157,7 +67158,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/supervisor-roles/spend`
           - `tasks/task-triage`
           - `upstream`
-    - **`decisions`** — Agent decisions, web half: registers the dec and dex id kinds, and the pieces every decision surface shares — DecisionCard (one decision in full: label, state pill, new mark, lineage, question, outcome or Split into, markdown body, one-sentence options with a muted Recommended, the latest exchange with earlier ones folded), decisionPresentation (the pill a state wears) and useMarkDecisionSeen; answering — the drafted answers (decisionDrafts: one browser-only kept work entry keyed by decision, shared by every surface; useDecisionDrafts' part(id) and submit), DecisionCard answered in place given a draft (options pick, a note or a question, Got it on an FYI, Close on a finished agent's decision, which says its answer will be kept, not sent), SubmitBar — the one sticky Submit (⌘↵) sending every drafted answer, N of M answered, how many go to agents and how many are only kept — and TaskDecisionsPanel, one task's decisions as the conversation tray and the page block draw them (a header folding it, open rows expanding inline into their card, a collapsed N closed row, the Submit scoped to the task); the row fields every decision list shares (the state dot, the drafted answer). The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open — a supervisor's root only (update_decision edits a decision's question, body and option texts with Edit-style old_string/new_string edits, or rewrites a field whole; a closed decision accepts only notes and replies unless the call reopens it), and read_decision (any agent: one decision of any task in full — body, options, thread — by its id, or a label of the caller's task; what a page's <task-decisions> excerpt points to and what an agent reads before editing); POST /api/decisions/:decisionId/seen stamps seen_at when the user opens one.
+    - **`decisions`** — Agent decisions, web half: registers the dec and dex id kinds, and the pieces every decision surface shares — DecisionCard (one decision in full: label, state pill, new mark, lineage, question, outcome or Split into, markdown body, one-sentence options with a muted Recommended, the latest exchange with earlier ones folded), decisionPresentation (the pill a state wears) and useMarkDecisionSeen; answering — the drafted answers (decisionDrafts: one browser-only kept work entry keyed by decision, shared by every surface; useDecisionDrafts' part(id) and submit), DecisionCard answered in place given a draft (options pick, a note or a question, Got it on an FYI, Close on a finished agent's decision, which says its answer will be kept, not sent), SubmitBar — the one sticky Submit (⌘↵) sending every drafted answer, N of M answered, how many go to agents and how many are only kept — and TaskDecisionsPanel, one task's decisions as the conversation tray and the page block draw them (a header folding it, open rows expanding inline into their card, a collapsed N closed row, the Submit scoped to the task; given a side pane's toggle, an icon opening the decisions beside, the panel folding to its header while they are) and TaskDecisions, the same decisions unframed for a pane; the row fields every decision list shares (the state dot, the drafted answer). The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open — a supervisor's root only (update_decision edits a decision's question, body and option texts with Edit-style old_string/new_string edits, or rewrites a field whole; a closed decision accepts only notes and replies unless the call reopens it), and read_decision (any agent: one decision of any task in full — body, options, thread — by its id, or a label of the caller's task; what a page's <task-decisions> excerpt points to and what an agent reads before editing); POST /api/decisions/:decisionId/seen stamps seen_at when the user opens one.
       - Web:
         - Slots:
           - `DecisionCardSlots.AboveAnswer`
@@ -67170,17 +67171,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "dec"
           - `IdKinds.Kind` "dex"
-        - Uses: 50 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+        - Uses: 53 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+          - `network/live/live-state` ×4
           - `primitives/data-view` ×4
           - `network/live` ×3
           - `primitives/collapsible` ×3
           - `conversations/conversation-view/user-message` ×2
-          - `network/live/live-state` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/text` ×2
           - `primitives/css/ui-kit` ×2
           - `primitives/kept-state` ×2
+          - `primitives/link-gesture` ×2
           - `primitives/row-actions` ×2
           - `primitives/shortcuts` ×2
           - `apps-core/tabs.useSurfaceShown`
@@ -67197,7 +67199,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/sticky.Sticky`
           - `primitives/icon-button.IconButton`
-          - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
           - `primitives/markdown.Markdown`
           - `primitives/overlay/tooltip.Kbd`
@@ -67210,6 +67211,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DecisionDraft`
           - `DecisionDrafts`
           - `DecisionPresentation`
+          - `DecisionsBeside`
         - Exports (values):
           - `answerOf`
           - `DecisionCard`
@@ -67224,6 +67226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isDraftEmpty`
           - `NewMark`
           - `SubmitBar`
+          - `TaskDecisions`
           - `TaskDecisionsPanel`
           - `useDecisionDrafts`
           - `useMarkDecisionSeen`
@@ -67625,12 +67628,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-        - **`tray`** — An agent's decisions in its conversation: a tray above the composer drawing the task's TaskDecisionsPanel — "N decisions need you" (a click on it folds the tray), one row per open decision expanding inline into its card, answered in place with the inbox's drafts, a collapsed N closed row, the Submit scoped to this agent and Open in Decisions. Absent while no decision waits on the user (none in Needs you or FYI; a Sent one waits on the agent).
+        - **`tray`** — An agent's decisions in its conversation: a tray above the composer drawing the task's TaskDecisionsPanel — "N decisions need you" (a click on it folds the tray), one row per open decision expanding inline into its card, answered in place with the inbox's drafts, a collapsed N closed row, the Submit scoped to this agent and Open in Decisions; its side-pane icon opens the same decisions in a Decisions pane beside the conversation (convDecisionsPane), the tray folding to its header while that pane is open. Absent while no decision waits on the user (none in Needs you or FYI; a Sent one waits on the agent).
           - Web:
-            - Contributes: `Conversation.AbovePromptInput` → `DecisionsTray`
+            - Slots: `conv-decisions.actions`
+            - Slot contributors: `conv-decisions.actions` ← `primitives.pane`
+            - Contributes:
+              - `Conversation.AbovePromptInput` → `DecisionsTray`
+              - `Pane.Register` "conv-decisions"
             - Uses:
+              - `conversations.useConversationById`
               - `conversations/conversation-view.Conversation`
+              - `network/live/live-state.ResourceErrorInline`
+              - `primitives/css/text.Text`
+              - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
+              - `primitives/pane.impliedBy`
+              - `primitives/pane.Pane`
+              - `primitives/pane.PaneChrome`
+              - `primitives/pane.sameAs`
               - `primitives/pane.useOpenPane`
+              - `tasks/decisions.TaskDecisions`
               - `tasks/decisions.TaskDecisionsPanel`
               - `tasks/decisions/inbox.decisionsPane`
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.

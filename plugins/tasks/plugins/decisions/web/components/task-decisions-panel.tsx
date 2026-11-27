@@ -1,6 +1,10 @@
 import { useMemo, useRef, useState, type ReactElement } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
+import {
+  mapResource,
+  ResourceErrorInline,
+  type ResourceResult,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   DataView,
   defineDataView,
@@ -28,7 +32,12 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  activationProps,
+  linkProps,
+} from "@plugins/primitives/plugins/link-gesture/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import type { TaskId } from "@plugins/tasks/plugins/task-ids/core";
 import { decisionsList, type DecisionRow } from "../../core";
@@ -69,6 +78,14 @@ interface Counts {
   closed: number;
 }
 
+/** A side pane showing the panel's decisions instead of the panel itself. */
+export interface DecisionsBeside {
+  /** The side pane is open: the panel folds to its header. */
+  isOpen: boolean;
+  /** Opens the side pane, or closes it while it is open. */
+  toggle: LinkTarget;
+}
+
 /**
  * A task's decisions, as one panel — what the conversation tray (above the
  * composer) and the page block draw: a "N decisions need you" header that
@@ -83,95 +100,166 @@ interface Counts {
  * — none in Needs you or FYI (the tray: nothing to answer, nothing over the
  * composer; a Sent one waits on the agent); `"show"` draws
  * the panel whatever it holds (the page block).
+ *
+ * `beside`: the header's side-pane toggle (the tray's — the decisions shown
+ * in a pane beside instead of over the composer). While that pane is open
+ * the panel is its header alone: the decisions are drawn once, beside.
  */
 export function TaskDecisionsPanel({
   taskId,
   inboxLink,
   whenSettled,
+  beside,
 }: {
   taskId: TaskId;
   /** Where "Open in Decisions" goes: the inbox. */
   inboxLink: LinkTarget;
   whenSettled: "hide" | "show";
+  beside?: DecisionsBeside;
 }): ReactElement | null {
-  // Every tab's count for this task, one grouping (the SubmitBar's own read).
-  const groups = useLive(decisionsList, { groupBy: "tab", where: { taskId } });
-  // The panel: where its Submit's ⌘↵ belongs.
-  const root = useRef<HTMLElement | null>(null);
+  const counts = useTaskDecisionCounts(taskId);
   const collapsible = useCollapsible({
     defaultOpen: true,
     keep: `decisions.panel:${taskId}`,
   });
-  if (groups.status === "loading")
+  if (counts.status === "loading")
     return whenSettled === "hide" ? null : <Loading variant="rows" count={2} />;
-  if (groups.status === "error")
-    return (
-      <ResourceErrorInline
-        variant="block"
-        subject="this agent's decisions"
-        error={groups.error}
-        refetch={groups.refetch}
-      />
-    );
-  const countOf = (tab: string) =>
-    groups.data.find((g) => g.value === tab)?.count ?? 0;
-  const counts: Counts = {
-    needs: countOf("needs"),
-    fyi: countOf("fyi"),
-    open: countOf("needs") + countOf("sent") + countOf("fyi"),
-    closed: countOf("closed"),
-  };
+  if (counts.status === "error") return <CountsError counts={counts} />;
   // Sent decisions wait on the agent: the tray stays away until the agent
   // acts on them (an update or a reply brings one back to Needs you).
-  if (whenSettled === "hide" && counts.needs + counts.fyi === 0) return null;
-  const { open, triggerProps, contentProps } = collapsible;
+  if (whenSettled === "hide" && counts.data.needs + counts.data.fyi === 0)
+    return null;
+  const { triggerProps, contentProps } = collapsible;
+  const shownBeside = beside?.isOpen === true;
+  const open = collapsible.open && !shownBeside;
   return (
     <Text as="div" variant="caption">
       <Clip
-        ref={root}
         className="rounded-md border border-border bg-muted/30"
         data-testid="decisions-panel"
       >
         <Line className="gap-sm px-md py-sm">
-          <Line
-            as="button"
-            {...triggerProps}
-            data-testid="decisions-panel-header"
-            className={cn(
-              fillClasses("x"),
-              "gap-sm text-left hover:bg-foreground/[0.03]",
-            )}
-          >
-            <CollapsibleChevron
-              open={open}
-              className={cn("size-4 text-muted-foreground", rigidClass())}
-            />
-            <Fill as="span">
-              <HeaderWords counts={counts} />
+          {shownBeside ? (
+            // Shown beside: nothing to fold here, the header only says what waits.
+            <Fill as="span" data-testid="decisions-panel-header">
+              <HeaderWords counts={counts.data} />
+              <span className="text-muted-foreground"> · shown beside</span>
             </Fill>
-          </Line>
+          ) : (
+            <Line
+              as="button"
+              {...triggerProps}
+              data-testid="decisions-panel-header"
+              className={cn(
+                fillClasses("x"),
+                "gap-sm text-left hover:bg-foreground/[0.03]",
+              )}
+            >
+              <CollapsibleChevron
+                open={open}
+                className={cn("size-4 text-muted-foreground", rigidClass())}
+              />
+              <Fill as="span">
+                <HeaderWords counts={counts.data} />
+              </Fill>
+            </Line>
+          )}
+          {beside === undefined ? null : (
+            <IconButton
+              icon={navIcons.sidePane}
+              label={shownBeside ? "Close the side pane" : "Open beside"}
+              variant={shownBeside ? "secondary" : "ghost"}
+              aria-pressed={shownBeside}
+              data-testid="decisions-panel-beside"
+              {...linkProps(beside.toggle)}
+            />
+          )}
           <Button variant="ghost" {...activationProps(inboxLink)}>
             Open in Decisions
           </Button>
         </Line>
-        <FoldMotion {...contentProps}>
-          {/* Capped and scrolled on its own: an open decision is long, and an
-              unbounded panel would push the composer under it off-screen.
-              Kept across a reload under the pane's keep scope, per task (a
-              page may hold several tasks' panels). */}
-          <Scroll
-            keep={`decisions.panel:${taskId}`}
-            className="max-h-[60vh] border-t border-border/60 bg-background/40"
-          >
-            <OpenDecisions taskId={taskId} />
-            {counts.closed > 0 ? (
-              <ClosedDecisions taskId={taskId} count={counts.closed} />
-            ) : null}
-            <SubmitBar taskId={taskId} region={root} />
-          </Scroll>
-        </FoldMotion>
+        {shownBeside ? null : (
+          <FoldMotion {...contentProps}>
+            {/* Capped and scrolled on its own: an open decision is long, and an
+                unbounded panel would push the composer under it off-screen.
+                Kept across a reload under the pane's keep scope, per task (a
+                page may hold several tasks' panels). */}
+            <Scroll
+              keep={`decisions.panel:${taskId}`}
+              className="max-h-[60vh] border-t border-border/60 bg-background/40"
+            >
+              <TaskDecisionsBody taskId={taskId} closed={counts.data.closed} />
+            </Scroll>
+          </FoldMotion>
+        )}
       </Clip>
     </Text>
+  );
+}
+
+/**
+ * A task's decisions with no frame of their own — what a pane draws (the
+ * tray's side pane): the open ones, the "N closed" row, the Submit scoped to
+ * the task.
+ */
+export function TaskDecisions({ taskId }: { taskId: TaskId }): ReactElement {
+  const counts = useTaskDecisionCounts(taskId);
+  if (counts.status === "loading") return <Loading variant="rows" count={2} />;
+  if (counts.status === "error") return <CountsError counts={counts} />;
+  return (
+    <Text as="div" variant="caption">
+      <TaskDecisionsBody taskId={taskId} closed={counts.data.closed} />
+    </Text>
+  );
+}
+
+/** The open decisions, the closed row, the Submit: the panel's and the pane's body. */
+function TaskDecisionsBody({
+  taskId,
+  closed,
+}: {
+  taskId: TaskId;
+  closed: number;
+}): ReactElement {
+  // Where its Submit's ⌘↵ belongs (a box of no layout).
+  const root = useRef<HTMLDivElement | null>(null);
+  return (
+    <div ref={root} className="contents">
+      <OpenDecisions taskId={taskId} />
+      {closed > 0 ? <ClosedDecisions taskId={taskId} count={closed} /> : null}
+      <SubmitBar taskId={taskId} region={root} />
+    </div>
+  );
+}
+
+/** Every tab's count for this task, one grouping (the SubmitBar's own read). */
+function useTaskDecisionCounts(taskId: TaskId): ResourceResult<Counts> {
+  const groups = useLive(decisionsList, { groupBy: "tab", where: { taskId } });
+  return mapResource(groups, (data) => {
+    const countOf = (tab: string) =>
+      data.find((g) => g.value === tab)?.count ?? 0;
+    return {
+      needs: countOf("needs"),
+      fyi: countOf("fyi"),
+      open: countOf("needs") + countOf("sent") + countOf("fyi"),
+      closed: countOf("closed"),
+    };
+  });
+}
+
+/** The counts' read failing, said where the decisions would be. */
+function CountsError({
+  counts,
+}: {
+  counts: Extract<ResourceResult<Counts>, { status: "error" }>;
+}): ReactElement {
+  return (
+    <ResourceErrorInline
+      variant="block"
+      subject="this agent's decisions"
+      error={counts.error}
+      refetch={counts.refetch}
+    />
   );
 }
 

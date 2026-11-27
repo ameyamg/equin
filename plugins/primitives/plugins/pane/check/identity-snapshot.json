@@ -187,6 +187,12 @@
       "parent": null
     },
     {
+      "paneId": "conv-decisions",
+      "segment": "agent-decisions;conv",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "conv-file-tree",
       "segment": "files;dir;conv",
       "appIndex": false,

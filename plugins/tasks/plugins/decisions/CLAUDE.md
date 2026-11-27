@@ -24,7 +24,11 @@ Needs you → Sent → FYI, newest first) whose rows expand inline into
 `DecisionCard` (the list's `detail` + `detailOnActivate`; shown ⇒ marked
 seen); a collapsed "N closed" row over the closed ones
 (`tasks.decisions.panel-closed`, each line its outcome); the SubmitBar
-scoped to the task. `whenSettled: "hide"` (the tray) draws nothing while no
+scoped to the task. `beside` (the tray's side pane: `isOpen` + its `toggle`) adds an icon
+opening the decisions in a pane beside; while it is open the panel is its
+header alone ("… · shown beside"), so the decisions are drawn once.
+`TaskDecisions` is the same body unframed, what that pane draws.
+`whenSettled: "hide"` (the tray) draws nothing while no
 decision waits on the user (none in Needs you or FYI: a Sent one waits on the agent). Decisions are never drawn inline in the transcript: the
 agent edits them after opening them, so they are shown live here.
 
@@ -199,7 +203,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
 
 ## Plugin reference
 
-- Description: Agent decisions, web half: registers the dec and dex id kinds, and the pieces every decision surface shares — DecisionCard (one decision in full: label, state pill, new mark, lineage, question, outcome or Split into, markdown body, one-sentence options with a muted Recommended, the latest exchange with earlier ones folded), decisionPresentation (the pill a state wears) and useMarkDecisionSeen; answering — the drafted answers (decisionDrafts: one browser-only kept work entry keyed by decision, shared by every surface; useDecisionDrafts' part(id) and submit), DecisionCard answered in place given a draft (options pick, a note or a question, Got it on an FYI, Close on a finished agent's decision, which says its answer will be kept, not sent), SubmitBar — the one sticky Submit (⌘↵) sending every drafted answer, N of M answered, how many go to agents and how many are only kept — and TaskDecisionsPanel, one task's decisions as the conversation tray and the page block draw them (a header folding it, open rows expanding inline into their card, a collapsed N closed row, the Submit scoped to the task); the row fields every decision list shares (the state dot, the drafted answer). The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open — a supervisor's root only (update_decision edits a decision's question, body and option texts with Edit-style old_string/new_string edits, or rewrites a field whole; a closed decision accepts only notes and replies unless the call reopens it), and read_decision (any agent: one decision of any task in full — body, options, thread — by its id, or a label of the caller's task; what a page's <task-decisions> excerpt points to and what an agent reads before editing); POST /api/decisions/:decisionId/seen stamps seen_at when the user opens one.
+- Description: Agent decisions, web half: registers the dec and dex id kinds, and the pieces every decision surface shares — DecisionCard (one decision in full: label, state pill, new mark, lineage, question, outcome or Split into, markdown body, one-sentence options with a muted Recommended, the latest exchange with earlier ones folded), decisionPresentation (the pill a state wears) and useMarkDecisionSeen; answering — the drafted answers (decisionDrafts: one browser-only kept work entry keyed by decision, shared by every surface; useDecisionDrafts' part(id) and submit), DecisionCard answered in place given a draft (options pick, a note or a question, Got it on an FYI, Close on a finished agent's decision, which says its answer will be kept, not sent), SubmitBar — the one sticky Submit (⌘↵) sending every drafted answer, N of M answered, how many go to agents and how many are only kept — and TaskDecisionsPanel, one task's decisions as the conversation tray and the page block draw them (a header folding it, open rows expanding inline into their card, a collapsed N closed row, the Submit scoped to the task; given a side pane's toggle, an icon opening the decisions beside, the panel folding to its header while they are) and TaskDecisions, the same decisions unframed for a pane; the row fields every decision list shares (the state dot, the drafted answer). The surfaces (the inbox, the conversation tray, the page block) are its sub-plugins. Agent decisions, the record: the decisions table (one per question an agent asks the user, owned by its task, labelled D<n>, in state decision / action / fyi / other / closed with an outcome) and its append-only thread (decision_exchanges: answers, questions and the agent's replies, notes); each decision's thread facts materialized per decision (decision_exchange_facts), from which the decisions.list window derives the inbox tab (needs / sent / fyi / closed) and the new mark; decisions.exchanges, one decision's thread; the decision history source (every edit a version, the closed version pinned before a reopen); and the open_decision / update_decision / list_decisions MCP tools, granted by decisions.open — a supervisor's root only (update_decision edits a decision's question, body and option texts with Edit-style old_string/new_string edits, or rewrites a field whole; a closed decision accepts only notes and replies unless the call reopens it), and read_decision (any agent: one decision of any task in full — body, options, thread — by its id, or a label of the caller's task; what a page's <task-decisions> excerpt points to and what an agent reads before editing); POST /api/decisions/:decisionId/seen stamps seen_at when the user opens one.
 - Web:
   - Slots:
     - `DecisionCardSlots.AboveAnswer`
@@ -212,17 +216,18 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   - Contributes:
     - `IdKinds.Kind` "dec"
     - `IdKinds.Kind` "dex"
-  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live/live-state` ×4
     - `primitives/data-view` ×4
     - `network/live` ×3
     - `primitives/collapsible` ×3
     - `conversations/conversation-view/user-message` ×2
-    - `network/live/live-state` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/kept-state` ×2
+    - `primitives/link-gesture` ×2
     - `primitives/row-actions` ×2
     - `primitives/shortcuts` ×2
     - `apps-core/tabs.useSurfaceShown`
@@ -239,7 +244,6 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/sticky.Sticky`
     - `primitives/icon-button.IconButton`
-    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
     - `primitives/overlay/tooltip.Kbd`
@@ -252,6 +256,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `DecisionDraft`
     - `DecisionDrafts`
     - `DecisionPresentation`
+    - `DecisionsBeside`
   - Exports (values):
     - `answerOf`
     - `DecisionCard`
@@ -266,6 +271,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `isDraftEmpty`
     - `NewMark`
     - `SubmitBar`
+    - `TaskDecisions`
     - `TaskDecisionsPanel`
     - `useDecisionDrafts`
     - `useMarkDecisionSeen`

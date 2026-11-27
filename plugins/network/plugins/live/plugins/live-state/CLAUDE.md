@@ -1001,11 +1001,11 @@ Pinned by `on-screen-pending.test.tsx`.
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 334 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 335 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×88
     - `conversations` ×49
     - `debug` ×31
-    - `tasks` ×30
+    - `tasks` ×31
     - `ui` ×26
     - `primitives` ×17
     - `page` ×16

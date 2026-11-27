@@ -4,12 +4,26 @@
 
 ## Plugin reference
 
-- Description: An agent's decisions in its conversation: a tray above the composer drawing the task's TaskDecisionsPanel — "N decisions need you" (a click on it folds the tray), one row per open decision expanding inline into its card, answered in place with the inbox's drafts, a collapsed N closed row, the Submit scoped to this agent and Open in Decisions. Absent while no decision waits on the user (none in Needs you or FYI; a Sent one waits on the agent).
+- Description: An agent's decisions in its conversation: a tray above the composer drawing the task's TaskDecisionsPanel — "N decisions need you" (a click on it folds the tray), one row per open decision expanding inline into its card, answered in place with the inbox's drafts, a collapsed N closed row, the Submit scoped to this agent and Open in Decisions; its side-pane icon opens the same decisions in a Decisions pane beside the conversation (convDecisionsPane), the tray folding to its header while that pane is open. Absent while no decision waits on the user (none in Needs you or FYI; a Sent one waits on the agent).
 - Web:
-  - Contributes: `Conversation.AbovePromptInput` → `DecisionsTray`
+  - Slots: `conv-decisions.actions`
+  - Slot contributors: `conv-decisions.actions` ← `primitives.pane`
+  - Contributes:
+    - `Conversation.AbovePromptInput` → `DecisionsTray`
+    - `Pane.Register` "conv-decisions"
   - Uses:
+    - `conversations.useConversationById`
     - `conversations/conversation-view.Conversation`
+    - `network/live/live-state.ResourceErrorInline`
+    - `primitives/css/text.Text`
+    - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
+    - `primitives/pane.impliedBy`
+    - `primitives/pane.Pane`
+    - `primitives/pane.PaneChrome`
+    - `primitives/pane.sameAs`
     - `primitives/pane.useOpenPane`
+    - `tasks/decisions.TaskDecisions`
     - `tasks/decisions.TaskDecisionsPanel`
     - `tasks/decisions/inbox.decisionsPane`
 
