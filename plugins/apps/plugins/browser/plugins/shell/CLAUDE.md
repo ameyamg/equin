@@ -57,7 +57,6 @@
     - `BrowserOpenOptions`
     - `BrowserRemoteApi`
     - `BrowserTab`
-    - `BrowserTabHandoff`
     - `BrowserTabsApi`
     - `BrowserTabsState`
     - `BrowserTabSummary`
@@ -68,7 +67,6 @@
     - `BrowserToolbar`
     - `Favicon`
     - `singlePageTabs`
-    - `useAddBrowserTab`
     - `useBrowserNav`
     - `useBrowserRemote`
     - `useBrowserTabs`

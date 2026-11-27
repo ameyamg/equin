@@ -4,24 +4,22 @@ import {
   PaneChrome,
   defineRoute,
   useOpenPane,
-  type PaneExpandTarget,
 } from "@plugins/primitives/plugins/pane/web";
 import { parseUrl } from "@plugins/packages/plugins/floor-compat/core";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
-import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { browserApp } from "@plugins/apps/plugins/browser/plugins/shell/core";
 import {
   Browser,
   BrowserTabsStore,
   BrowserToolbar,
   singlePageTabs,
-  useAddBrowserTab,
   useBrowserTabs,
 } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { PublishPageTitle, usePageTitle } from "./page-titles";
 
 /**
  * A web page beside the pane that linked to it, in the Browser's own
@@ -31,51 +29,32 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  *   (re)created when the host no longer holds it.
  * - `;page` — the remote page's key on the engine host. In the URL so a reload
  *   of this tab re-attaches the same live page (its history, scroll, sign-in
- *   form) rather than loading `url` afresh, and so Expand can hand the very
- *   page to the Browser app. A pane nobody shows lets its page go: the host
- *   freezes it after a minute and closes it after 30 (engine's host-pages).
+ *   form) rather than loading `url` afresh. A pane nobody shows lets its page
+ *   go: the host freezes it after a minute and closes it after 30 (engine's
+ *   host-pages).
+ *
+ * Titled by the page's own title once it reports one (its host until then).
+ * No Expand (`promote: false`): the toolbar's "Open in system browser" is the
+ * way out, and a second "open elsewhere" beside it read as the same thing.
  */
 export const webPagePane = Pane.define({
   route: defineRoute({ id: "web-page", segment: "web/:url;page" }),
   app: browserApp,
   component: WebPagePaneBody,
-  title: { useText: ({ url }) => hostOf(url) },
-  chrome: { history: false },
+  title: { useText: usePaneTitleText },
+  chrome: { history: false, promote: false },
   useResolve: false,
-  expand: { app: browserApp, useTarget: useBrowserHandoff },
 });
+
+/** The page's reported title, else its host. */
+function usePaneTitleText({ url, page }: { url: string; page?: string }) {
+  const title = usePageTitle(page);
+  return title !== "" ? title : hostOf(url);
+}
 
 /** The page's host, for the pane's title (the whole URL when it has none). */
 function hostOf(url: string): string {
   return parseUrl(url)?.host || url;
-}
-
-/**
- * Expand: the Browser app, showing THIS page — handed to the browser's tab set
- * by key (`useAddBrowserTab`), so its history and state come along. ⌘/middle-
- * click hands it over too and opens the Browser in a new browser tab.
- */
-function useBrowserHandoff(params: {
-  url: string;
-  page?: string;
-}): PaneExpandTarget {
-  const addTab = useAddBrowserTab();
-  const appLink = useAppLink();
-  const { url, page } = params;
-  if (page === undefined) return { kind: "none" };
-  const handoff = () => addTab({ key: page, url, title: hostOf(url) });
-  const browser = appLink(browserApp.basePath);
-  const target: LinkTarget = {
-    open: (gesture) => {
-      handoff();
-      browser.open(gesture);
-    },
-    href: () => {
-      handoff();
-      return browser.href();
-    },
-  };
-  return { kind: "ready", target };
 }
 
 function WebPagePaneBody() {
@@ -84,6 +63,7 @@ function WebPagePaneBody() {
   const [key] = useState(() => page ?? crypto.randomUUID());
   return (
     <BrowserTabsStore.Provider initial={() => singlePageTabs({ key, url })}>
+      <PublishPageTitle pageKey={key} />
       <PaneChrome pane={webPagePane}>
         <WebPageView />
       </PaneChrome>

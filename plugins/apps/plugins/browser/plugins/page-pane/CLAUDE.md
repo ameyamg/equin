@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Web pages in a side pane, in the Browser's own rendering: the web-page pane (web/:url;page) shows one page of the engine's Chromium beside the pane that linked to it, under the browser's toolbar (nav controls, omnibox, actions; the tab strip only once the page opened a popup), its remote page keyed in the URL so a reload re-attaches it, and Expand hands that very page to the Browser app's tabs. useWebPageLink(url) is the link that opens it — plain click opens the pane, ⌘/middle-click leaves the site to a new browser tab — and it is the transcript's web-link opener (MarkdownExtensions.WebLink).
+- Description: Web pages in a side pane, in the Browser's own rendering: the web-page pane (web/:url;page) shows one page of the engine's Chromium beside the pane that linked to it, under the browser's toolbar (nav controls, omnibox, actions; the tab strip only once the page opened a popup), its remote page keyed in the URL so a reload re-attaches it, titled by the page's own reported title (its host until then), with no Expand (the toolbar's open-in-system-browser is the way out). useWebPageLink(url) is the link that opens it — plain click opens the pane, ⌘/middle-click leaves the site to a new browser tab — and it is the transcript's web-link opener (MarkdownExtensions.WebLink).
 - Web:
   - Slots: `webPagePane.Actions`
   - Slot contributors: `webPagePane.Actions` ← `primitives.pane`
@@ -12,12 +12,10 @@
     - `Pane.Register` "web-page"
     - `MarkdownExtensions.WebLink` → `BrowserWebLink`
   - Uses:
-    - `apps-core/tabs.useAppLink`
     - `apps/browser/shell.Browser`
     - `apps/browser/shell.BrowserTabsStore`
     - `apps/browser/shell.BrowserToolbar`
     - `apps/browser/shell.singlePageTabs`
-    - `apps/browser/shell.useAddBrowserTab`
     - `apps/browser/shell.useBrowserTabs`
     - `conversations/conversation-view/markdown-extensions.MarkdownExtensions`
     - `primitives/css/clip.Clip`
@@ -28,7 +26,6 @@
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
-    - `primitives/pane.PaneExpandTarget`
     - `primitives/pane.useOpenPane`
   - Exports (values):
     - `useWebPageLink`

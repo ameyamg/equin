@@ -339,8 +339,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceShowsAppsSideBySide`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×22
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×21
     - `apps-core` ×9
     - `debug` ×4
     - `shell` ×3

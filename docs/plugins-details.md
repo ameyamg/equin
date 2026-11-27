@@ -974,7 +974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: `apps/browser/start-page`
-        - **`page-pane`** — Web pages in a side pane, in the Browser's own rendering: the web-page pane (web/:url;page) shows one page of the engine's Chromium beside the pane that linked to it, under the browser's toolbar (nav controls, omnibox, actions; the tab strip only once the page opened a popup), its remote page keyed in the URL so a reload re-attaches it, and Expand hands that very page to the Browser app's tabs. useWebPageLink(url) is the link that opens it — plain click opens the pane, ⌘/middle-click leaves the site to a new browser tab — and it is the transcript's web-link opener (MarkdownExtensions.WebLink).
+        - **`page-pane`** — Web pages in a side pane, in the Browser's own rendering: the web-page pane (web/:url;page) shows one page of the engine's Chromium beside the pane that linked to it, under the browser's toolbar (nav controls, omnibox, actions; the tab strip only once the page opened a popup), its remote page keyed in the URL so a reload re-attaches it, titled by the page's own reported title (its host until then), with no Expand (the toolbar's open-in-system-browser is the way out). useWebPageLink(url) is the link that opens it — plain click opens the pane, ⌘/middle-click leaves the site to a new browser tab — and it is the transcript's web-link opener (MarkdownExtensions.WebLink).
           - Web:
             - Slots: `webPagePane.Actions`
             - Slot contributors: `webPagePane.Actions` ← `primitives.pane`
@@ -982,12 +982,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "web-page"
               - `MarkdownExtensions.WebLink` → `BrowserWebLink`
             - Uses:
-              - `apps-core/tabs.useAppLink`
               - `apps/browser/shell.Browser`
               - `apps/browser/shell.BrowserTabsStore`
               - `apps/browser/shell.BrowserToolbar`
               - `apps/browser/shell.singlePageTabs`
-              - `apps/browser/shell.useAddBrowserTab`
               - `apps/browser/shell.useBrowserTabs`
               - `conversations/conversation-view/markdown-extensions.MarkdownExtensions`
               - `primitives/css/clip.Clip`
@@ -998,7 +996,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
-              - `primitives/pane.PaneExpandTarget`
               - `primitives/pane.useOpenPane`
             - Exports (values):
               - `useWebPageLink`
@@ -1058,7 +1055,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BrowserOpenOptions`
               - `BrowserRemoteApi`
               - `BrowserTab`
-              - `BrowserTabHandoff`
               - `BrowserTabsApi`
               - `BrowserTabsState`
               - `BrowserTabSummary`
@@ -1069,7 +1065,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BrowserToolbar`
               - `Favicon`
               - `singlePageTabs`
-              - `useAddBrowserTab`
               - `useBrowserNav`
               - `useBrowserRemote`
               - `useBrowserTabs`
@@ -15898,8 +15893,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShowsAppsSideBySide`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 53 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×22
+        - Imported by: 52 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×21
           - `apps-core` ×9
           - `debug` ×4
           - `shell` ×3
