@@ -21,6 +21,7 @@ never Postgres' `encode(…, 'base64')`, which breaks lines every 76 chars.
     - `bytesToBase64`
 - Cross-plugin:
   - Imported by:
+    - `apps/mail/providers/local`
     - `fields/server-capabilities-loader`
     - `page/editor-collab`
 

@@ -15,10 +15,10 @@ import {
 } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import {
   decodeEncodedWords,
-  header,
   parseAddressList,
   parseMailbox,
-} from "./headers";
+} from "@plugins/packages/plugins/mime/core";
+import { header } from "./headers";
 import { FLAG_LABELS, mailboxesOfLabels } from "./labels";
 
 /** The headers a summary reads, asked for with `format=metadata`. */

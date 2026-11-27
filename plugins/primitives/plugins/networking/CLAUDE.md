@@ -303,8 +303,8 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×9
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×10
     - `primitives` ×7
     - `conversations` ×5
     - `network` ×5

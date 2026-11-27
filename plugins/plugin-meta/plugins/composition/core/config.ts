@@ -473,6 +473,10 @@ export const compositionsConfig = defineConfig({
         // `./equin promo-film seed` verb stays: it is the parent's `cli/`,
         // which runs on no host, so its import of the seed's `core/` is no
         // edge of any bundle.
+        // `!apps.mail.providers.local`: the local mail provider (a mailbox in
+        // this host's own database) is the website demo's mail — Mail's cache
+        // serves exactly ONE registered provider, so a composition that ships
+        // it names it and leaves Gmail out (`agent-manager-demo` does).
         {
           id: ALL_EXCLUSIONS_ID,
           name: ALL_EXCLUSIONS_ID,
@@ -481,6 +485,7 @@ export const compositionsConfig = defineConfig({
           entryPoints: [
             "!apps.website.promo-film.circle",
             "!apps.website.promo-film.seed",
+            "!apps.mail.providers.local",
           ],
           selectedContributors: [] as string[],
           extends: [BASE_EXCLUSIONS_ID],
@@ -705,6 +710,15 @@ export const compositionsConfig = defineConfig({
               // the computer and say so. The adapters into it (the place and
               // map blocks, the data view's map) come with it (`withAppAdapters`).
               "apps.places.**",
+              // Mail, on Demo's own mailbox: the local provider (a mailbox in
+              // the worker's database, seeded through `apps.mail.fixtures`,
+              // taken back from `all-exclusions` by naming it) in place of
+              // Gmail, which needs OAuth, Pub/Sub and the computer — Mail's
+              // cache serves exactly one provider. Loading a body's remote
+              // images needs the computer and says so (the reader's machine/).
+              "apps.mail.**",
+              "apps.mail.providers.local",
+              "!apps.mail.providers.gmail.**",
               // The OS menu-bar panel and its sections: a page the native
               // helper opens on the computer, meaningless in a demo.
               "!companions.menu-bar.**",

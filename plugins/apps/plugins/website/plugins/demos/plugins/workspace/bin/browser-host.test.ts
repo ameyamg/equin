@@ -98,6 +98,7 @@ import {
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
   DEMO_BEFORE_AFTERS,
+  DEMO_MAIL,
   DEMO_PLACES,
   DEMO_RECIPES_BEFORE_AFTER,
   DEMO_STORIES,
@@ -120,6 +121,10 @@ import { warmupRunOf } from "@plugins/infra/plugins/warmup/server";
 import { listRegisteredJobs } from "@plugins/infra/plugins/jobs/server";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
 import { hostReads } from "../core/browser-host.generated";
+import { mailCache } from "@plugins/apps/plugins/mail/plugins/cache/server";
+import { mailImageProxy } from "@plugins/apps/plugins/mail/plugins/reader/core";
+import { mailThread } from "@plugins/apps/plugins/mail/plugins/reader/core";
+import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
 import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
 import { bunHostEntries, diskDemoData } from "./bun-host";
@@ -1357,5 +1362,122 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       expect(res.status).toBe(409);
       expect(await res.json()).toMatchObject({ reason: "unsupported" });
     }
+  });
+
+  // ── Mail: Demo's mailbox in the local provider, the cache filled on demand ──
+  test("the seed leaves the Mail cache empty: it fills on the first open", async () => {
+    // Before any test below opens Mail.
+    for (const table of [
+      "mail_accounts",
+      "mail_mailboxes",
+      "mail_threads",
+      "mail_queries",
+      "mail_query_members",
+      "mail_thread_bodies",
+    ]) {
+      const { rows } = await db.execute<{ n: number }>(
+        sql`SELECT count(*)::int AS n FROM ${sql.identifier(table)}`,
+      );
+      expect([table, rows[0]!.n]).toEqual([table, 0]);
+    }
+  });
+
+  test("the local mailbox holds DEMO_MAIL's account, labels and messages", async () => {
+    const accounts = await db.execute<{ address: string }>(
+      sql`SELECT address FROM mail_local_accounts`,
+    );
+    expect(accounts.rows).toEqual([{ address: DEMO_MAIL.account.address }]);
+    const messages = await db.execute<{ id: string; thread_id: string }>(
+      sql`SELECT id, thread_id FROM mail_local_messages ORDER BY id`,
+    );
+    const expected = DEMO_MAIL.threads
+      .flatMap((t) => t.messages.map((m) => ({ id: m.id, thread_id: t.id })))
+      .sort((a, b) => (a.id < b.id ? -1 : 1));
+    expect(messages.rows).toEqual(expected);
+    const labels = await db.execute<{
+      id: string;
+      name: string;
+      parent_id: string | null;
+    }>(sql`SELECT id, name, parent_id FROM mail_local_mailboxes`);
+    const pathOf = (id: string): string => {
+      const row = labels.rows.find((r) => r.id === id)!;
+      return row.parent_id === null
+        ? row.name
+        : `${pathOf(row.parent_id)}/${row.name}`;
+    };
+    for (const label of DEMO_MAIL.labels)
+      expect(labels.rows.map((r) => pathOf(r.id))).toContain(label.path);
+  });
+
+  test("the Inbox view answers DEMO_MAIL's inbox threads, newest first, through the cache", async () => {
+    const inInbox = (
+      m: (typeof DEMO_MAIL.threads)[number]["messages"][number],
+    ) => (m.mailboxes ?? [m.draft ? "drafts" : "inbox"]).includes("inbox");
+    const ago = (m: (typeof DEMO_MAIL.threads)[number]["messages"][number]) =>
+      ((m.ago.days ?? 0) * 24 + (m.ago.hours ?? 0)) * 60 + (m.ago.minutes ?? 0);
+    // Each inbox thread at its latest inbox message — the list's (date, id) order.
+    const expected = DEMO_MAIL.threads
+      .flatMap((t) => {
+        const ms = t.messages.filter(inInbox);
+        if (ms.length === 0) return [];
+        const latest = ms.reduce((a, b) =>
+          ago(b) < ago(a) || (ago(b) === ago(a) && b.id > a.id) ? b : a,
+        );
+        return [{ id: t.id, at: ago(latest), mid: latest.id }];
+      })
+      .sort((a, b) => a.at - b.at || (a.mid < b.mid ? 1 : -1))
+      .map((t) => t.id);
+    expect(expected.length).toBeGreaterThan(5);
+    const rows = await mailCache.window({
+      limit: 25,
+      where: clause("mailboxes", "hasAny", ["role:inbox"]),
+    });
+    expect(rows.map((r) => r.id)).toEqual(expected.slice(0, 25));
+  });
+
+  test("a thread opens with its messages and its attachment, the file served", async () => {
+    const withFile = DEMO_MAIL.threads.find((t) =>
+      t.messages.some((m) =>
+        (m.attachments ?? []).some((a) => a.contentId === undefined),
+      ),
+    )!;
+    expect(withFile).toBeDefined();
+    const thread = (await loadResourceByKey(mailThread.key, {
+      id: withFile.id,
+    })) as {
+      messages: {
+        id: string;
+        attachments: { partId: string; filename: string; inline: boolean }[];
+      }[];
+    };
+    expect(thread.messages.map((m) => m.id)).toEqual(
+      withFile.messages.map((m) => m.id),
+    );
+    const message = thread.messages.find((m) =>
+      m.attachments.some((a) => !a.inline),
+    )!;
+    const file = message.attachments.find((a) => !a.inline)!;
+    const fixture = withFile.messages
+      .find((m) => m.id === message.id)!
+      .attachments!.find((a) => a.filename === file.filename);
+    expect(fixture).toBeDefined();
+    const res = await host.request(
+      new Request(
+        `http://demo.invalid/api/mail/attachment/${encodeURIComponent(withFile.id)}/${encodeURIComponent(message.id)}/${file.partId}?download=1`,
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect((await res.arrayBuffer()).byteLength).toBeGreaterThan(0);
+  });
+
+  test("loading a body's remote images needs the computer: declared needsMachine, refused here", async () => {
+    expect(mailImageProxy.needsMachine).toBeDefined();
+    const res = await host.request(
+      new Request(
+        "http://demo.invalid/api/mail/image/sig?u=https%3A%2F%2Fx.example%2Fa.png",
+      ),
+    );
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ reason: "unsupported" });
   });
 });

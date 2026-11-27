@@ -1,24 +1,18 @@
-import {
-  canonicalizeFilter,
-  decodeFilter,
-  encodeFilter,
-  matchesFilter,
-  type Filter,
-} from "@plugins/network/plugins/live/plugins/filter/core";
+import { matchesFilter } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   assertOutgoingMessageId,
   changeCursor,
+  compileCanonicalMailQuery,
+  decodeCanonicalMailQuery,
+  deriveThreadSummary,
   draftId as toDraftId,
-  isDeclaredMailOp,
   listCursor,
   MAIL_QUERY_COLUMNS,
   MailOutcomeUnknownError,
   MailRefusedError,
   messageId as toMessageId,
   nativeMailboxId,
-  providerQuery,
   roleMailboxId,
-  THREAD_PARTICIPANTS_MAX,
   threadId as toThreadId,
   threadVersion,
   type CompiledMailQuery,
@@ -41,7 +35,6 @@ import {
 } from "../../core";
 import type { DraftId, MessageId } from "../../core/internal/ids";
 import type { MailCallPriority } from "../../core/internal/provider";
-import type { MailQueryColumns } from "../../core/internal/query";
 
 // An in-memory MailProvider for cache and e2e tests: a label-model mailbox
 // (like Gmail) whose list, search, change cursor and writes behave as the
@@ -137,13 +130,6 @@ const SPAM = roleMailboxId("spam");
 const SENT = roleMailboxId("sent");
 const DRAFTS = roleMailboxId("drafts");
 
-/** Every clause of a canonical filter, depth first. */
-function clausesOf(f: Filter): Extract<Filter, { column: string }>[] {
-  if ("and" in f) return f.and.flatMap(clausesOf);
-  if ("or" in f) return f.or.flatMap(clausesOf);
-  return [f];
-}
-
 /** The fake provider's label colours: three pairs, clearable. */
 export const FAKE_MAILBOX_COLORS: readonly MailboxColor[] = [
   { background: "#fb4c2f", text: "#ffffff" },
@@ -161,48 +147,10 @@ export function fakeCompileQuery(
   ctx: { mailboxes: readonly Mailbox[] },
   refuse?: (clause: { column: string; op: string }) => boolean,
 ): CompiledMailQuery {
-  const canonical = canonicalizeFilter(query, MAIL_QUERY_COLUMNS);
-  if (canonical === undefined)
-    return { kind: "query", providerQuery: providerQuery("") };
-  if ("or" in canonical && canonical.or.length === 0)
-    return { kind: "nothing" };
-  const known = new Set(ctx.mailboxes.map((m) => m.id));
-  for (const c of clausesOf(canonical as Filter)) {
-    if (!isDeclaredMailOp(c.column, c.op) || refuse?.(c)) {
-      return {
-        kind: "refused",
-        refusal: {
-          column: c.column,
-          op: c.op,
-          reason: "unsupported-op",
-          message: `the fake provider does not run ${c.column} ${c.op}`,
-        },
-      };
-    }
-    if (c.column === "mailboxes") {
-      const missing = (c.operand as readonly string[]).find(
-        (id) => !known.has(id as MailboxId),
-      );
-      if (missing !== undefined) {
-        // A role this account has no mailbox for (Gmail's archive) is
-        // unsupported, an id nobody listed is unknown — as a real provider says.
-        const role = missing.startsWith("role:");
-        return {
-          kind: "refused",
-          refusal: {
-            column: c.column,
-            op: c.op,
-            reason: role ? "unsupported-mailbox" : "unknown-mailbox",
-            message: `no mailbox ${missing}`,
-          },
-        };
-      }
-    }
-  }
-  return {
-    kind: "query",
-    providerQuery: providerQuery(encodeFilter(canonical, MAIL_QUERY_COLUMNS)!),
-  };
+  return compileCanonicalMailQuery(query, ctx, {
+    label: "the fake provider",
+    ...(refuse ? { refuse } : {}),
+  });
 }
 
 const addr = (p: Participant) =>
@@ -321,53 +269,24 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
     };
   }
 
-  const lastAt = (t: FakeThread) => {
-    const sent = t.messages.filter((m) => !m.isDraft);
-    const from = sent.length > 0 ? sent : t.messages;
-    return from[from.length - 1]!.date;
-  };
-
   function summary(t: FakeThread): ThreadSummary {
-    const participants: Participant[] = [];
-    for (const m of t.messages) {
-      if (participants.length >= THREAD_PARTICIPANTS_MAX) break;
-      if (!participants.some((p) => p.address === m.from.address))
-        participants.push(m.from);
-    }
-    const recipients: Participant[] = [];
-    for (const m of t.messages)
-      for (const r of m.to)
-        if (
-          recipients.length < THREAD_PARTICIPANTS_MAX &&
-          !recipients.some((x) => x.address === r.address)
-        )
-          recipients.push(r);
-    const boxes = new Set<MailboxId>();
-    for (const m of t.messages) for (const b of m.mailboxes) boxes.add(b);
-    const last = t.messages[t.messages.length - 1]!;
-    return {
+    return deriveThreadSummary({
       id: t.id,
       version: threadVersion(String(t.version)),
-      subject: t.messages[0]!.subject,
-      snippet: (last.text ?? "").slice(0, 120),
-      participants,
-      recipients,
-      lastMessageAt: lastAt(t),
-      messageCount: t.messages.length,
-      mailboxes: [...boxes].sort(),
-      unread: t.messages.some((m) => m.unread),
-      starred: t.messages.some((m) => m.starred),
-      hasAttachments: t.messages.some((m) => m.attachments.length > 0),
-      hasDraft: t.messages.some((m) => m.isDraft),
       messages: t.messages.map((m) => ({
         id: m.id,
         date: m.date,
-        mailboxes: [...m.mailboxes].sort(),
+        from: m.from,
+        to: m.to,
+        subject: m.subject,
+        snippet: (m.text ?? "").slice(0, 120),
+        mailboxes: [...m.mailboxes],
         unread: m.unread,
         starred: m.starred,
         isDraft: m.isDraft,
+        hasAttachments: m.attachments.length > 0,
       })),
-    };
+    });
   }
 
   function content(m: FakeMessage): MessageContent {
@@ -485,8 +404,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
   const provider: MailProvider = {
     listMessages: (query, page, o) =>
       call("listMessages", 0, o, () => {
-        const filter =
-          query === "" ? undefined : decodeFilter(query, MAIL_QUERY_COLUMNS);
+        const filter = decodeCanonicalMailQuery(query);
         const providerAt = (m: FakeMessage) =>
           m.date.getTime() + m.providerSkewMs;
         const cut = page.olderThan === null ? null : page.olderThan.getTime();
@@ -496,11 +414,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
             ({ m }) =>
               (cut === null || providerAt(m) < cut) &&
               (filter === undefined ||
-                matchesFilter(
-                  row(m),
-                  filter as Filter<MailQueryColumns>,
-                  MAIL_QUERY_COLUMNS,
-                )),
+                matchesFilter(row(m), filter, MAIL_QUERY_COLUMNS)),
           )
           .sort(
             (a, b) =>

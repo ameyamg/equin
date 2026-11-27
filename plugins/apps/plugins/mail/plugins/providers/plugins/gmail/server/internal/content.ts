@@ -16,10 +16,10 @@ import {
 import {
   decodeEncodedWords,
   decoderFor,
-  header,
   parseAddressList,
   parseMailbox,
-} from "./headers";
+} from "@plugins/packages/plugins/mime/core";
+import { header } from "./headers";
 import { FLAG_LABELS, mailboxesOfLabels } from "./labels";
 import { messageDate } from "./summary";
 

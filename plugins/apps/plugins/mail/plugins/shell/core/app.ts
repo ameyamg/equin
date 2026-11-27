@@ -4,8 +4,9 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 /**
  * The Mail app (rebuild). Dark only: the approved prototype
  * (proto-1795656296-rtsmk5) is a dark mailbox, so the app declares the scheme
- * rather than its theme spelling dark values group by group. Developer-only
- * until it can read and send mail (later steps of the design).
+ * rather than its theme spelling dark values group by group. Listed for
+ * every user: with no account connected it draws its provider's connect
+ * surface.
  */
 export const mailApp = defineApp({
   id: "mail",
@@ -14,7 +15,6 @@ export const mailApp = defineApp({
   icon: symbol("mail"),
   category: ["Office", "Documents"],
   colorMode: "dark",
-  audience: "developer",
 });
 
 /** Mail's index: the threads list (bare `/mail`). */

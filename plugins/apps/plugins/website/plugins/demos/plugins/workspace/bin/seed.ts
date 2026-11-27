@@ -35,6 +35,7 @@ import {
 import { writePrototypeFixture } from "@plugins/apps/plugins/prototypes/plugins/fixtures/server";
 import { writeSongFixtures } from "@plugins/apps/plugins/sonata/plugins/fixtures/server";
 import { writePlacesFixture } from "@plugins/apps/plugins/places/plugins/fixtures/server";
+import { writeMailFixture } from "@plugins/apps/plugins/mail/plugins/fixtures/server";
 import { writeBrowserHomeFiles } from "@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
@@ -53,6 +54,7 @@ import {
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
   demoPages,
+  DEMO_MAIL,
   DEMO_PLACES,
   demoSongs,
   DEMO_STORIES,
@@ -115,7 +117,12 @@ import {
  *    (`writeBrowserHomeFiles`): Documents (notes, code, a recipe page, the
  *    Lisbon trip's papers), Music (a recording, a MIDI piece, the practice
  *    log), Pictures, and a few loose files (a video clip, a note, a picture,
- *    a ticket, a Chopin nocturne).
+ *    a ticket, a Chopin nocturne);
+ * 10. Demo's mailbox (`../core`'s `DEMO_MAIL`), through Mail's fixture writer
+ *    (`writeMailFixture`) into the local mail provider: the account, its
+ *    labels through the provider's own mailbox writes, each message through
+ *    its inbound `deliver` (attachments read from `../data/`) — never the
+ *    Mail cache, which fills on the visitor's first open.
  */
 /** The seed's input: the demo's `data/` folder, split by what each writer takes. */
 export interface DemoSeedData {
@@ -266,6 +273,24 @@ export async function seed(
     systemOrigin("demo seed"),
   );
   await settleJobQueue();
+  await writeMailFixture(DEMO_MAIL, {
+    readData: (path) => demoDataFile(data, path),
+  });
+  await settleJobQueue();
+}
+
+/** A file of the demo's `data/` folder by its path there, from what the seed was given. */
+function demoDataFile(data: DemoSeedData, path: string): Uint8Array {
+  const HOME = "home/";
+  const bytes = path.startsWith(HOME)
+    ? data.home[path.slice(HOME.length)]
+    : undefined;
+  if (bytes === undefined) {
+    throw new Error(
+      `[demo seed] no data/${path}: a mail attachment reads a file of data/home/`,
+    );
+  }
+  return bytes;
 }
 
 /**

@@ -29,17 +29,29 @@ in the bar (`ThreadReader`'s `tools`).
 - **The server's rewrite keeps mail working inside that policy**, not safe:
   remote `<img>`, `background` and inline-style `url()` through the image
   proxy (decided: load by default — the sender never sees the reader's
-  address, tracking pixels still fire), `cid:` images through the
-  inline-part route, `http(s)`/`mailto` links to a new tab
+  address, tracking pixels still fire), `cid:` images as tokens
+  (`inlineImageToken`, the message's `inlineImages`), `http(s)`/`mailto`
+  links to a new tab
   (`allow-popups-to-escape-sandbox`). It cuts what the policy cannot: a
   `<meta http-equiv="refresh">`, `<link>` prefetches, `<base>`. An image in a
   `<style>` block is not rewritten: the policy blocks it.
+- **Inline images are the page's to resolve** (`web/internal/inline-images.ts`):
+  a route written into the body would load from the PAGE's server, which an
+  in-browser host is not. On the page's own server each token becomes the
+  inline-part route's URL; under a transport no URL reaches (the website's
+  demo) the parts are read live as `data:` URLs (`mail.inline-images`,
+  immutable) and the frame's policy admits `data:` images only — the frame,
+  an opaque origin, cannot load the page's blob URLs. Attachments are
+  `useAssetSrc` (a blob URL there).
 - **The frame's requests are anonymous** (opaque origin), so the image and
   inline-part routes are public — each URL carries this server's HMAC of what
   it names (`server/internal/sign.ts`, a key per process: a restart re-renders
   every open body). Only a URL the server wrote into a body it rendered is
   served. The image proxy is SSRF-guarded (`infra/safe-fetch`), image types
-  only, 10 MB.
+  only, 10 MB. It is the reader's `machine/` half (`safeFetch` resolves
+  through `node:dns`), declared `needsMachine` ("Loading remote images"), so
+  the server half stays portable: a browser host (the website's demo) serves
+  the thread, its `cid:` parts and attachments, and refuses the proxy.
 - **Every answer is untrusted bytes on the app's origin**: `nosniff`, a
   `sandbox` policy, and anything a browser would render as a page (HTML, SVG,
   …) served as a download.
@@ -72,9 +84,11 @@ the painted body, prefetched vs cold.
 
 ## Plugin reference
 
-- Description: The Mail reader, web half: ThreadReader — one thread (mail.thread) as the reading pane draws it: the subject and message count, every message oldest first (the last and the unread open, the rest folded to a line), an HTML body in a fitted InlineFrame (an opaque origin, as tall as the message, under the mail policy: images only through this server's proxy and inline-part routes, no script of the body's, no form, frame or font load), a text body as text, each message's files opened in a tab or downloaded. Opening marks nothing read. The Mail reader, server half: mail.thread — one thread from the Mail cache (its stored body while it holds the thread's messages, else fetched from the provider), every HTML body rewritten to work inside the reader's frame policy (remote images through the image proxy, cid: images through the inline-part route, links opening a tab, refreshes and link prefetches cut), re-read when the cache learns the thread moved — and the routes the reader loads mail through: the signed image proxy and inline-part routes the opaque-origin frame reaches (public, each URL an HMAC of what it names), and the attachment route (open or download), both parts kept in infra/attachments under a name-derived id.
+- Description: The Mail reader, web half: ThreadReader — one thread (mail.thread) as the reading pane draws it: the subject and message count, every message oldest first (the last and the unread open, the rest folded to a line), an HTML body in a fitted InlineFrame (an opaque origin, as tall as the message, under the mail policy: images only through this server's proxy and inline-part routes, no script of the body's, no form, frame or font load), a text body as text, each message's files opened in a tab or downloaded. Opening marks nothing read. The Mail reader, server half: mail.thread — one thread from the Mail cache (its stored body while it holds the thread's messages, else fetched from the provider), every HTML body rewritten to work inside the reader's frame policy (remote images through the image proxy (machine/), cid: images through the inline-part route, links opening a tab, refreshes and link prefetches cut), re-read when the cache learns the thread moved — and the routes the reader loads mail through: the signed inline-part route the opaque-origin frame reaches (public, each URL an HMAC of what it names), and the attachment route (open or download), both parts kept in infra/attachments under a name-derived id.
 - Server:
-  - Contributes: `resource.declare` "mail.thread"
+  - Contributes:
+    - `resource.declare` "mail.inline-images"
+    - `resource.declare` "mail.thread"
   - Uses:
     - `apps/mail/cache._mailAccounts`
     - `apps/mail/cache._mailMailboxes`
@@ -91,24 +105,26 @@ the painted body, prefetched vs cold.
     - `infra/attachments.readAttachmentBytes`
     - `infra/endpoints.endpointPath`
     - `infra/endpoints.rawEndpointHandler`
-    - `infra/safe-fetch.isUnreachableError`
-    - `infra/safe-fetch.safeFetch`
-    - `infra/safe-fetch.SsrfError`
     - `network/live.serveValue`
-  - Resources: `mail.thread` (push, notified, whole: the mailboxes one thread is in: a handful of labels, capped: READER_MESSAGES_MAX, whole: the mailboxes one message is in: a handful of labels, whole: one message's attachments, as the provider lists them, whole: one message's own address header, as the sender wrote it)
+  - Exports (values):
+    - `refused`
+    - `UNTRUSTED_HEADERS`
+    - `verifyMail`
+  - Resources:
+    - `mail.inline-images` (push, notified, capped: MAIL_INLINE_IMAGES_MAX)
+    - `mail.thread` (push, notified, whole: the mailboxes one thread is in: a handful of labels, capped: READER_MESSAGES_MAX, whole: the mailboxes one message is in: a handful of labels, whole: the inline images of one message's body, as its parts list them, whole: one message's attachments, as the provider lists them, whole: one message's own address header, as the sender wrote it)
   - Routes:
-    - `GET /api/mail/image/:sig`
     - `GET /api/mail/inline/:sig`
     - `GET /api/mail/attachment/:threadId/:messageId/:partId`
 - Web:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/rigid` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `apps/mail/provider.MailProviderConnect`
     - `fields/date/format.useDateFormatter`
-    - `infra/endpoints.useAssetUrl`
     - `network/live/live-state.ResourceError`
     - `network/live.useLive`
     - `primitives/bar.Bar`
@@ -123,8 +139,12 @@ the painted body, prefetched vs cold.
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.gestureOf`
     - `primitives/loading.Loading`
+    - `primitives/networking.useTransport`
     - `ui/icons.Icon`
   - Exports (values): `ThreadReader`
+- Machine:
+  - Uses: `infra/endpoints.machineHandler`
+  - Routes: `GET /api/mail/image/:sig`
 - Core:
   - Uses:
     - `infra/endpoints.blob`
@@ -135,16 +155,21 @@ the painted body, prefetched vs cold.
   - Exports (types):
     - `MailThreadRefusal`
     - `ReaderAttachment`
+    - `ReaderInlineImage`
     - `ReaderMessage`
     - `ReaderThread`
   - Exports (values):
+    - `inlineImageToken`
+    - `MAIL_INLINE_IMAGES_MAX`
     - `MAIL_THREAD_REFUSALS`
     - `mailAttachment`
     - `mailImageProxy`
+    - `mailInlineImages`
     - `mailInlinePart`
     - `mailThread`
     - `READER_MESSAGES_MAX`
     - `ReaderAttachmentSchema`
+    - `ReaderInlineImageSchema`
     - `ReaderMessageSchema`
     - `ReaderThreadSchema`
 - Cross-plugin:

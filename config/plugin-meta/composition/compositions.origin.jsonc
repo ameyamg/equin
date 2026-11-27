@@ -1,4 +1,4 @@
-// @hash ff30403c10d4
+// @hash 6aaa02fe3bde
 {
   "manifests": [
     {
@@ -78,7 +78,8 @@
       ],
       "entryPoints": [
         "!apps.website.promo-film.circle",
-        "!apps.website.promo-film.seed"
+        "!apps.website.promo-film.seed",
+        "!apps.mail.providers.local"
       ],
       "selectedContributors": [],
       "extends": [
@@ -255,6 +256,9 @@
         "apps.settings.config",
         "apps.settings.isle-building",
         "apps.places.**",
+        "apps.mail.**",
+        "apps.mail.providers.local",
+        "!apps.mail.providers.gmail.**",
         "!companions.menu-bar.**",
         "companions.menu-bar.app-window",
         "!conversations.companion-status.**",

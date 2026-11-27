@@ -94,6 +94,7 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
     - `apps/mail/cache`
     - `apps/mail/provider`
     - `apps/mail/providers/gmail`
+    - `apps/mail/providers/local`
     - `fields/bool/filter`
     - `fields/date/filter`
     - `fields/enum/filter`

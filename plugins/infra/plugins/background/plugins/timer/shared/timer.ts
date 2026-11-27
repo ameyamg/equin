@@ -169,7 +169,8 @@ export function defineTimerIn(spec: TimerSpec, runtime: TimerRuntime): Timer {
       if (state.handle !== null) return;
       if (spec.immediate) fire();
       state.handle = setInterval(fire, spec.everyMs);
-      if (spec.unref) state.handle.unref();
+      // A browser host's setInterval answers a number, with no unref.
+      if (spec.unref) (state.handle as { unref?: () => void }).unref?.();
       runtime.changed(spec.name);
     },
     stop() {

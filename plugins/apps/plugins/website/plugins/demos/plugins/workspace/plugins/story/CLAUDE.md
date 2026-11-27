@@ -37,6 +37,7 @@
   - Exports (values):
     - `DEMO_AGENTS`
     - `DEMO_BEFORE_AFTERS`
+    - `DEMO_MAIL`
     - `DEMO_PAGE_IDS`
     - `DEMO_PLACES`
     - `DEMO_PRACTICE_TIMER_BEFORE_AFTER`

@@ -63,7 +63,8 @@ serves (`mailCache.sender()`), the bytes built by `packages/mime`.
 - A draft and its send carry different Message-IDs (the draft's would be
   found as the draft itself). Gmail renames a sent message anyway: see the
   Gmail provider's `findMessage`.
-- **Left out of worktree forks**: a fork must never send main's queued mail
+- **Left out of worktree forks** (declared by the `machine/` half, so the
+  server half stays portable): a fork must never send main's queued mail
   or rewrite main's provider drafts. Backed up (user content). Sent drafts
   and reply boxes left untyped are cleared a day after (`mailDraftsRetention`).
 
@@ -152,10 +153,10 @@ footer's Add signature puts it back.
     - `resource.declare` "mail.draft-attachment-links:rows"
     - `resource.declare` "mail.signature"
     - `attachments.link` "mail_drafts"
+    - `ConfigV2.Register` "mail-compose"
     - `fork-data-exclusion` "mail_drafts"
     - `fork-data-exclusion` "mail_drafts_attachments"
-    - `ConfigV2.Register` "mail-compose"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/attachments` ×4
     - `config_v2` ×2
     - `database/derived-updated-at` ×2
@@ -166,14 +167,15 @@ footer's Add signature puts it back.
     - `infra/retention` ×2
     - `network/live` ×2
     - `apps/mail/cache.mailCache`
-    - `database/admin.ExcludeFromFork`
     - `database.db`
     - `fields/date/format.serverDateFormatter`
     - `shell/notifications.recordNotification`
   - DB schema:
     - `plugins/apps/plugins/mail/plugins/compose/server/internal/schema-attachments.ts`
     - `plugins/apps/plugins/mail/plugins/compose/server/internal/tables.ts`
-  - Exports (values): `_mailDrafts`
+  - Exports (values):
+    - `_mailDraftAttachmentsTable`
+    - `_mailDrafts`
   - Register:
     - `defineJob('mail.draft-mirror')`
     - `defineJob('mail.send')`

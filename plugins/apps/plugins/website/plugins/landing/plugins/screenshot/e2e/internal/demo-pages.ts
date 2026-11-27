@@ -19,9 +19,16 @@ import {
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
+import { addressPathOf } from "@plugins/primitives/plugins/pane/plugins/route-prefix/core";
+import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 
 /** The page the live demo is alone on: the website's demo page (`/about/demo`). */
 const DEMO_PAGE = demoPage.path;
+/**
+ * The same page's address on the standalone site, which serves the website
+ * app at its root (`homeAtRoot`: `/demo`, its `/about/demo` answering 301).
+ */
+const DEMO_PAGE_AT_ROOT = addressPathOf(DEMO_PAGE, websiteApp.basePath);
 
 /**
  * The `data-theme-scope` an app's boundary stamps inside the demo: its app
@@ -152,7 +159,9 @@ export function demoPath(location: string): string {
  */
 export function onDemoPage(url: string): boolean {
   const { pathname } = new URL(url);
-  return pathname === DEMO_PAGE || pathname.startsWith(`${DEMO_PAGE}/`);
+  return [DEMO_PAGE, DEMO_PAGE_AT_ROOT].some(
+    (page) => pathname === page || pathname.startsWith(`${page}/`),
+  );
 }
 
 export function embedRoot(page: Page): Locator {

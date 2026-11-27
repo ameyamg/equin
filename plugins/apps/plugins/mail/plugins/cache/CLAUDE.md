@@ -48,7 +48,8 @@ It never names a provider: it serves the one registered `MailProviders.Provider`
 ## How a window is answered (`server/internal/engine.ts`)
 
 - **Tables** (`server/internal/tables.ts`, all keyed by account, all left out
-  of forks, backups and the change feed): `mail_accounts` (provider, address,
+  of forks, backups and the change feed — the fork and backup exclusions are
+  the `machine/` half's, so the server half stays portable): `mail_accounts` (provider, address,
   change cursor), `mail_mailboxes`, `mail_threads` (one `ThreadSummary` each,
   `stale`, `last_used_at`), `mail_queries` (one per compiled query: coverage
   `floor_at` / `exhausted`, `verified_cursor`, `locally_maintained`,
@@ -325,8 +326,6 @@ offline, the byte budget, prefetch (speculative priority, neighbours first).
     - `database.db`
     - `database.Db`
     - `database.writeAtomically`
-    - `database/admin.ExcludeFromBackup`
-    - `database/admin.ExcludeFromFork`
     - `database/sql-column.parsedJson`
     - `ids.externalIdColumn`
     - `infra/background/timer.defineTimer`
@@ -352,6 +351,7 @@ offline, the byte budget, prefetch (speculative priority, neighbours first).
     - `_mailQueryMembers`
     - `_mailThreadBodies`
     - `_mailThreads`
+    - `CACHE_TABLES`
     - `mailCache`
     - `MailThreadUnavailableError`
     - `onMailThreadsChanged`

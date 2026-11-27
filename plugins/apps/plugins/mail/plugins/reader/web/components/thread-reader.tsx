@@ -5,7 +5,8 @@ import type { Gesture } from "@plugins/primitives/plugins/link-gesture/core";
 import { gestureOf } from "@plugins/primitives/plugins/link-gesture/web";
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { assetPath } from "@plugins/infra/plugins/endpoints/core";
-import { useAssetUrl } from "@plugins/infra/plugins/endpoints/web";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { InlineFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -50,6 +51,10 @@ import {
   type ReaderMessage,
   type ReaderThread,
 } from "../../core";
+import {
+  useInlineImageSrcs,
+  withInlineImages,
+} from "../internal/inline-images";
 import { mailFrameDocument } from "../internal/mail-frame";
 
 const closeIcon = symbol("close");
@@ -343,7 +348,7 @@ function OpenMessage({
             {header}
           </button>
         )}
-        <MessageBody message={m} />
+        <MessageBody threadId={threadId} message={m} />
         {m.unknownCharset !== null ? (
           <Text variant="caption" tone="faint">
             This message declares the charset “{m.unknownCharset}”, which can’t
@@ -370,31 +375,57 @@ function OpenMessage({
 /** The page's origin never changes: nothing to subscribe to. */
 const noChange = () => () => {};
 
-function MessageBody({ message: m }: { message: ReaderMessage }): ReactNode {
+function MessageBody({
+  threadId,
+  message: m,
+}: {
+  threadId: string;
+  message: ReaderMessage;
+}): ReactNode {
   // The page's own server — the body's rewritten paths resolve against it,
   // and the frame's policy names it — read once mounted (a page has one).
+  // Under a transport no URL reaches (an in-browser server) the frame loads
+  // nothing by URL: its policy admits `data:` images only.
+  const servesUrls = useTransport().servesUrls;
   const origin = useSyncExternalStore(
     noChange,
     () => window.location.origin,
     () => null,
   );
+  const images = useInlineImageSrcs(threadId, m.id, m.inlineImages);
   const doc = useMemo(
     () =>
-      m.html === null || origin === null
+      m.html === null || origin === null || images.kind === "loading"
         ? null
-        : mailFrameDocument(m.html, origin),
-    [m.html, origin],
+        : mailFrameDocument(
+            withInlineImages(
+              m.html,
+              images.kind === "ready" ? images.srcs : null,
+              m.inlineImages.length,
+            ),
+            servesUrls ? origin : null,
+          ),
+    [m.html, m.inlineImages.length, origin, images, servesUrls],
   );
-  if (m.html !== null && doc === null) return null;
+  if (m.html !== null && doc === null) {
+    return <Loading label="Loading the message…" />;
+  }
   if (doc !== null) {
     return (
-      <InlineFrame
-        title={m.subject === "" ? "Message" : m.subject}
-        html={doc}
-        fit
-        allow={["popups", "popups-to-escape-sandbox"]}
-        className="block w-full rounded-md border-0 bg-white"
-      />
+      <Stack gap="xs">
+        <InlineFrame
+          title={m.subject === "" ? "Message" : m.subject}
+          html={doc}
+          fit
+          allow={["popups", "popups-to-escape-sandbox"]}
+          className="block w-full rounded-md border-0 bg-white"
+        />
+        {images.kind === "error" ? (
+          <Text variant="caption" tone="faint">
+            This message’s images couldn’t be loaded: {images.message}
+          </Text>
+        ) : null}
+      </Stack>
     );
   }
   if (m.text === null || m.text.trim() === "") {
@@ -431,14 +462,30 @@ function AttachmentChip({
   attachment: ReaderAttachment;
 }): ReactNode {
   const params = { threadId, messageId, partId: a.partId };
-  const open = useAssetUrl(assetPath(mailAttachment, params, {}));
-  const save = useAssetUrl(
+  // An element's own load: the path on the page's server, a blob URL of the
+  // bytes on an in-browser one (which no URL reaches).
+  const open = useAssetSrc(assetPath(mailAttachment, params, {}));
+  const save = useAssetSrc(
     assetPath(mailAttachment, params, { download: "1" }),
   );
-  if (open.kind !== "ready" || save.kind !== "ready") {
+  if (open.kind === "loading" || save.kind === "loading") {
     return (
       <Text variant="caption" tone="faint">
-        {a.filename} (not available here)
+        {a.filename}…
+      </Text>
+    );
+  }
+  if (open.kind !== "ready") {
+    return (
+      <Text variant="caption" tone="faint">
+        {a.filename} ({open.message})
+      </Text>
+    );
+  }
+  if (save.kind !== "ready") {
+    return (
+      <Text variant="caption" tone="faint">
+        {a.filename} ({save.message})
       </Text>
     );
   }
@@ -446,7 +493,7 @@ function AttachmentChip({
   return (
     <Line className="gap-2xs">
       <a
-        href={open.url}
+        href={open.src}
         target="_blank"
         rel="noopener"
         className={cn(buttonVariants({ variant: "outline" }), "gap-xsm")}
@@ -457,7 +504,7 @@ function AttachmentChip({
         <span className="text-faint-foreground">{formatSize(a.size)}</span>
       </a>
       <a
-        href={save.url}
+        href={save.src}
         download={name}
         className={buttonVariants({ variant: "ghost", size: "icon" })}
         aria-label={`Download ${name}`}

@@ -8,15 +8,11 @@ import {
   readAttachmentBytes,
 } from "@plugins/infra/plugins/attachments/server";
 import {
-  isUnreachableError,
-  safeFetch,
-  SsrfError,
-} from "@plugins/infra/plugins/safe-fetch/server";
-import {
   mailCache,
   MailThreadUnavailableError,
 } from "@plugins/apps/plugins/mail/plugins/cache/server";
 import { verifyMail } from "./sign";
+import { refused, UNTRUSTED_HEADERS } from "./untrusted";
 
 // The routes the reader loads mail through (core/internal/endpoints.ts).
 // Every answer is untrusted bytes served on the app's origin, so none may be
@@ -24,122 +20,9 @@ import { verifyMail } from "./sign";
 // would render as a page (HTML, SVG, XML, anything not on the inline list)
 // is served as a download or under a `sandbox` policy.
 
-/** A remote image larger than this is not proxied. */
-const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
-/** How long the proxy waits on a sender's server. */
-const IMAGE_TIMEOUT_MS = 15_000;
-
 /** Types opened in a tab as themselves; anything else is downloaded. */
 const INLINE_TYPES =
   /^(image\/(png|jpe?g|gif|webp|avif|bmp)|application\/pdf|text\/plain|audio\/[\w.+-]+|video\/[\w.+-]+)$/i;
-
-/** Every untrusted answer: no sniffing, and as a document, sandboxed with nothing it may load. */
-const UNTRUSTED_HEADERS = {
-  "x-content-type-options": "nosniff",
-  "content-security-policy":
-    "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'",
-} as const;
-
-function refused(status: number, message: string): Response {
-  return new Response(message, {
-    status,
-    headers: { "content-type": "text/plain; charset=utf-8" },
-  });
-}
-
-// ── the image proxy ──────────────────────────────────────────────────────
-
-/** `GET /api/mail/image/:sig?u=` — a remote image the server signed, fetched SSRF-guarded. */
-export async function handleImage(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const url = new URL(req.url).searchParams.get("u");
-  const sig = params.sig ?? "";
-  if (url === null || !(await verifyMail("image", [url], sig))) {
-    return refused(403, "not an image this server proxies");
-  }
-  let res: Response;
-  try {
-    res = await safeFetch(url, {
-      timeoutMs: IMAGE_TIMEOUT_MS,
-      headers: { accept: "image/*" },
-    });
-  } catch (err) {
-    if (err instanceof SsrfError) return refused(403, err.message);
-    if (isUnreachableError(err)) return refused(502, String(err));
-    throw err;
-  }
-  if (!res.ok) {
-    await res.body?.cancel();
-    return refused(502, `the image's server answered ${res.status}`);
-  }
-  const type = res.headers.get("content-type") ?? "";
-  if (!/^image\//i.test(type)) {
-    await res.body?.cancel();
-    return refused(415, `not an image: ${type || "no type"}`);
-  }
-  const declared = Number(res.headers.get("content-length") ?? "0");
-  if (declared > IMAGE_MAX_BYTES) {
-    await res.body?.cancel();
-    return refused(413, "image too large");
-  }
-  let bytes: Uint8Array<ArrayBuffer> | null;
-  try {
-    bytes = await readBounded(res, IMAGE_MAX_BYTES);
-  } catch (err) {
-    // The sender's server cut or stalled the body: a network peer's failure.
-    if (isUnreachableError(err) || isAbort(err)) {
-      return refused(502, String(err));
-    }
-    throw err;
-  }
-  if (bytes === null) return refused(413, "image too large");
-  return new Response(bytes, {
-    headers: {
-      ...UNTRUSTED_HEADERS,
-      "content-type": type,
-      // The reader's browser keeps it; nothing about the reader goes back.
-      "cache-control": "private, max-age=86400",
-      "referrer-policy": "no-referrer",
-    },
-  });
-}
-
-function isAbort(err: unknown): boolean {
-  return (
-    err instanceof Error &&
-    (err.name === "AbortError" || err.name === "TimeoutError")
-  );
-}
-
-/** The body, read as it arrives and dropped past `max` (a missing or false length is no bound). */
-async function readBounded(
-  res: Response,
-  max: number,
-): Promise<Uint8Array<ArrayBuffer> | null> {
-  const reader = res.body?.getReader();
-  if (reader === undefined) return new Uint8Array();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > max) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-  const out = new Uint8Array(size);
-  let at = 0;
-  for (const c of chunks) {
-    out.set(c, at);
-    at += c.byteLength;
-  }
-  return out;
-}
 
 // ── parts and attachments, kept in infra/attachments ─────────────────────
 
@@ -161,13 +44,14 @@ async function partUuid(parts: readonly string[]): Promise<string> {
  * A part's bytes and description: from infra/attachments when this part was
  * imported (its id derived from the part), else from the provider through
  * the Mail cache, then imported. Unlinked, an import is reclaimed by the
- * attachments sweep — the next open fetches it again.
+ * attachments sweep — the next open fetches it again. Throws the cache's
+ * `MailThreadUnavailableError` when the provider cannot answer.
  */
-async function partBytes(
+export async function readPart(
   threadId: string,
   messageId: string,
   partId: string,
-): Promise<{ bytes: Uint8Array; filename: string; mime: string } | Response> {
+): Promise<{ bytes: Uint8Array; filename: string; mime: string }> {
   const id = await partUuid([threadId, messageId, partId]);
   const held = await getAttachment(id);
   if (held !== null) {
@@ -177,16 +61,11 @@ async function partBytes(
       mime: held.mime,
     };
   }
-  let read;
-  try {
-    read = await mailCache.attachment(threadId, messageId, partId);
-  } catch (err) {
-    if (err instanceof MailThreadUnavailableError) {
-      return refused(err.reason === "gone" ? 404 : 503, err.message);
-    }
-    throw err;
-  }
-  const { meta, bytes } = read;
+  const { meta, bytes } = await mailCache.attachment(
+    threadId,
+    messageId,
+    partId,
+  );
   const filename = meta.filename || `attachment-${partId}`;
   const mime = meta.mimeType || "application/octet-stream";
   await importAttachment({
@@ -197,6 +76,22 @@ async function partBytes(
     size: bytes.byteLength,
   });
   return { bytes, filename, mime };
+}
+
+/** {@link readPart}, a provider that cannot answer as the route's refusal. */
+async function partBytes(
+  threadId: string,
+  messageId: string,
+  partId: string,
+): Promise<{ bytes: Uint8Array; filename: string; mime: string } | Response> {
+  try {
+    return await readPart(threadId, messageId, partId);
+  } catch (err) {
+    if (err instanceof MailThreadUnavailableError) {
+      return refused(err.reason === "gone" ? 404 : 503, err.message);
+    }
+    throw err;
+  }
 }
 
 /** `GET /api/mail/inline/:sig?t=&m=&p=` — an inline image the server signed, for the mail frame. */

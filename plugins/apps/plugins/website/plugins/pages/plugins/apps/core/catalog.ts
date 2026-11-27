@@ -1,7 +1,8 @@
 import type { WebsiteTileColor } from "@plugins/apps/plugins/website/plugins/app-tiles/core";
 import { symbol, type SymbolRef } from "@plugins/ui/plugins/icons/core";
 
-export type AppCategoryId = "harness" | "daily" | "tools" | "surfaces" | "next";
+export type AppCategoryId =
+  "harness" | "office" | "leisure" | "tools" | "surfaces" | "next";
 
 export interface AppCategory {
   id: AppCategoryId;
@@ -41,7 +42,8 @@ export const CATEGORIES: readonly AppCategory[] = [
     name: "The harness",
     body: "The apps used to build equin itself",
   },
-  { id: "daily", name: "Daily life", body: "The apps used every day" },
+  { id: "office", name: "Office", body: "The apps used to get things done" },
+  { id: "leisure", name: "Leisure", body: "The apps used for fun" },
   { id: "tools", name: "Tools", body: "Small utilities the others lean on" },
   // Not apps of their own kind: two ways to hold every other app at once.
   {
@@ -96,54 +98,75 @@ export const APPS: readonly CatalogEntry[] = [
     appId: "pages",
     color: "blue",
     name: "Pages",
-    category: "daily",
+    category: "office",
     icon: symbol("description"),
     summary: "Notion-like editor and agentic wiki",
     description:
       "A Notion-like editor and agentic wiki: blocks, databases, backlinks, and agents writing beside you.",
   },
   {
-    id: "sonata",
-    appId: "sonata",
-    color: "emerald",
-    name: "Sonata",
-    category: "daily",
-    icon: symbol("piano"),
-    summary: "Learn piano from any song",
+    id: "mail",
+    appId: "mail",
+    color: "rose",
+    name: "Mail",
+    category: "office",
+    icon: symbol("mail"),
+    summary: "Your inbox as views you build",
     description:
-      "Learn piano from any song: a piano roll, chords broken down, and practice that adapts to you.",
-  },
-  {
-    id: "events",
-    appId: "events",
-    color: "orange",
-    name: "Events",
-    category: "daily",
-    icon: symbol("event"),
-    description:
-      "Social events from many sources, in one place, on a map and a calendar.",
+      "Your mail as views you build: every mailbox and label is a filter you can copy and edit.",
   },
   {
     id: "maps",
     appId: "places",
     color: "green",
     name: "Maps",
-    category: "daily",
+    category: "office",
     icon: symbol("location-on"),
     summary: "Every place you love, on one map",
     description:
       "The places you want to go and have been, on one map, sorted by a tree of tags.",
   },
   {
+    id: "events",
+    appId: "events",
+    color: "orange",
+    name: "Events",
+    category: "office",
+    icon: symbol("event"),
+    description:
+      "Social events from many sources, in one place, on a map and a calendar.",
+  },
+  {
+    id: "sonata",
+    appId: "sonata",
+    color: "emerald",
+    name: "Sonata",
+    category: "leisure",
+    icon: symbol("piano"),
+    summary: "Learn piano from any song",
+    description:
+      "Learn piano from any song: a piano roll, chords broken down, and practice that adapts to you.",
+  },
+  {
     id: "chord",
     appId: "chord",
     color: "pink",
     name: "Chord",
-    category: "daily",
+    category: "leisure",
     icon: symbol("queue-music"),
     summary: "Name the chords of real songs",
     description:
       "An ear trainer that plays loops of real songs and asks you to name each chord.",
+  },
+  {
+    id: "party",
+    appId: "keyboard-party",
+    color: "fuchsia",
+    name: "Tap Tap Party",
+    category: "leisure",
+    icon: symbol("celebration"),
+    description:
+      "A keyboard toy for a small child: every key answers with its own animation and sound.",
   },
   {
     id: "browser",
@@ -194,27 +217,6 @@ export const APPS: readonly CatalogEntry[] = [
     icon: symbol("extension"),
     description:
       "Every plugin of equin, its graph and what it contributes, open to inspect.",
-  },
-  {
-    id: "party",
-    appId: "keyboard-party",
-    color: "fuchsia",
-    name: "Tap Tap Party",
-    category: "daily",
-    icon: symbol("celebration"),
-    description:
-      "A keyboard toy for a small child: every key answers with its own animation and sound.",
-  },
-  {
-    id: "mail",
-    appId: "mail",
-    color: "rose",
-    name: "Mail",
-    category: "next",
-    icon: symbol("mail"),
-    soon: true,
-    description:
-      "Your mail as views you build: every mailbox and label is a filter you can copy and edit, loaded from Gmail as you open it.",
   },
   {
     id: "finance",

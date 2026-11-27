@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-providers-local",
+  "description": "The local mail provider: a MailProvider whose mailbox lives in this host's own database — no network, no computer — for the website's demo (and any host without a mail account): the contract's canonical filter compiled to SQL, an atomic change log as the cursor, an in-process push, send stored in Sent, and deliver / setAccount for fixture writers.",
+  "private": true,
+  "version": "0.0.1"
+}

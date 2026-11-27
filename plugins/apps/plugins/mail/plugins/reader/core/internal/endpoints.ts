@@ -8,9 +8,14 @@ import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // server wrote into a body it rendered is served. The attachment route is the
 // page's own (owner), opened in a tab or downloaded.
 
-/** A remote image of a mail body, fetched by the server so the sender never sees the reader's address. */
+/**
+ * A remote image of a mail body, fetched by the server so the sender never
+ * sees the reader's address. Fetched by the computer's server (SSRF-guarded),
+ * so a browser host has none (`machine/`).
+ */
 export const mailImageProxy = defineEndpoint({
   route: "GET /api/mail/image/:sig",
+  needsMachine: { feature: "Loading remote images" },
   query: z.object({ u: z.string() }),
   response: blob(),
   access: {

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-mail-fixtures",
+  "description": "Mail fixtures: a typed mailbox (MailFixture — the account, labels, threads of messages) and its writer through the local mail provider's real write paths, for demos and tests.",
+  "private": true,
+  "version": "0.0.1"
+}

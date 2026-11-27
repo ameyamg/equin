@@ -42,6 +42,9 @@ export const APP_DEMO_PLACES: Readonly<Record<string, AppDemoPlace>> = {
     shot: "/files/browse/~;fs=browser/preview/This%20week.md;fs=browser",
   },
   maps: { home: "/places", shot: "/places" },
+  // The concert hall's newsletter open beside Demo's Inbox: an HTML body
+  // with its inline picture, the Lisbon and Tokyo labels in the list.
+  mail: { home: "/mail", shot: "/mail/thread/mthread-demo01" },
   // The two ways to use equin as a whole surface. The desktop is shot with
   // Sonata's window open on the nocturne (two more windows join it in the
   // screenshot script's setup); the island at its home, Start pressed by the

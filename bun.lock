@@ -834,6 +834,10 @@
       "name": "@equin/plugin-apps-mail-compose",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail/plugins/fixtures": {
+      "name": "@equin/plugin-apps-mail-fixtures",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/mail/plugins/isle-building": {
       "name": "@equin/plugin-apps-mail-isle-building",
       "version": "0.0.1",
@@ -848,6 +852,10 @@
     },
     "plugins/apps/plugins/mail/plugins/providers/plugins/gmail": {
       "name": "@equin/plugin-apps-mail-providers-gmail",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/providers/plugins/local": {
+      "name": "@equin/plugin-apps-mail-providers-local",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/mail/plugins/reader": {
@@ -9004,6 +9012,8 @@
 
     "@equin/plugin-apps-mail-compose": ["@equin/plugin-apps-mail-compose@workspace:plugins/apps/plugins/mail/plugins/compose"],
 
+    "@equin/plugin-apps-mail-fixtures": ["@equin/plugin-apps-mail-fixtures@workspace:plugins/apps/plugins/mail/plugins/fixtures"],
+
     "@equin/plugin-apps-mail-isle-building": ["@equin/plugin-apps-mail-isle-building@workspace:plugins/apps/plugins/mail/plugins/isle-building"],
 
     "@equin/plugin-apps-mail-provider": ["@equin/plugin-apps-mail-provider@workspace:plugins/apps/plugins/mail/plugins/provider"],
@@ -9011,6 +9021,8 @@
     "@equin/plugin-apps-mail-providers": ["@equin/plugin-apps-mail-providers@workspace:plugins/apps/plugins/mail/plugins/providers"],
 
     "@equin/plugin-apps-mail-providers-gmail": ["@equin/plugin-apps-mail-providers-gmail@workspace:plugins/apps/plugins/mail/plugins/providers/plugins/gmail"],
+
+    "@equin/plugin-apps-mail-providers-local": ["@equin/plugin-apps-mail-providers-local@workspace:plugins/apps/plugins/mail/plugins/providers/plugins/local"],
 
     "@equin/plugin-apps-mail-reader": ["@equin/plugin-apps-mail-reader@workspace:plugins/apps/plugins/mail/plugins/reader"],
 

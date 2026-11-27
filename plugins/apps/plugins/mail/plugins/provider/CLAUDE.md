@@ -157,7 +157,9 @@ The cache and e2e tests run on it, never on Gmail.
 - Description: Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered one. Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
 - Web:
   - Slots: `MailProviderUi.Connect`
-  - Slot contributors: `MailProviderUi.Connect` ← `apps.mail.providers.gmail`
+  - Slot contributors:
+    - `MailProviderUi.Connect` ← `apps.mail.providers.gmail`
+    - `MailProviderUi.Connect` ← `apps.mail.providers.local`
   - Uses: `primitives/slot-render.renderIsolated`
   - Exports (types): `MailProviderConnectContribution`
   - Exports (values):
@@ -165,6 +167,9 @@ The cache and e2e tests run on it, never on Gmail.
     - `MailProviderUi`
 - Core:
   - Uses:
+    - `network/live/filter.canonicalizeFilter`
+    - `network/live/filter.decodeFilter`
+    - `network/live/filter.encodeFilter`
     - `network/live/filter.Filter`
     - `network/live/filter.Filterable`
     - `network/live/filter.FilterColumn`
@@ -203,12 +208,14 @@ The cache and e2e tests run on it, never on Gmail.
     - `MessageBody`
     - `MessageContent`
     - `MessageFacts`
+    - `MessageId`
     - `MessageListPage`
     - `OutgoingMessage`
     - `Participant`
     - `SavedDraft`
     - `SendIdentity`
     - `SentMessage`
+    - `SummaryMessage`
     - `ThreadContent`
     - `ThreadContentResult`
     - `ThreadId`
@@ -218,6 +225,9 @@ The cache and e2e tests run on it, never on Gmail.
   - Exports (values):
     - `assertOutgoingMessageId`
     - `changeCursor`
+    - `compileCanonicalMailQuery`
+    - `decodeCanonicalMailQuery`
+    - `deriveThreadSummary`
     - `draftId`
     - `isDeclaredMailOp`
     - `listCursor`
@@ -241,7 +251,9 @@ The cache and e2e tests run on it, never on Gmail.
   - Imported by:
     - `apps/mail/cache`
     - `apps/mail/compose`
+    - `apps/mail/fixtures`
     - `apps/mail/providers/gmail`
+    - `apps/mail/providers/local`
     - `apps/mail/reader`
     - `apps/mail/threads`
 - Server:

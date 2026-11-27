@@ -1,7 +1,3 @@
-import {
-  ExcludeFromBackup,
-  ExcludeFromFork,
-} from "@plugins/database/plugins/admin/server";
 import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { markCascadeBounded } from "@plugins/infra/plugins/retention/server";
 import {
@@ -13,15 +9,16 @@ import {
   _mailThreads,
 } from "./tables";
 
-// The cache tables' growth bounds (checked at module eval) and exclusions: a
-// cache is left out of forks, backups and the change feed.
+// The cache tables' growth bounds (checked at module eval) and their
+// exclusion from the change feed. (A cache is left out of forks and backups
+// too: those are the computer's, declared in machine/.)
 
 markCascadeBounded(_mailMailboxes, _mailAccounts);
 markCascadeBounded(_mailQueryMembers, _mailQueries);
 // Also held under the byte budget, evicted least recently opened first (engine).
 markCascadeBounded(_mailThreadBodies, _mailThreads);
 
-const CACHE_TABLES = [
+export const CACHE_TABLES = [
   _mailAccounts,
   _mailMailboxes,
   _mailThreads,
@@ -30,19 +27,10 @@ const CACHE_TABLES = [
   _mailThreadBodies,
 ];
 
-export const cacheTableExclusions = CACHE_TABLES.flatMap((table) => [
-  ExcludeFromFork({
-    table,
-    reason:
-      "Mail cache: a worktree reads its own from the provider on demand (a copy would share main's change cursor).",
-  }),
-  ExcludeFromBackup({
-    table,
-    reason: "Mail cache: re-read from the mail provider on demand.",
-  }),
+export const cacheTableExclusions = CACHE_TABLES.map((table) =>
   ExcludeFromChangeFeed({
     table,
     reason:
       "Mail cache: only the cache writes it, and it notifies mail.threads / mail.mailboxes itself (external arm).",
   }),
-]);
+);

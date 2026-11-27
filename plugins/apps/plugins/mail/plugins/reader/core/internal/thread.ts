@@ -25,6 +25,24 @@ export const ReaderAttachmentSchema = z.object({
 });
 export type ReaderAttachment = z.infer<typeof ReaderAttachmentSchema>;
 
+/**
+ * What an inline part (a `cid:` image) is written as in a rendered body: a
+ * token, never a route — the page resolves it over its own transport (a
+ * URL on a server a URL reaches, the part's bytes as a `data:` URL on an
+ * in-browser one, which no URL reaches). Index into `inlineImages`.
+ */
+export function inlineImageToken(index: number): string {
+  return `mail-inline:${index}`;
+}
+
+/** One inline part a rendered body shows, signed for the inline-part route. */
+export const ReaderInlineImageSchema = z.object({
+  partId: z.string(),
+  /** The server's signature over thread, message and part (`mailInlinePart`'s `:sig`). */
+  sig: z.string(),
+});
+export type ReaderInlineImage = z.infer<typeof ReaderInlineImageSchema>;
+
 /** One message as the reader draws it. */
 export const ReaderMessageSchema = z.object({
   id: z.string(),
@@ -47,11 +65,16 @@ export const ReaderMessageSchema = z.object({
   text: z.string().nullable(),
   /**
    * The HTML body made safe to frame (`server/internal/render.ts`): remote
-   * images through the image proxy, `cid:` images through the inline-part
-   * route, links opening a new tab, refreshes and stylesheet links cut. The
-   * page frames it under its own policy (no request but those routes).
+   * images through the image proxy, `cid:` images as `inlineImageToken`s the
+   * page resolves, links opening a new tab, refreshes and stylesheet links
+   * cut. The page frames it under its own policy (no request but those
+   * routes).
    */
   html: z.string().nullable(),
+  /** The inline parts `html` shows, by `inlineImageToken` index. */
+  inlineImages: wholeList(ReaderInlineImageSchema, {
+    reason: "the inline images of one message's body, as its parts list them",
+  }),
   /** A charset no decoder knows: the body is its bytes read as UTF-8, the reader says so. */
   unknownCharset: z.string().nullable(),
   attachments: wholeList(ReaderAttachmentSchema, {
@@ -98,5 +121,24 @@ export type MailThreadRefusal = (typeof MAIL_THREAD_REFUSALS)[number];
 export const mailThread = liveValue("mail.thread", {
   schema: ReaderThreadSchema,
   params: ["id"],
+  refusals: MAIL_THREAD_REFUSALS,
+});
+
+/** The most inline images one message's body shows, read at once. */
+export const MAIL_INLINE_IMAGES_MAX = 100;
+
+/**
+ * One message's inline images (its `cid:` parts) as `data:` URLs, in
+ * `inlineImages` order — for a reader whose server no URL reaches (an
+ * in-browser one, the website's demo): the body's frame is an opaque origin
+ * that loads by URL, and a route would load from the PAGE's server. A reader
+ * on the page's own server loads them through `mailInlinePart` instead.
+ * Immutable: a message's parts never change.
+ */
+export const mailInlineImages = liveValue("mail.inline-images", {
+  schema: z.object({
+    srcs: cappedList(z.string(), { max: MAIL_INLINE_IMAGES_MAX }),
+  }),
+  params: ["threadId", "messageId"],
   refusals: MAIL_THREAD_REFUSALS,
 });

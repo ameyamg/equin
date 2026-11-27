@@ -1,7 +1,8 @@
 # shell
 
 The Mail app's identity (`core/app.ts`: id `mail`, `/mail`, dark only,
-developer-only until it reads and sends mail), its rail entry and frame (the
+listed for every user — with no account it draws its provider's connect
+surface), its rail entry and frame (the
 sidebar-less app shell around the column renderer — the threads plugin
 registers the index pane, which draws its own sidebar as the DataView's
 `aside`, and the thread pane beside it), the presentation the list and the

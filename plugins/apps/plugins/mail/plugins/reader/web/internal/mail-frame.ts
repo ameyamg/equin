@@ -12,10 +12,15 @@
 // only its height reporter, and a second policy can only narrow — a
 // `default-src` here would block the reporter too.
 
-/** The policy, for the mail routes on `origin` (the page's own server). */
-export function mailFramePolicy(origin: string): string {
+/**
+ * The policy, for the mail routes on `origin` (the page's own server) — or,
+ * `null`, for a server no URL reaches (an in-browser one): `data:` images
+ * only, its inline parts handed over as bytes, so nothing reaches the page's
+ * server.
+ */
+export function mailFramePolicy(origin: string | null): string {
   return [
-    `img-src ${origin}/api/mail/ data:`,
+    origin === null ? "img-src data:" : `img-src ${origin}/api/mail/ data:`,
     "style-src 'unsafe-inline'",
     "font-src data:",
     "media-src 'none'",
@@ -39,8 +44,8 @@ const BASE_STYLE = `html,body{height:auto!important;min-height:0!important}html{
 
 const DOCTYPE = /^\s*<!doctype[^>]*>/i;
 
-/** `html` (a rewritten body) as the framed document, the policy first. */
-export function mailFrameDocument(html: string, origin: string): string {
+/** `html` (a rewritten body) as the framed document, the policy first (`origin`: as {@link mailFramePolicy}). */
+export function mailFrameDocument(html: string, origin: string | null): string {
   const head =
     `<meta http-equiv="Content-Security-Policy" content="${mailFramePolicy(origin)}">` +
     `<meta name="referrer" content="no-referrer">` +

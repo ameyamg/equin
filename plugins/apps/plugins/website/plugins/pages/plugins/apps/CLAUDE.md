@@ -72,7 +72,7 @@ shell never names this page. The homepage's applications layer opens it.
 
 ## Plugin reference
 
-- Description: The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, the ways to use equin as a whole surface — Desktop and Isle —, coming next), each card's Install and the 'Missing an app?' band going to the download page, and its Apps nav link; the page ends on the site's Try it band. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, office, leisure, tools, the ways to use equin as a whole surface — Desktop and Isle —, coming next), each card's Install and the 'Missing an app?' band going to the download page, and its Apps nav link; the page ends on the site's Try it band. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-apps"

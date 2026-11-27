@@ -40,6 +40,7 @@ read it.
     - `apps-core/tab-origin`
     - `apps-core/tabs`
     - `apps/website/crawlable`
+    - `apps/website/landing/screenshot`
     - `apps/website/live-demo`
     - `apps/website/shell`
     - `framework/web-core`

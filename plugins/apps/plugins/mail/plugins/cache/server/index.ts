@@ -33,6 +33,7 @@ import {
   mailThreadsRetention,
 } from "./internal/retention";
 
+export { CACHE_TABLES } from "./internal/declarations";
 export {
   _mailAccounts,
   _mailMailboxes,

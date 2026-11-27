@@ -10,6 +10,7 @@ import chordShot from "../shots/app-chord.jpg";
 import desktopShot from "../shots/app-desktop.jpg";
 import filesShot from "../shots/app-files.jpg";
 import isleShot from "../shots/app-isle.jpg";
+import mailShot from "../shots/app-mail.jpg";
 import mapsShot from "../shots/app-maps.jpg";
 import pagesShot from "../shots/app-pages.jpg";
 import partyShot from "../shots/app-party.jpg";
@@ -28,6 +29,7 @@ const SHOTS: Readonly<Record<string, ImportedImage>> = {
   pages: pagesShot,
   sonata: sonataShot,
   maps: mapsShot,
+  mail: mailShot,
   chord: chordShot,
   files: filesShot,
   desktop: desktopShot,

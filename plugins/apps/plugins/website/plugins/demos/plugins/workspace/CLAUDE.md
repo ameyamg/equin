@@ -1,7 +1,7 @@
 # workspace
 
 The workspace demo — the website's live demo: the Agent Manager, Pages,
-Prototypes, Sonata, Keyboard Party, Isle, Places and Files on Demo's own equin, the story being what equin is for:
+Prototypes, Sonata, Keyboard Party, Isle, Places, Files and Mail on Demo's own equin, the story being what equin is for:
 a person shaping their apps with agents. Its
 scenario is `workspaceDemo` (`core`) — the app, the
 route it opens at (`/c/conv-1760000000-demo02`) and its browser host
@@ -69,13 +69,22 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   `~` of the browser's file system: Documents — notes, code, an HTML recipe,
   the Lisbon trip's papers —, Music — a recording, a MIDI piece, the practice
   log —, Pictures, and loose files — a short video clip, a note, a picture, a
-  ticket, a Chopin nocturne; real files, path → bytes, kept small). How each app's data is written is that
+  ticket, a Chopin nocturne; real files, path → bytes, kept small), and Demo's
+  mailbox (`story`'s `core/internal/mail.ts`, `DEMO_MAIL`, a Mail fixture:
+  three weeks of mail that fits the rest of the demo — the Lisbon trip, Tokyo,
+  piano, everyday mail, a draft in progress — every correspondent on a
+  `.example` domain, attachments from `data/home/`). How each app's data is written is that
   app's fixture writer: `apps/pages/fixtures`' `writePageTree`,
   `apps/prototypes/fixtures`' `writePrototypeFixture`,
   `apps/sonata/fixtures`' `writeSongFixtures` and `apps/places/fixtures`'
   `writePlacesFixture` (its tags through the tag tree's endpoints on the
   seed's `host`), the browser file system's `writeBrowserHomeFiles`
-  (`infra/paths/data-files/memory`).
+  (`infra/paths/data-files/memory`), and `apps/mail/fixtures`'
+  `writeMailFixture` (into the local mail provider: its labels through the
+  provider's own mailbox writes, each message through its inbound `deliver`
+  — never the Mail cache, which fills on the visitor's first open, against
+  the time-shifted provider rows; the boot test asserts it is empty after the
+  seed).
   Design:
   `research/2026-10-28-global-per-app-demo-seeds-v2.md`.
 - **Two sessions show their change as a before / after pair.** The recipes
@@ -118,7 +127,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   the page header's own `PATCH` sent to the host's router (`seed`'s `host`
   argument) — an agent's tools cannot set an icon, a person can — → the
   agents' before / after pairs → settle → the transcripts → the prototypes fixture → settle → the songs → settle →
-  Places → settle → the home folder → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
+  Places → settle → the home folder → settle → the mailbox → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
   them itself, as on a fresh install.)
 - **Every id carries `demo`, and is a real id of its kind** (`task-1760000000-demo02`,
   `att-…`, `conv-…`, the agents, the pages and the blocks a record names —
@@ -182,7 +191,14 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   filled from `data/home/` (`writeBrowserHomeFiles`), with the apps' folders
   under the hidden `~/.equin/` — and leaves out the computer's disk, which
   this host does not serve; `apps/demo`'s `file-explorer-in-demo.ts` opens
-  each viewer.
+  each viewer. Mail (`apps.mail.**`) reads Demo's mailbox from the local mail
+  provider (`apps.mail.providers.local`, a mailbox in the worker's own
+  database, named to take it back from `all-exclusions`) in place of Gmail
+  (`!apps.mail.providers.gmail.**`: OAuth, Pub/Sub, the computer) — Mail's
+  cache serves exactly one provider; sending stores the message in Sent and
+  delivers it nowhere, and loading a body's remote images needs the computer
+  and says so (the reader's `machine/`;
+  `research/2026-11-27-global-mail-in-browser-demo.md`).
   The third-party
   hosts the demo may reach are the scoped plugins' `ExternalHosts.Declare`s
   (`externalHosts`, exported from `core`), which `apps/demo`'s e2e hold every

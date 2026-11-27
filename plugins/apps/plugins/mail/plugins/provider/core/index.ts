@@ -10,6 +10,7 @@ export {
   type DraftId,
   type ListCursor,
   type MailboxId,
+  type MessageId,
   type ThreadId,
   type ThreadVersion,
 } from "./internal/ids";
@@ -71,3 +72,8 @@ export {
   type MailPush,
   type MailPushState,
 } from "./internal/provider";
+export {
+  compileCanonicalMailQuery,
+  decodeCanonicalMailQuery,
+} from "./internal/canonical";
+export { deriveThreadSummary, type SummaryMessage } from "./internal/summary";

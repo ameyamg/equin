@@ -11,7 +11,7 @@ import {
   startMailDraft,
   undoSendMailDraft,
 } from "../core";
-import { draftTableExclusions } from "./internal/declarations";
+import "./internal/declarations";
 import {
   attachmentLinkContributions,
   mailDraftMirrorJob,
@@ -23,6 +23,7 @@ import {
 } from "./internal/served";
 
 export { _mailDrafts } from "./internal/tables";
+export { _mailDraftAttachmentsTable } from "./internal/schema-attachments";
 
 export default {
   description:
@@ -49,7 +50,6 @@ export default {
     ...mailDraftServed.declare,
     ...mailSignatureServed.declare,
     ...attachmentLinkContributions,
-    ...draftTableExclusions,
     ConfigV2.Register({ descriptor: mailComposeConfig }),
   ],
   register: [mailDraftMirrorJob, mailSendJob, mailDraftsRetention],
