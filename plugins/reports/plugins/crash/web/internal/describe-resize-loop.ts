@@ -1,4 +1,5 @@
 import type {
+  ResizeLoopHeldBack,
   ResizeLoopObservation,
   ResizeLoopReport,
 } from "@plugins/primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace/web";
@@ -29,21 +30,48 @@ export function describeResizeLoop(r: ResizeLoopReport): ResizeLoopTrace {
     omittedDeferred:
       r.omittedDeferred +
       Math.max(0, r.deferred.length - RESIZE_LOOP_OBSERVATIONS_MAX),
+    // Shallowest first: the browser holds back what sits at or above the
+    // depth it just delivered, so the loop's element leads.
+    heldBack: r.heldBack
+      .map(describeHeldBack)
+      .sort((a, b) => a.depth - b.depth)
+      .slice(0, RESIZE_LOOP_OBSERVATIONS_MAX),
+    omittedHeldBack:
+      r.omittedHeldBack +
+      Math.max(0, r.heldBack.length - RESIZE_LOOP_OBSERVATIONS_MAX),
+    occurrences: r.occurrences,
+    durationMs: r.durationMs,
+  };
+}
+
+function describeHeldBack(h: ResizeLoopHeldBack) {
+  return {
+    ...describeTarget(h.target, h.width, h.height),
+    // As it was when the error fired, not when the report is written.
+    connected: h.connected,
+    site: h.site,
+    reported: h.reported,
+  };
+}
+
+function describeTarget(target: Element, width: number, height: number) {
+  return {
+    element: elementLabel(target),
+    owner: nearestOwner(target) ?? null,
+    source: nearestSource(target) ?? null,
+    depth: depthOf(target),
+    width,
+    height,
+    connected: target.isConnected,
   };
 }
 
 function describeObservation(o: ResizeLoopObservation) {
   return {
     site: o.site,
-    targets: o.entries.slice(0, RESIZE_LOOP_TARGETS_MAX).map((e) => ({
-      element: elementLabel(e.target),
-      owner: nearestOwner(e.target) ?? null,
-      source: nearestSource(e.target) ?? null,
-      depth: depthOf(e.target),
-      width: e.width,
-      height: e.height,
-      connected: e.target.isConnected,
-    })),
+    targets: o.entries
+      .slice(0, RESIZE_LOOP_TARGETS_MAX)
+      .map((e) => describeTarget(e.target, e.width, e.height)),
     omittedTargets: Math.max(0, o.entries.length - RESIZE_LOOP_TARGETS_MAX),
   };
 }

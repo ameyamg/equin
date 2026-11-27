@@ -57489,6 +57489,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rail`
               - `primitives/css/ui-kit`
               - `primitives/dom/auto-scroll`
+              - `primitives/dom/element-size/resize-loop-trace`
               - `primitives/ui-context/element-picker`
               - `search/find-in-surface`
           - Exemptions:
@@ -57602,19 +57603,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
               - `react-compiler:no-silent-skips` — `web/internal/element-size.ts` (debt)
           - Plugins:
-            - **`resize-loop-trace`** — Names the observers behind a 'ResizeObserver loop completed with undelivered notifications' error, which the browser raises with no stack: installResizeLoopTrace() (imported first by main.tsx) wraps the page's ResizeObserver to remember the callbacks of the current pass and where each observer was created; when the loop error fires it emits, on resizeLoopReportSink, that pass and the notifications held back to the next frame (the elements whose resize could not be delivered). claimsResizeLoopError(e) tells the window-error reporter the tracer reports this one.
-              - Cross-plugin:
-                - Imported by:
-                  - `framework/web-core`
-                  - `reports/crash`
+            - **`resize-loop-trace`** — Names the observers behind a 'ResizeObserver loop completed with undelivered notifications' error, which the browser raises with no stack: installResizeLoopTrace() (imported first by main.tsx) wraps the page's ResizeObserver to remember the callbacks of the current pass, where each observer was created and the size each observation last reported. When the loop error fires it reads which observations are still out of date (resized or detached since they last reported, or never reported) — exactly the notifications the browser held back — and emits, on resizeLoopReportSink, ONE report per episode (loop errors less than a second apart, cut at 10 s): its first error's pass, held-back observations and next step, with how many errors it raised and for how long. claimsResizeLoopError(e) tells the window-error reporter the tracer reports this one.
               - Web:
+                - Uses: `primitives/dom/box-presence.generatesBox`
                 - Exports (types):
+                  - `ResizeLoopHeldBack`
                   - `ResizeLoopObservation`
                   - `ResizeLoopReport`
                 - Exports (values):
                   - `claimsResizeLoopError`
                   - `installResizeLoopTrace`
                   - `resizeLoopReportSink`
+              - Cross-plugin:
+                - Imported by:
+                  - `framework/web-core`
+                  - `reports/crash`
         - **`gesture-origin`** — Whether a pointer gesture a chrome surface caught (a drag handle's press, a header's double-click) is its own: isChromeGesture(event) — false for an event bubbled through React from a portal (a popover opened from the surface, outside it in the DOM) and for one landing in text entry (input, textarea, select, editable region), where a press-and-drag selects text and a double-click picks a word. Read by the sortable-list pointer sensor and the pane header's double-click.
           - Cross-plugin:
             - Imported by:

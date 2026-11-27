@@ -38,6 +38,7 @@ suites went red. So the read has one home:
     - `primitives/css/rail`
     - `primitives/css/ui-kit`
     - `primitives/dom/auto-scroll`
+    - `primitives/dom/element-size/resize-loop-trace`
     - `primitives/ui-context/element-picker`
     - `search/find-in-surface`
 - Exemptions:
