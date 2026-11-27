@@ -32,6 +32,7 @@ export {
   AttachmentTooLargeError,
   pipeBounded,
 } from "./internal/blobs";
+export { attachmentReads } from "./internal/reads";
 export {
   AttachmentMissingError,
   readAttachmentBytes,

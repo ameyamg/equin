@@ -95,6 +95,7 @@ the painted body, prefetched vs cold.
     - `apps/mail/cache.MailThreadRead`
     - `apps/mail/cache.MailThreadUnavailableError`
     - `apps/mail/cache.onMailThreadsChanged`
+    - `infra/attachments.attachmentReads`
     - `infra/attachments.getAttachment`
     - `infra/attachments.importAttachment`
     - `infra/attachments.readAttachmentBytes`

@@ -45,6 +45,11 @@ a `.partial` sibling renamed into place).
   bytes keep one id everywhere. Idempotent — `{ kind: "exists" }` when the id
   already holds `size` bytes (the stream is not read); another size throws
   `AttachmentConflictError`. The id must be a lowercase UUID.
+- **Reading inside a live loader** — `getAttachment`, `readAttachmentBytes` and
+  `importAttachment` read the `attachments` rows. A served value whose loader
+  calls one declares `attachmentReads` (server) in its `reads` — the tables
+  stay this plugin's to name, and an undeclared read is route drift
+  (mail/reader's `mail.inline-images` is the reference).
 
 ## API
 
@@ -149,6 +154,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `AttachmentBlobs`
     - `AttachmentConflictError`
     - `AttachmentMissingError`
+    - `attachmentReads`
     - `Attachments`
     - `AttachmentTooLargeError`
     - `createAttachment`

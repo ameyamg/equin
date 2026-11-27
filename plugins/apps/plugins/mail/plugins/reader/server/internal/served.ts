@@ -1,3 +1,4 @@
+import { attachmentReads } from "@plugins/infra/plugins/attachments/server";
 import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
@@ -146,12 +147,25 @@ function dataUrl(bytes: Uint8Array, mime: string): string {
  */
 export const mailInlineImagesServed = serveValue(mailInlineImages, {
   source: "external",
-  // Read through the cache like the thread itself (and a part kept in
-  // infra/attachments): re-read when the cache says the thread moved.
+  // Read through the cache like the thread itself: re-read when the cache
+  // says the thread moved.
   changes: "notified",
   // The cache's tables and its providers' (the cache tells this value,
-  // onMailThreadsChanged, when a thread moved).
-  reads: mailCacheReads,
+  // onMailThreadsChanged, when a thread moved), and infra/attachments' rows
+  // each part is kept in (`readPart`) — notified, never routed: a part's
+  // attachment id is derived from the part and its bytes never change, so
+  // no write there changes an answer (a swept row only sends the next read
+  // back to the provider, for the same bytes).
+  reads: () => {
+    const cache = mailCacheReads();
+    return {
+      ...cache,
+      notified: {
+        relations: [...cache.notified.relations, ...attachmentReads.tables],
+        reason: `${cache.notified.reason}; parts kept in infra/attachments (readPart), under an id derived from the part whose bytes never change — ${attachmentReads.reason}`,
+      },
+    };
+  },
   loader: async ({ threadId, messageId }) => {
     try {
       const read = await mailCache.thread(threadId);

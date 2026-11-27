@@ -7748,6 +7748,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/cache.MailThreadRead`
               - `apps/mail/cache.MailThreadUnavailableError`
               - `apps/mail/cache.onMailThreadsChanged`
+              - `infra/attachments.attachmentReads`
               - `infra/attachments.getAttachment`
               - `infra/attachments.importAttachment`
               - `infra/attachments.readAttachmentBytes`
@@ -38105,6 +38106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AttachmentBlobs`
           - `AttachmentConflictError`
           - `AttachmentMissingError`
+          - `attachmentReads`
           - `Attachments`
           - `AttachmentTooLargeError`
           - `createAttachment`
