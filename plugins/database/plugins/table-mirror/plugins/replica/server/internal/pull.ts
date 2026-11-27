@@ -79,7 +79,10 @@ export interface MirrorSinkBatch {
  * reduce step): handed every applied page in the page's transaction, beside
  * the cursor. The replica keeps the key index for it, and hands it only the
  * upserts whose row hash the index did not hold — each row content once, a
- * re-delivery never (tombstones are all handed). `reconciling`: the rows come
+ * re-delivery never (tombstones are all handed). A hash also moves with no
+ * change of meaning (a column added on both sides moves every row's), so a
+ * sink that counts what it is handed judges recurrence from the row's own
+ * facts (site-reports' delivery ledger). `reconciling`: the rows come
  * from a reconciliation (they changed while deltas could not say so);
  * `firstCopy`: from the replica's first sync (its copy, then the stream that
  * catches it up).

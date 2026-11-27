@@ -96,8 +96,12 @@ const stop = await onReplicaApplied("analytics", (replicaId) => served.notify())
   upserts whose hash the index did not hold (`ON CONFLICT … WHERE h IS
   DISTINCT FROM excluded.h RETURNING`), so a re-delivery — the stream re-reads
   from its floor, and the stream after a copy or reconcile re-reads rows the
-  pass already applied — never reaches it; tombstones are all handed. A sink
-  that counts what it is handed (site-reports' recurrences) counts truthfully.
+  pass already applied — never reaches it; tombstones are all handed. A hash
+  moves with no change of the row's meaning, though: a column added on both
+  sides moves every row's hash, and the reconcile hands the whole table again
+  (the index keeps no content to re-hash it). So a sink that counts what it is
+  handed must judge recurrence from the row's own facts, not from being
+  handed it (site-reports' delivery ledger, `site_report_imports`).
 - **No retention here.** Deletions — cascades, the source's retention, rows
   deleted while the replica was past the horizon — reach the copy only
   through the sync (tombstones, or a reconcile's deletes).

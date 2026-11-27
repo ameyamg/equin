@@ -6,7 +6,9 @@ import type {
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { recordReportIncident } from "@plugins/reports/plugins/engine/server";
 import { reduceSiteReport, websiteVisitorErrorSummary } from "../../core";
+import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { importedKindOf } from "./kind";
+import { siteReportLedger, type SiteReportLedger } from "./ledger";
 import { SITE_REPORTS_TABLE, siteReportRecordOfRow } from "./site-row";
 
 const log = Log.channel("site-reports-import");
@@ -34,23 +36,57 @@ export const IMPORT_PACE: SiteMirrorPace = {
  *   (`siteReportRecordOfRow`) and reduced (`reduceSiteReport`): typed,
  *   clamped fields, the site's payload never copied. The replica keeps only
  *   each row's key and hash (`table_mirror_keys`), never its content.
- * - **Recurrences, counted once.** The replica hands a row only when its hash
- *   changed (a new fingerprint, or `count` / `last_seen_at` moved on the
- *   site), so the local `count` is the number of pulls that saw it recur.
+ * - **Recurrences, counted once.** A handed row is recorded only when the
+ *   site's own facts (`last_seen_at`, `count`) moved past what the delivery
+ *   ledger holds (`./ledger`). The replica hands a row whenever its hash
+ *   moved, and a hash moves with no new occurrence: a column added to
+ *   `site_reports` changes every row's hash, and the reconcile it starts
+ *   re-sends the whole table (2026-11-27: ~50 rows from 11-12…11-19 re-filed
+ *   at once after `split` was added). So the local `count` is the number of
+ *   pulls that saw the site's count or last sighting move.
  * - **One incident per page**, one bell at most; a reconciliation (the
  *   computer was away past the box's log horizon) records its catch-up
  *   without ringing (`alert: false`).
- * - **Tombstones are ignored.** The box's 30-day sweep forgetting a
- *   fingerprint is not news here: the local report is an incident record with
- *   the engine's own retention, not a copy of the box's table.
+ * - **Tombstones are not news.** The box's 30-day sweep forgetting a
+ *   fingerprint files nothing: the local report is an incident record with
+ *   the engine's own retention, not a copy of the box's table. The ledger
+ *   forgets it too, so it stays as small as the box's table.
  *
  * Recorded inside the page's transaction, before it commits (on its own
  * connection): a page that then fails to commit is handed again on the next
- * pull — a duplicate recurrence at worst, never a lost report.
+ * pull — a duplicate recurrence at worst, never a lost report (the ledger
+ * rolls back with the page).
  */
-export function reduceSink(site: SiteMirrorSite): MirrorCustomSink {
+/** What the sink writes through: the ledger, and the reports engine. */
+export interface ReduceSinkDeps {
+  ledger: SiteReportLedger;
+  record: typeof recordReportIncident;
+}
+
+const ENGINE: ReduceSinkDeps = {
+  ledger: siteReportLedger,
+  record: recordReportIncident,
+};
+
+export function reduceSink(
+  site: SiteMirrorSite,
+  { ledger, record }: ReduceSinkDeps = ENGINE,
+): MirrorCustomSink {
   return {
-    async apply(_tx, batch, { reconciling }) {
+    async apply(tx, batch, { reconciling }) {
+      const forgotten = batch.flatMap((b) =>
+        b.table === SITE_REPORTS_TABLE
+          ? b.deletes.map((pk) => {
+              if (typeof pk.fingerprint !== "string") {
+                throw new Error(
+                  `site-reports/import: a ${SITE_REPORTS_TABLE} tombstone without a text fingerprint: ${JSON.stringify(pk)}`,
+                );
+              }
+              return hashHex(pk.fingerprint);
+            })
+          : [],
+      );
+      await ledger.forget(tx, site.deploymentId, forgotten);
       const records = batch.flatMap((b) => {
         if (b.table !== SITE_REPORTS_TABLE) {
           throw new Error(
@@ -72,9 +108,30 @@ export function reduceSink(site: SiteMirrorSite): MirrorCustomSink {
           Date.parse(a.lastSeenAt) - Date.parse(b.lastSeenAt) ||
           (a.fingerprint < b.fingerprint ? -1 : 1),
       );
-      await recordReportIncident(
-        records.map((record) => {
-          const data = reduceSiteReport(record, site);
+      const reduced = records.map((record) => ({
+        record,
+        data: reduceSiteReport(record, site),
+      }));
+      const news = await ledger.admit(
+        tx,
+        site.deploymentId,
+        reduced.map(({ data }) => ({
+          siteFingerprint: data.siteFingerprint,
+          lastSeenAt: data.lastSeenAt,
+          siteCount: data.siteCount,
+        })),
+      );
+      const fresh = reduced.filter(({ data }) =>
+        news.has(data.siteFingerprint),
+      );
+      if (fresh.length < reduced.length) {
+        log.publish(
+          `${site.deploymentId}: ${reduced.length - fresh.length} of ${reduced.length} handed rows already recorded (no new sighting on the site) — skipped`,
+        );
+      }
+      if (fresh.length === 0) return;
+      await record(
+        fresh.map(({ record, data }) => {
           return {
             // The site kind's own category decides: a slow load is a slow op.
             kind: importedKindOf(record),
@@ -90,7 +147,7 @@ export function reduceSink(site: SiteMirrorSite): MirrorCustomSink {
         { alert: !reconciling },
       );
       log.publish(
-        `${site.deploymentId}: recorded ${records.length}${reconciling ? " (reconciling, no bell)" : ""}`,
+        `${site.deploymentId}: recorded ${fresh.length}${reconciling ? " (reconciling, no bell)" : ""}`,
       );
     },
   };

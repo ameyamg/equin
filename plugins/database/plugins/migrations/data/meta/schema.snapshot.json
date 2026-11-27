@@ -1,6 +1,6 @@
 {
-  "id": "b9b6b12a-092e-445c-a06a-2ca5808bcd96",
-  "prevId": "9c9dabe5-351d-482e-b513-46f75dd36fd0",
+  "id": "e32744f6-1cc6-4e68-a75e-691430613c7f",
+  "prevId": "b9b6b12a-092e-445c-a06a-2ca5808bcd96",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3267,6 +3267,51 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.site_report_imports": {
+      "name": "site_report_imports",
+      "schema": "",
+      "columns": {
+        "deployment_id": {
+          "name": "deployment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_fingerprint": {
+          "name": "site_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_count": {
+          "name": "site_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "site_report_imports_deployment_id_site_fingerprint_pk": {
+          "name": "site_report_imports_deployment_id_site_fingerprint_pk",
+          "columns": [
+            "deployment_id",
+            "site_fingerprint"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
