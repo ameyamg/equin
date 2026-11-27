@@ -8,7 +8,9 @@
 // start.
 //
 // The camera never zooms: every click changes another part of the screen (a
-// pane opening beside), so the click and its result stay in one frame.
+// pane opening beside), so the click and its result stay in one frame. The
+// hand goes straight to each target and clicks as it arrives; it pauses only
+// once a result is on screen.
 //
 //   ./equin run plugins/apps/plugins/website/plugins/pages/plugins/tips/e2e/open-panes-side-by-side.ts --composition promo-film
 //
@@ -66,20 +68,14 @@ await tipVideo({
 
     // Two more conversations from the sidebar, each beside the others.
     const groceryRow = sidebar.getByRole("button", { name: GROCERY });
-    await r.move(groceryRow);
-    await r.hold(0.5);
     await r.click(groceryRow, { modifiers: ["Alt"] });
     await r.hold(0.8);
     const goodreadsRow = sidebar.getByRole("button", { name: GOODREADS });
-    await r.move(goodreadsRow);
-    await r.hold(0.3);
     await r.click(goodreadsRow, { modifiers: ["Alt"] });
     await r.hold(0.9);
 
     // ⌥ on the middle one's Close: only that pane goes, the one after stays.
     const close = grocery.getByRole("button", { name: "Close", exact: true });
-    await r.move(close);
-    await r.hold(0.5);
     await r.click(close, { modifiers: ["Alt"] });
     await r.hold(0.8);
 
@@ -88,22 +84,16 @@ await tipVideo({
       name: "Toggle Sidebar",
       exact: true,
     });
-    await r.move(toggle);
-    await r.hold(0.3);
     await r.click(toggle);
     await r.hold(0.6);
 
     // Inside the first conversation, its pages open right after it…
     const pages = grieg.getByRole("button", { name: "Pages", exact: true });
-    await r.move(pages);
-    await r.hold(0.4);
     await r.click(pages, { modifiers: ["Alt"] });
     await r.hold(1.0);
     // …and so does the score page it saved, before the pages: the row slides
     // to its end (Miller always does), the conversation off to the left.
     const score = grieg.getByRole("button", { name: SCORE_PAGE, exact: true });
-    await r.move(score);
-    await r.hold(0.4);
     await r.click(score, { modifiers: ["Alt"] });
     await r.hold(1.3);
 
