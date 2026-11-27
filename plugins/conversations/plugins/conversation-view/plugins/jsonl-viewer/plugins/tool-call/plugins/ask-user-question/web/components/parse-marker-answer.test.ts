@@ -5,6 +5,13 @@ import {
   serializeMarkerAnswer,
   type Question,
 } from "./answer-model";
+import {
+  PromptMarkdownSchema,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
+
+/** Text as the prompt editor hands it over. */
+const md = (text: string): PromptMarkdown => PromptMarkdownSchema.parse(text);
 
 function q(partial: Partial<Question> & { header: string }): Question {
   return {
@@ -86,10 +93,10 @@ describe("serializeMarkerAnswer", () => {
   ];
 
   it("writes the marker turn parseMarkerAnswer reads back", () => {
-    const text = serializeMarkerAnswer(questions, {
+    const text: string = serializeMarkerAnswer(questions, {
       selections: {
         "Which scope?": { selected: ["B"], other: null },
-        "Which extras?": { selected: ["X", "Y"], other: "Z" },
+        "Which extras?": { selected: ["X", "Y"], other: md("Z") },
       },
       response: null,
     });
@@ -106,9 +113,9 @@ describe("serializeMarkerAnswer", () => {
   });
 
   it("appends a free-text reply after the lines, read back as the reply", () => {
-    const text = serializeMarkerAnswer(questions, {
+    const text: string = serializeMarkerAnswer(questions, {
       selections: { "Which extras?": { selected: ["X"], other: null } },
-      response: "- Scope: none of these\nlet's discuss first",
+      response: md("- Scope: none of these\nlet's discuss first"),
     });
     expect(text).toBe(
       `${ANSWER_MARKER}\n\n- Scope: CLI fix: \n- Extras: X\n\n- Scope: none of these\nlet's discuss first`,
@@ -123,12 +130,12 @@ describe("serializeMarkerAnswer", () => {
   });
 
   it("reads back a reply of several paragraphs beside full answers", () => {
-    const text = serializeMarkerAnswer(questions, {
+    const text: string = serializeMarkerAnswer(questions, {
       selections: {
         "Which scope?": { selected: ["A"], other: null },
         "Which extras?": { selected: ["Y"], other: null },
       },
-      response: "Rebase first.\n\nUse as many agents as necessary",
+      response: md("Rebase first.\n\nUse as many agents as necessary"),
     });
     expect(parseMarkerAnswer(text, questions)).toEqual({
       answers: {
@@ -140,13 +147,13 @@ describe("serializeMarkerAnswer", () => {
   });
 
   it("round-trips free text spanning lines, blank lines included", () => {
-    const other = "First line\n\n  indented\nlast";
-    const text = serializeMarkerAnswer(questions, {
+    const other = md("First line\n\n  indented\nlast");
+    const text: string = serializeMarkerAnswer(questions, {
       selections: {
         "Which scope?": { selected: [], other },
-        "Which extras?": { selected: ["X"], other: "a\nb" },
+        "Which extras?": { selected: ["X"], other: md("a\nb") },
       },
-      response: "Then the reply",
+      response: md("Then the reply"),
     });
     expect(text).toBe(
       `${ANSWER_MARKER}\n\n- Scope: CLI fix: First line\n  \n    indented\n  last\n- Extras: X, a\n  b\n\nThen the reply`,

@@ -6,15 +6,17 @@ import {
   DECISION_HISTORY_SOURCE,
   submitDecisionAnswersEndpoint,
 } from "../../core";
-import { takeDecisionNote } from "./take-note";
+import { keepDecisionNote } from "./take-note";
 import { taskAgentFinished } from "./agent";
 import { submitAnswers, type AnswerPorts } from "./answers";
 
 const ports: AnswerPorts = {
   isFinished: taskAgentFinished,
-  deliver: deliverEventTurn,
+  // A finished agent's answer is kept on the record, never sent: it is not reopened.
+  deliver: (taskId, turn) =>
+    deliverEventTurn(taskId, turn, { ifClosed: "leave" }),
   recordVersion: (id) => recordVersion(DECISION_HISTORY_SOURCE, id),
-  takeNote: takeDecisionNote,
+  keepNote: keepDecisionNote,
 };
 
 /** The user's Submit: every drafted answer, one event turn per agent. */

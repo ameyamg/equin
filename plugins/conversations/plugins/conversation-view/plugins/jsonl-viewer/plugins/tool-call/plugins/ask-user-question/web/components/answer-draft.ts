@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { attachmentRefsOf } from "@plugins/conversations/core";
 import {
+  EMPTY_PROMPT,
+  PromptMarkdownSchema,
+  storedPrompt,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
+import {
   defineStore,
   type StorageScope,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
@@ -30,7 +36,8 @@ import {
 // either. Multi-select ignores `otherActive`: there the freeform is additive.
 export interface QuestionAnswer {
   selected: string[];
-  otherText: string;
+  /** Typed in the prompt editor. */
+  otherText: PromptMarkdown;
   otherActive: boolean;
 }
 
@@ -44,21 +51,21 @@ export const answerDraftStore = defineStore<QuestionAnswer[]>({
   schema: z.array(
     z.object({
       selected: z.array(z.string()),
-      otherText: z.string(),
+      otherText: PromptMarkdownSchema,
       otherActive: z.boolean(),
     }),
   ),
   legacy: legacyDraftKeys("ask-user-question:answer"),
 });
 /** The free-text reply's draft — same scope as the answer's. */
-export const responseDraftStore = defineStore({
+export const responseDraftStore = defineStore<PromptMarkdown>({
   owner: "ask-user-question.response",
   label: "Question reply drafts",
   area: "local",
   cap: "128 KB",
   ttl: DEFAULT_DRAFT_TTL,
   whenFull: "refuse",
-  schema: z.string(),
+  schema: PromptMarkdownSchema,
   legacy: legacyDraftKeys("ask-user-question:response"),
 });
 
@@ -73,7 +80,7 @@ export function answerDraftScope(convId: string, toolUseId: string): string {
 export function emptyAnswers(questions: Question[]): QuestionAnswer[] {
   return questions.map(() => ({
     selected: [],
-    otherText: "",
+    otherText: EMPTY_PROMPT,
     otherActive: false,
   }));
 }
@@ -105,7 +112,10 @@ function formAnswers(
     return {
       selected: [...selected],
       // Typed text holds attachments as the disk paths the agent was handed.
-      otherText: otherText === null ? "" : attachmentRefsOf(otherText),
+      otherText:
+        otherText === null
+          ? EMPTY_PROMPT
+          : storedPrompt(attachmentRefsOf(otherText)),
       otherActive: !q.multiSelect && otherText != null,
     };
   });
@@ -128,9 +138,13 @@ export function restoreAnswerDraft(
     scope,
   });
   if (reply !== null) {
-    writeDraft(responseDraftStore.in(storage), attachmentRefsOf(reply), {
-      scope,
-    });
+    writeDraft(
+      responseDraftStore.in(storage),
+      storedPrompt(attachmentRefsOf(reply)),
+      {
+        scope,
+      },
+    );
   }
 }
 
@@ -156,8 +170,12 @@ export function restoreAnswerDraftFromRecord(
   );
   const reply = replyOf(record);
   if (reply !== undefined) {
-    writeDraft(responseDraftStore.in(storage), attachmentRefsOf(reply), {
-      scope,
-    });
+    writeDraft(
+      responseDraftStore.in(storage),
+      storedPrompt(attachmentRefsOf(reply)),
+      {
+        scope,
+      },
+    );
   }
 }

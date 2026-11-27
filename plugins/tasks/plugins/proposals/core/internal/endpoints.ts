@@ -5,6 +5,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/core";
 import { ATTACHMENT_MAX_BYTES } from "@plugins/infra/plugins/attachments/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
+import { PromptMarkdownSchema } from "@plugins/primitives/plugins/text-editor/core";
 import {
   PROPOSAL_STATES,
   ProposalTypeIdSchema,
@@ -19,6 +20,10 @@ export const PROPOSAL_ATTACHMENTS_MAX = 100;
 export const PROPOSAL_NOTE_MAX = 4000;
 
 const NoteSchema = z.string().max(PROPOSAL_NOTE_MAX);
+/** A decision's note: written by the user in the prompt field, for the agent. */
+const DecisionNoteSchema = PromptMarkdownSchema.check(
+  z.maxLength(PROPOSAL_NOTE_MAX),
+);
 
 /** What became of one record handed to main. */
 export const ProposalOutcomeSchema = z.discriminatedUnion("kind", [
@@ -146,19 +151,26 @@ export const DecideProposalBodySchema = z.discriminatedUnion("decision", [
     decision: z.literal("accept"),
     values: ProposalValuesSchema.optional(),
   }),
-  z.object({ decision: z.literal("reject"), note: NoteSchema.optional() }),
+  z.object({
+    decision: z.literal("reject"),
+    note: DecisionNoteSchema.optional(),
+  }),
   /** Back to the agent with what should change. */
   z.object({
     decision: z.literal("request-changes"),
-    note: NoteSchema.min(1),
+    note: DecisionNoteSchema.check(z.minLength(1)),
   }),
 ]);
 export type DecideProposalBody = z.infer<typeof DecideProposalBodySchema>;
 
-/** How the decision reached the agent that proposed it. */
+/**
+ * How the decision reached the agent that proposed it: told (`delivered`),
+ * told after reopening it — it had closed (`reopened`), nobody to tell
+ * (`no-agent`), or it could not be resumed (`blocked`).
+ */
 export const PROPOSAL_DELIVERIES = [
   "delivered",
-  "finished",
+  "reopened",
   "no-agent",
   "blocked",
 ] as const;

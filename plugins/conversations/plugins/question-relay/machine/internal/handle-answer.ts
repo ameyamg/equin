@@ -5,7 +5,7 @@ import {
   resolvePromptAttachments,
 } from "@plugins/conversations/server";
 import { answerRelayQuestion } from "../../core/endpoints";
-import type { AnswerQuestionBody } from "../../core/schemas";
+import type { AnswerQuestionBody, ResolvedAnswer } from "../../core";
 import { toCliAnswer } from "../../server/internal/answer";
 import {
   readOpenQuestions,
@@ -20,10 +20,10 @@ import { notifyQuestionResolved } from "../../server/internal/resolved";
 async function withAttachmentsResolved(
   conversationId: string,
   body: AnswerQuestionBody,
-): Promise<AnswerQuestionBody> {
+): Promise<ResolvedAnswer> {
   const resolve = (text: string) =>
     resolvePromptAttachments(conversationId, text);
-  const selections: AnswerQuestionBody["selections"] = {};
+  const selections: ResolvedAnswer["selections"] = {};
   for (const [question, selection] of Object.entries(body.selections)) {
     selections[question] = {
       ...selection,

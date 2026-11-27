@@ -19,7 +19,7 @@ export { useReadMarkdown } from "./internal/use-read-markdown";
 
 export default {
   description:
-    "Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.",
+    "Generic Lexical-based rich text editor primitive — the prompt field: what it hands out (onChange, its kept value, useTakeMarkdownWith / useReadMarkdown) is PromptMarkdown (core), the only text an endpoint taking a person's words for an agent accepts. Plugins inject behaviors via the Plugin slot and registerNodeExtension.",
   contributions: [],
   slots: TextEditorSlots,
 } satisfies PluginDefinition;

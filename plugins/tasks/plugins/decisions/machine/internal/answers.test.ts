@@ -21,8 +21,15 @@ import {
   type TaskId,
 } from "@plugins/tasks/plugins/task-ids/core";
 import type { EventTurn } from "@plugins/tasks/plugins/orchestration/plugins/message/server";
+import {
+  PromptMarkdownSchema,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
 import type { DecisionId } from "../../core";
 import { answerTurnText, submitAnswers, type AnswerPorts } from "./answers";
+
+/** A note as the prompt field hands it over. */
+const md = (text: string): PromptMarkdown => PromptMarkdownSchema.parse(text);
 import {
   decisionsAwaitingUser,
   owedDecisions,
@@ -66,7 +73,8 @@ async function open(
 
 /** A fake agent per task: live, or finished; records every turn it is handed. */
 function fakeAgents(tx: DbExecutor, finished: ReadonlySet<string> = new Set()) {
-  const turns: { taskId: string; turn: EventTurn }[] = [];
+  /** Each typed turn, with its text as the agent reads it. */
+  const turns: { taskId: string; turn: EventTurn; text: string }[] = [];
   const recordedIds = new Set<string>();
   const versions: string[] = [];
   const notesTaken: string[] = [];
@@ -82,25 +90,30 @@ function fakeAgents(tx: DbExecutor, finished: ReadonlySet<string> = new Set()) {
           await turn.onRecorded?.(inner as never);
         });
         recordedIds.add(id);
-        turns.push({ taskId, turn });
+        // The agent's copy of a note: an attachment ref read as its disk path.
+        const reads = Object.fromEntries(
+          Object.entries(turn.userText).map(([k, note]) => [
+            k,
+            note.replaceAll(
+              "![shot](/api/attachments/att-1)",
+              "@/disk/att-1.png",
+            ),
+          ]),
+        );
+        turns.push({ taskId, turn, text: turn.text(reads) });
       }
       return {
         kind: "delivered",
         conversationId: `conv-of-${taskId}`,
         turnId: id,
-        resumed: false,
+        was: "running",
       };
     },
     recordVersion: async (id) => {
       versions.push(id);
     },
-    // The agent's copy of a note: an attachment ref read as its disk path.
-    takeNote: async (decisionId, note) => {
+    keepNote: async (decisionId) => {
       notesTaken.push(decisionId);
-      return note.replaceAll(
-        "![shot](/api/attachments/att-1)",
-        "@/disk/att-1.png",
-      );
     },
   };
   return { ports, turns, versions, notesTaken };
@@ -137,8 +150,8 @@ describe("decisions: submitting answers", () => {
         {
           submissionId: SUBMISSION,
           answers: [
-            { decision: a1, pick: "A", note: "keep it under 10 s" },
-            { decision: a2, note: "why not a rolling restart?" },
+            { decision: a1, pick: "A", note: md("keep it under 10 s") },
+            { decision: a2, note: md("why not a rolling restart?") },
             { decision: b1, pick: "B" },
           ],
         },
@@ -151,7 +164,7 @@ describe("decisions: submitting answers", () => {
         [b.taskId, 1],
       ]);
       expect(agents.turns.length).toBe(2);
-      const textA = agents.turns[0]!.turn.text;
+      const textA = agents.turns[0]!.text;
       expect(textA).toContain(
         `<decision-answer decision="${a1}" label="D1" pick="A">keep it under 10 s</decision-answer>`,
       );
@@ -217,7 +230,7 @@ describe("decisions: submitting answers", () => {
       const agents = fakeAgents(tx);
       const answers = [
         { decision: picked, pick: "A" },
-        { decision: asked, note: "why?" },
+        { decision: asked, note: md("why?") },
       ];
       await submitAnswers(
         tx,
@@ -315,7 +328,7 @@ describe("decisions: submitting answers", () => {
             { decision: badPick, pick: "Z" },
             { decision: notFyi, close: true },
             { decision: "dec-1795000000000-zzzzzz", pick: "A" },
-            { decision: ok.replace(/.$/, "q"), note: "   " },
+            { decision: ok.replace(/.$/, "q"), note: md("   ") },
           ],
         },
         agents.ports,
@@ -343,8 +356,8 @@ describe("decisions: submitting answers", () => {
         {
           submissionId: SUBMISSION,
           answers: [
-            { decision: picked, pick: "A", note: "later" },
-            { decision: noted, note: "still relevant?" },
+            { decision: picked, pick: "A", note: md("later") },
+            { decision: noted, note: md("still relevant?") },
           ],
         },
         agents.ports,
@@ -399,7 +412,7 @@ describe("decisions: submitting answers", () => {
       const b = await caller(tx, "Agent B");
       const kept = await open(tx, b);
       const agents = fakeAgents(tx, new Set([b.taskId]));
-      const note = "like this ![shot](/api/attachments/att-1)";
+      const note = md("like this ![shot](/api/attachments/att-1)");
       await submitAnswers(
         tx,
         {
@@ -413,7 +426,7 @@ describe("decisions: submitting answers", () => {
       );
       // Both notes taken — the kept one's attachments stay with its decision too.
       expect(agents.notesTaken.sort()).toEqual([live, kept].sort());
-      const text = agents.turns[0]!.turn.text;
+      const text = agents.turns[0]!.text;
       expect(text).toContain("like this @/disk/att-1.png");
       expect(text).not.toContain("/api/attachments/");
       expect((await exchangesOf(tx, live))[0]?.userText).toBe(note);
@@ -433,11 +446,11 @@ describe("decisions: submitting answers", () => {
             optionKeys: ["A"],
           },
           pick: "A",
-          note: "a <b> & c",
+          note: md("a <b> & c"),
           close: false,
         },
       ],
-      new Map([["dec-1" as DecisionId, "a <b> & c"]]),
+      { "dec-1": "a <b> & c" },
     );
     expect(text).toContain("a &lt;b&gt; &amp; c");
     expect(text).toStartWith("The user answered 1 of your decisions:");

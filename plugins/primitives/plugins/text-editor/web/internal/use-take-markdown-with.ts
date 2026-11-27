@@ -3,6 +3,8 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $createParagraphNode, $getRoot } from "lexical";
 import { getNodeExtensions } from "./node-extensions";
 import { $insertMarkdownSnippet, $serializeRootToMarkdown } from "./markdown";
+import type { PromptMarkdown } from "../../core";
+import { editorMarkdown } from "./prompt-mint";
 
 /**
  * Insert a markdown snippet at the caret, then hand back the whole draft and
@@ -18,7 +20,7 @@ import { $insertMarkdownSnippet, $serializeRootToMarkdown } from "./markdown";
  *
  * Must be called inside a `LexicalComposer` (the editor's own subtree).
  */
-export function useTakeMarkdownWith(): (snippet: string) => string {
+export function useTakeMarkdownWith(): (snippet: string) => PromptMarkdown {
   const [editor] = useLexicalComposerContext();
   return useCallback(
     (snippet: string) => {
@@ -34,7 +36,7 @@ export function useTakeMarkdownWith(): (snippet: string) => string {
         },
         { discrete: true },
       );
-      return markdown;
+      return editorMarkdown(markdown);
     },
     [editor],
   );

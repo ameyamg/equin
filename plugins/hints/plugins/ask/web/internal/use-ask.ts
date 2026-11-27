@@ -1,4 +1,8 @@
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  writtenPrompt,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useActiveApp, usePathname } from "@plugins/apps-core/web";
 import { useFocusedTabTitle } from "@plugins/apps-core/plugins/tabs/web";
@@ -75,15 +79,16 @@ function markPageSent(conversationId: string, input: AskInput): void {
 export function useAskPrepareTurn(
   conversationId: string,
   card: () => Element,
-): (text: string) => string {
+): (text: PromptMarkdown) => PromptMarkdown {
   const capture = usePageContext();
   return (typed) => {
-    const text = stripPageContext(typed);
+    // The user's words with the code's page token after them.
+    const text = writtenPrompt(stripPageContext(typed));
     const input = capture(card());
     const seen = askSeenPageStore.read(conversationId);
     if (seen.kind === "value" && seen.value === pageKey(input)) return text;
     markPageSent(conversationId, input);
-    return `${text}\n\n${formatPageContext(input)}`;
+    return writtenPrompt(`${text}\n\n${formatPageContext(input)}`);
   };
 }
 

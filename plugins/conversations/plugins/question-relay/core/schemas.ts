@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import { PromptMarkdownSchema } from "@plugins/primitives/plugins/text-editor/core";
 
 // The question as the CLI hands it to the hook (`tool_input.questions`). The
 // defaults are the AskUserQuestion tool's own: a hook sees the input as the
@@ -78,7 +79,8 @@ export type RegisterQuestionBody = z.infer<typeof RegisterQuestionBodySchema>;
  */
 export const QuestionSelectionSchema = z.object({
   selected: z.array(z.string()),
-  other: z.string().nullable(),
+  /** Typed in the prompt field (`PromptMarkdown`). */
+  other: PromptMarkdownSchema.nullable(),
 });
 export type QuestionSelection = z.infer<typeof QuestionSelectionSchema>;
 
@@ -88,10 +90,20 @@ export const AnswerQuestionBodySchema = z.object({
   annotations: z
     .record(z.string(), z.object({ notes: z.string().min(1) }))
     .optional(),
-  /** Free text in place of the answers ("The user responded: …"). */
-  response: z.string().min(1).optional(),
+  /** Free text in place of the answers ("The user responded: …"), typed in the prompt field. */
+  response: PromptMarkdownSchema.check(z.minLength(1)).optional(),
 });
 export type AnswerQuestionBody = z.infer<typeof AnswerQuestionBodySchema>;
+
+/**
+ * An answer as the agent reads it: the body with each piece of the user's
+ * own text resolved (attachment refs as disk paths) — plain strings now.
+ */
+export interface ResolvedAnswer {
+  selections: Record<string, { selected: string[]; other: string | null }>;
+  annotations?: AnswerQuestionBody["annotations"];
+  response?: string;
+}
 
 /** An open held question, as the web reads it. */
 export const PendingQuestionSchema = z.object({

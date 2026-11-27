@@ -19,6 +19,7 @@ import { groupThread } from "../../core";
 import { AgentThreadView } from "../components/agent-thread-view";
 import { ThreadComposer, type PrepareTurn } from "../components/composer";
 import { loadLazyComponents } from "@plugins/primitives/plugins/lazy-component/web/testing";
+import { writtenPrompt } from "@plugins/primitives/plugins/text-editor/core";
 
 // The answer's markdown and the composer's editor are lazy chunks: load them
 // up front, so `findByText` below waits on the thread, not on a module import.
@@ -127,8 +128,8 @@ describe("a <go> in a thread's answer", () => {
   });
 
   it("goes through the host's prepareTurn", async () => {
-    const text = await clickGo(
-      (t) => `${t}\n\n<page-context path="/x">\n</page-context>`,
+    const text = await clickGo((t) =>
+      writtenPrompt(`${t}\n\n<page-context path="/x">\n</page-context>`),
     );
     expect(text).toContain("<go>push it</go>");
     expect(text.endsWith('<page-context path="/x">\n</page-context>')).toBe(

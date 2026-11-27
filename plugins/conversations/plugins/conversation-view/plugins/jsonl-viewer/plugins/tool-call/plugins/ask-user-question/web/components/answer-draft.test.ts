@@ -2,6 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { answersFromText } from "./answer-draft";
 import type { Question } from "./answer-model";
 import { ANSWER_MARKER } from "../../shared";
+import {
+  PromptMarkdownSchema,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
+
+/** Text as the prompt editor hands it over. */
+const md = (text: string): PromptMarkdown => PromptMarkdownSchema.parse(text);
 
 const single: Question = {
   question: "Which approach?",
@@ -28,19 +35,23 @@ const text = (...lines: string[]) =>
 describe("answersFromText", () => {
   test("a picked preset comes back selected", () => {
     expect(answersFromText([single], text("Approach: Slot"))).toEqual([
-      { selected: ["Slot"], otherText: "", otherActive: false },
+      { selected: ["Slot"], otherText: md(""), otherActive: false },
     ]);
   });
 
   test("a typed single-select answer comes back as the active Other", () => {
     expect(answersFromText([single], text("Approach: something else"))).toEqual(
-      [{ selected: [], otherText: "something else", otherActive: true }],
+      [{ selected: [], otherText: md("something else"), otherActive: true }],
     );
   });
 
   test("multi-select keeps presets and the additive freeform", () => {
     expect(answersFromText([multi], text("Parts: Web, Server, docs"))).toEqual([
-      { selected: ["Web", "Server"], otherText: "docs", otherActive: false },
+      {
+        selected: ["Web", "Server"],
+        otherText: md("docs"),
+        otherActive: false,
+      },
     ]);
   });
 
@@ -48,8 +59,8 @@ describe("answersFromText", () => {
     expect(
       answersFromText([single, multi], text("Approach: Hook", "Parts: ")),
     ).toEqual([
-      { selected: ["Hook"], otherText: "", otherActive: false },
-      { selected: [], otherText: "", otherActive: false },
+      { selected: ["Hook"], otherText: md(""), otherActive: false },
+      { selected: [], otherText: md(""), otherActive: false },
     ]);
   });
 });

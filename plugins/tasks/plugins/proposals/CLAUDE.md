@@ -111,10 +111,15 @@ The machine half handles this route because it types into agents.
   exactly those are written.
 - A new record is `create`d under its worktree id.
 - A refusal from the owner keeps the proposal open and shows the sentence.
-- `reject { note? }` and `request-changes { note }`.
+- `reject { note? }` and `request-changes { note }`. The note is
+  `PromptMarkdown` (`primitives/text-editor` core): the user writes it in the
+  prompt editor (`TextEditor`), so it may carry pasted images, files and
+  chips; a plain field's string does not compile in the body.
 
 Each decision is then typed into the author's task as an event turn
-(`deliverEventTurn`; the turn id is derived from the proposal and its state):
+(`deliverEventTurn`, `ifClosed: "reopen"`; the turn id is derived from the
+proposal and its state). Delivery resolves the note's attachment refs to disk
+paths and links them to the conversation:
 
 ```
 <proposal-decision proposal="prp-…" type="…" record="…" decision="changes-requested">note</proposal-decision>
@@ -124,8 +129,10 @@ That is followed by one sentence, and for a change request, how to revise:
 edit the same record again, then rerun `./equin propose`.
 
 - A stopped agent is resumed.
-- A finished one is not reopened. The answer says so (`delivery`), and the
-  review toasts it.
+- A closed (finished) one is reopened: it proposed and waits on the answer,
+  even once it ended its turn. The answer says so (`delivery: "reopened"`),
+  and the review toasts it ("The agent had closed: it was reopened and
+  told.").
 - Delivery runs after the commit. Sending the same decision again re-tells the
   agent: the turn id is derived from the proposal, the state and the note.
 
@@ -146,8 +153,8 @@ edit the same record again, then rerun `./equin propose`.
   - **now beside after accepting**, each drawn by the owner's `renderPreview`,
     or the changed fields as text without one;
   - the actions: Accept · Edit then accept (the owner's `FieldsForm` over a
-    copy, then "Accept with my edits") · Request changes (a note, "Send to the
-    agent") · Reject.
+    copy, then "Accept with my edits") · Request changes (a note in the prompt
+    editor — ⌘/Ctrl+Enter or "Send to the agent") · Reject.
 
 The first owner is the Deploy app's Feeds page
 (`apps/deploy/site-feeds/editor`, the `site-feed-item` type). Its preview is
@@ -169,7 +176,6 @@ the site plugin's own card (`SiteFeeds.Feed`'s `preview`: the tips page's
   - Contributes: `IdKinds.Kind` "prp"
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
-    - `primitives/css/ui-kit` ×2
     - `config_v2/fields.FieldsForm`
     - `ids.IdKinds`
     - `infra/endpoints.useEndpointMutation`
@@ -181,8 +187,10 @@ the site plugin's own card (`SiteFeeds.Feed`'s `preview`: the tips page's
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
     - `primitives/inline-text.InlineText`
     - `primitives/relative-time.RelativeTime`
+    - `primitives/text-editor.TextEditor`
     - `shell/notifications.useToast`
   - Exports (types):
     - `ProposalCurrent`
@@ -248,7 +256,7 @@ the site plugin's own card (`SiteFeeds.Feed`'s `preview`: the tips page's
     - `infra/endpoints.machineHandler`
   - Routes: `POST /api/proposals/:id/decide`
 - Core:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3
     - `ids` ×3
     - `infra/attachments` ×3
@@ -264,6 +272,7 @@ the site plugin's own card (`SiteFeeds.Feed`'s `preview`: the tips page's
     - `fields/string-list/config.stringListField`
     - `infra/entities.entityRef`
     - `network/live/query-resource.compositeKey`
+    - `primitives/text-editor.PromptMarkdownSchema`
   - Exports (types):
     - `DecideProposalBody`
     - `ProposalDelivery`

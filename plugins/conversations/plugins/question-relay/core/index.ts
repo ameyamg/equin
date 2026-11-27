@@ -20,5 +20,6 @@ export type {
   RelayQuestion,
   RelayResolution,
   RelayState,
+  ResolvedAnswer,
 } from "./schemas";
 export { pendingQuestionsEntityRef } from "./entity";

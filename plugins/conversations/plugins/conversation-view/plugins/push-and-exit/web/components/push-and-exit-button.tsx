@@ -1,4 +1,9 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import {
+  EMPTY_PROMPT,
+  storedPrompt,
+  writtenPrompt,
+} from "@plugins/primitives/plugins/text-editor/core";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
@@ -179,9 +184,11 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // `useConversationById` answers with the live row (its by-id read).
   const live = conversation;
 
-  const [draft, setDraft, , draftKept] = useDraft(conversationPromptDraft, "", {
-    scope: convId,
-  });
+  const [draft, setDraft, , draftKept] = useDraft(
+    conversationPromptDraft,
+    EMPTY_PROMPT,
+    { scope: convId },
+  );
   const [busy, setBusy] = useState(false);
   const draftRef = useLatestRef(draft);
   // Client-side read of the very prompt the server injects for Push & Close —
@@ -341,7 +348,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         return {
           verb: "Go",
           run: () => {
-            sendConversationTurn(convId, { text: "Go" });
+            sendConversationTurn(convId, { text: writtenPrompt("Go") });
           },
         };
       case "stop":
@@ -351,7 +358,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
             const data = machineValue(
               await fetchEndpoint(stopConversation, { id: convId }),
             );
-            if (data.rewindText) setDraft(data.rewindText);
+            if (data.rewindText) setDraft(storedPrompt(data.rewindText));
             // Stopped, but the agent did not come back as Stop meant it to:
             // say so, with what became of the message.
             if (data.relaunchFailure === null) return;
@@ -375,7 +382,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
             // the ledger, a card if it fails. The echo is read from the same
             // config the server sends verbatim.
             sendConversationTurn(convId, {
-              text: pushPrompt,
+              text: writtenPrompt(pushPrompt),
               delivery: pushAndExitDelivery,
             });
           },

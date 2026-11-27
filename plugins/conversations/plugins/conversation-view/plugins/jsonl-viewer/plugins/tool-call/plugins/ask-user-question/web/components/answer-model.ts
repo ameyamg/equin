@@ -1,6 +1,10 @@
 import { z } from "zod";
 import type { QuestionAnswer } from "@plugins/conversations/plugins/transcript-source/core";
 import { ANSWER_MARKER } from "../../shared";
+import {
+  writtenPrompt,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
 
 /**
  * Pure, React-free model for the AskUserQuestion tool: the question/answer
@@ -38,7 +42,8 @@ export type AskUserQuestionInput = z.infer<typeof AskUserQuestionInputSchema>;
  */
 export interface QuestionSelection {
   selected: string[];
-  other: string | null;
+  /** Typed in the prompt editor. */
+  other: PromptMarkdown | null;
 }
 
 /** A whole answer: one selection per question text. */
@@ -52,7 +57,8 @@ export type AnswerSelections = Record<string, QuestionSelection>;
  */
 export interface FormAnswer {
   selections: AnswerSelections;
-  response: string | null;
+  /** Typed in the prompt editor. */
+  response: PromptMarkdown | null;
 }
 
 export interface ParsedAnswer {
@@ -96,7 +102,7 @@ export function answersFromRecord(
 export function serializeMarkerAnswer(
   questions: Question[],
   { selections, response }: FormAnswer,
-): string {
+): PromptMarkdown {
   const items = questions.map((q) => {
     const s = selections[q.question];
     const parts = s ? [...s.selected, ...(s.other ? [s.other] : [])] : [];
@@ -107,7 +113,8 @@ export function serializeMarkerAnswer(
     ].join("\n");
   });
   const reply = response ? `\n\n${response}` : "";
-  return `${ANSWER_MARKER}\n\n${items.join("\n")}${reply}`;
+  // The code's answer list around the user's own typed parts.
+  return writtenPrompt(`${ANSWER_MARKER}\n\n${items.join("\n")}${reply}`);
 }
 
 /** The indent a multi-line value's further lines carry. */

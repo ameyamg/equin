@@ -45,6 +45,7 @@ import {
   useSendConversationTurn,
   useTurnSendInFlight,
 } from "../internal/send";
+import { writtenPrompt } from "@plugins/primitives/plugins/text-editor/core";
 
 const posts = {
   /** How the next request settles; `null` keeps it open. */
@@ -303,7 +304,7 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
       id,
       conversationId: "c",
       kind: "turn" as TurnKind,
-      text: "budget 50 euro max",
+      text: writtenPrompt("budget 50 euro max"),
       createdAt: new Date(),
       status: { kind: "posted" as const },
       delivery: postTurnDelivery,
@@ -404,7 +405,7 @@ describe("send → optimistic echo → live row", () => {
 
     let turnId = "";
     act(() => {
-      turnId = turns.send(conv, { text: "fix the build" }).id;
+      turnId = turns.send(conv, { text: writtenPrompt("fix the build") }).id;
     });
     // The request carries the browser's id: the server writes its row under it.
     expect(sentRequests()).toEqual([
@@ -483,7 +484,7 @@ describe("send → optimistic echo → live row", () => {
     );
     let turnId = "";
     act(() => {
-      turnId = turns.send(conv, { text: "hello" }).id;
+      turnId = turns.send(conv, { text: writtenPrompt("hello") }).id;
     });
     await settle();
     const failed = result.current;
@@ -535,7 +536,7 @@ describe("useOptimisticConversationStatus", () => {
     const { result, rerender } = render(conv, "waiting", before);
     let turnId = "";
     act(() => {
-      turnId = turns.send(conv, { text: "go" }).id;
+      turnId = turns.send(conv, { text: writtenPrompt("go") }).id;
     });
     expect(result.current).toBe("working");
     await settle();
@@ -565,7 +566,7 @@ describe("useOptimisticConversationStatus", () => {
     ready([]);
     const { result } = render(conv, "starting", new Date(Date.now() - 1000));
     act(() => {
-      turns.send(conv, { text: "go" });
+      turns.send(conv, { text: writtenPrompt("go") });
     });
     expect(result.current).toBe("starting");
   });
@@ -577,7 +578,7 @@ describe("useOptimisticConversationStatus", () => {
     const { result } = render(conv, "waiting", new Date(Date.now() - 1000));
     posts.next = "fail";
     act(() => {
-      turns.send(conv, { text: "go" });
+      turns.send(conv, { text: writtenPrompt("go") });
     });
     expect(result.current).toBe("working");
     await settle();

@@ -25,7 +25,7 @@ function productionPorts(fromConversationId: string): MessagePorts {
     async submit(conversationId, text) {
       // `sendAgentMessage` resumed a stopped target before this: only a
       // target that stopped again in between throws.
-      await typeEventTurn(conversationId, { text });
+      await typeEventTurn(conversationId, { userText: {}, text: () => text });
     },
     async mayReopen(taskId) {
       if ((await grantOf(messageTree, fromConversationId)) === null)

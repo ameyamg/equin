@@ -11,6 +11,12 @@ import {
 } from "@plugins/primitives/plugins/kept-state/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
+  EMPTY_PROMPT,
+  isBlankPrompt,
+  PromptMarkdownSchema,
+  trimPrompt,
+} from "@plugins/primitives/plugins/text-editor/core";
+import {
   ANSWERS_PER_SUBMIT_MAX,
   submitDecisionAnswersEndpoint,
   type DecisionAnswer,
@@ -30,7 +36,8 @@ import {
  */
 export const DecisionDraftSchema = z.object({
   pick: z.string().nullable(),
-  note: z.string(),
+  /** Typed in the prompt editor (`PromptMarkdown`): what the agent reads. */
+  note: PromptMarkdownSchema,
   close: z.boolean(),
   refused: z.string().nullable(),
 });
@@ -38,14 +45,14 @@ export type DecisionDraft = z.infer<typeof DecisionDraftSchema>;
 
 export const EMPTY_DRAFT: DecisionDraft = {
   pick: null,
-  note: "",
+  note: EMPTY_PROMPT,
   close: false,
   refused: null,
 };
 
 /** A draft holding nothing to send (a refusal alone is no work). */
 export function isDraftEmpty(d: DecisionDraft): boolean {
-  return d.pick === null && d.note.trim() === "" && !d.close;
+  return d.pick === null && isBlankPrompt(d.note) && !d.close;
 }
 
 /**
@@ -67,7 +74,7 @@ const SUBJECT = "answers";
 /** What a decision's draft sends — `null` when it holds nothing. */
 export function answerOf(id: string, d: DecisionDraft): DecisionAnswer | null {
   if (isDraftEmpty(d)) return null;
-  const note = d.note.trim();
+  const note = trimPrompt(d.note);
   return {
     decision: id,
     ...(d.pick === null ? {} : { pick: d.pick }),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PromptMarkdownSchema } from "@plugins/primitives/plugins/text-editor/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
@@ -58,7 +59,8 @@ export type CreateConversationBody = z.infer<
 >;
 
 export const PostTurnBodySchema = z.object({
-  text: z.string().min(1),
+  /** The prompt field's markdown (`PromptMarkdown`): its attachment refs are resolved for the agent. */
+  text: PromptMarkdownSchema.check(z.minLength(1)),
   /**
    * The turn's ledger id (conversations/turn-ledger), minted by the client so a
    * repeated request is a no-op. Omitted by older clients: the server mints one.

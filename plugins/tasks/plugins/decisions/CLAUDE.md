@@ -368,7 +368,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `network/live.serveValue`
   - Routes: `POST /api/decisions/answers`
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `ids` ×3
     - `fields/text/config` ×2
     - `fields` ×2
@@ -384,6 +384,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `infra/entities.entityRef`
     - `network/live/query-resource.compositeKey`
     - `packages/list-bound.cappedList`
+    - `primitives/text-editor.PromptMarkdownSchema`
   - Exports (types):
     - `AnswerRefusalReason`
     - `DecisionAgent`

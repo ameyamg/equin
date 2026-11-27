@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { PromptMarkdownSchema } from "@plugins/primitives/plugins/text-editor/core";
 
 /** The most answers one Submit carries. */
 export const ANSWERS_PER_SUBMIT_MAX = 200;
@@ -26,7 +27,8 @@ export const ANSWER_NOTE_MAX = 16_000;
 export const DecisionAnswerSchema = z.object({
   decision: z.string().min(1),
   pick: z.string().min(1).max(8).optional(),
-  note: z.string().max(ANSWER_NOTE_MAX).optional(),
+  /** Written in the prompt field (`PromptMarkdown`): a plain field's text does not compile here. */
+  note: PromptMarkdownSchema.check(z.maxLength(ANSWER_NOTE_MAX)).optional(),
   close: z.literal(true).optional(),
 });
 export type DecisionAnswer = z.infer<typeof DecisionAnswerSchema>;

@@ -1,4 +1,7 @@
-import { z } from "zod";
+import {
+  PromptMarkdownSchema,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   DEFAULT_DRAFT_TTL,
@@ -11,13 +14,14 @@ import {
  * to draft, rewind, the composers, Push & Exit) reads and writes this store.
  * It lives here, not in prompt-input, because prompt-input imports this plugin.
  */
-export const conversationPromptDraft = defineStore({
+export const conversationPromptDraft = defineStore<PromptMarkdown>({
   owner: "conversations.prompt-draft",
   label: "Prompt drafts",
   area: "local",
   cap: "1 MB",
   ttl: DEFAULT_DRAFT_TTL,
   whenFull: "refuse",
-  schema: z.string(),
+  // The prompt editor's markdown: a draft read back is still a prompt.
+  schema: PromptMarkdownSchema,
   legacy: legacyDraftKeys("conversation:prompt"),
 });

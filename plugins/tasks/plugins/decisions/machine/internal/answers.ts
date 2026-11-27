@@ -10,6 +10,10 @@ import type {
   EventTurn,
 } from "@plugins/tasks/plugins/orchestration/plugins/message/server";
 import {
+  trimPrompt,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
+import {
   decisionExchangeIdKind,
   decisionIdKind,
   EXCHANGES_PER_DECISION_MAX,
@@ -32,16 +36,20 @@ import { _decisionExchanges, _decisions } from "../../server/internal/tables";
 export interface AnswerPorts {
   /** Whether `taskId`'s agent has finished (its latest conversation is `done`). */
   isFinished(taskId: string): Promise<boolean>;
-  /** Type one event turn into `taskId`'s agent (`deliverEventTurn`). */
-  deliver(taskId: string, turn: EventTurn): Promise<EventDelivery>;
+  /**
+   * Type one event turn into `taskId`'s agent (`deliverEventTurn`, a closed
+   * one left closed: `finished`). Delivery resolves each note's attachment
+   * refs for the agent.
+   */
+  deliver(taskId: string, turn: EventTurn): Promise<EventDelivery<"leave">>;
   /** A decision's record changed (closed): record its version. */
   recordVersion(decisionId: DecisionId): Promise<void>;
   /**
-   * Take the note the user wrote on a decision (in the prompt field, so it
-   * may reference attachments): keep what it attached with the decision and
-   * answer the note as its agent reads it.
+   * Keep the note the user wrote on a decision (in the prompt field, so it
+   * may reference attachments) with it: what it attached linked to the
+   * decision.
    */
-  takeNote(decisionId: DecisionId, note: string): Promise<string>;
+  keepNote(decisionId: DecisionId, note: PromptMarkdown): Promise<void>;
 }
 
 /** Whether the exchanges of `turnId` committed (its turn was recorded). */
@@ -75,7 +83,7 @@ export interface Checked {
   target: Target;
   pick: string | null;
   /** The note, trimmed; `null` when none. */
-  note: string | null;
+  note: PromptMarkdown | null;
   close: boolean;
 }
 
@@ -115,14 +123,23 @@ const escapeText = (s: string): string =>
 const escapeAttr = (s: string): string =>
   escapeText(s).replaceAll('"', "&quot;");
 
+/** The notes of a batch, by decision: the user parts of its turn. */
+export function answerNotes(
+  answers: readonly Checked[],
+): Record<string, PromptMarkdown> {
+  const out: Record<string, PromptMarkdown> = {};
+  for (const a of answers) if (a.note !== null) out[a.target.id] = a.note;
+  return out;
+}
+
 /**
  * The event turn one agent reads: every answer and question of the batch that
- * is its, each note as the agent reads it (`agentNotes`, from `takeNote`:
- * attachment refs as disk paths).
+ * is its, each note as `notes` gives it (by decision id — as written, or as
+ * the agent reads it: delivery renders it both ways).
  */
 export function answerTurnText(
   answers: readonly Checked[],
-  agentNotes: ReadonlyMap<DecisionId, string>,
+  notes: Readonly<Record<string, string>>,
 ): string {
   const picks = answers.filter((a) => a.pick !== null).length;
   const questions = answers.length - picks;
@@ -135,10 +152,10 @@ export function answerTurnText(
   const lines = answers.map((a) => {
     let note: string | null = null;
     if (a.note !== null) {
-      note = agentNotes.get(a.target.id) ?? null;
+      note = notes[a.target.id] ?? null;
       if (note === null)
         throw new Error(
-          `decisions.answers: ${a.target.id}'s note was never taken`,
+          `decisions.answers: ${a.target.id}'s note is missing from its turn`,
         );
     }
     const attrs = `decision="${a.target.id}" label="${escapeAttr(a.target.label)}"`;
@@ -208,9 +225,9 @@ async function checkAnswers(
       );
       continue;
     }
-    const note = a.note?.trim() ?? "";
+    const note = a.note === undefined ? null : trimPrompt(a.note);
     const pick = a.pick ?? null;
-    if (pick === null && note === "" && a.close !== true) {
+    if (pick === null && (note === null || note === "") && a.close !== true) {
       refused.push(refusal(a.decision, "empty", "Nothing to send."));
       continue;
     }
@@ -233,7 +250,7 @@ async function checkAnswers(
         optionKeys: row.options.map((o) => o.key),
       },
       pick,
-      note: note === "" ? null : note,
+      note: note === null || note === "" ? null : note,
       close: a.close === true,
     });
   }
@@ -420,12 +437,10 @@ export async function submitAnswers(
     seen.add(a.decision);
   }
   const { checked, refused } = await checkAnswers(db, body.answers);
-  // Every note taken first — delivered or only kept, the thread shows it, so
+  // Every note kept first — delivered or only kept, the thread shows it, so
   // what it attached stays with the decision either way.
-  const agentNotes = new Map<DecisionId, string>();
   for (const a of checked)
-    if (a.note !== null)
-      agentNotes.set(a.target.id, await ports.takeNote(a.target.id, a.note));
+    if (a.note !== null) await ports.keepNote(a.target.id, a.note);
   const delivered: SubmitAnswersResponse["delivered"] = [];
   const recorded: string[] = [];
 
@@ -477,7 +492,8 @@ export async function submitAnswers(
       try {
         outcome = await ports.deliver(taskId, {
           id: turnId,
-          text: answerTurnText(batch, agentNotes),
+          userText: answerNotes(batch),
+          text: (notes) => answerTurnText(batch, notes),
           onRecorded: (tx) => writeDelivered(tx, batch, turnId),
         });
       } catch (err) {

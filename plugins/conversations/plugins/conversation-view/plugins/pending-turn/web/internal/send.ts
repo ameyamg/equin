@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
+import type { PromptMarkdown } from "@plugins/primitives/plugins/text-editor/core";
 import {
   fetchEndpointOver,
   getEndpointErrorMessage,
@@ -57,7 +58,7 @@ export interface SentTurn {
   id: TurnId;
   conversationId: string;
   kind: TurnKind;
-  text: string;
+  text: PromptMarkdown;
   /** When the user sent it (this tab's clock). */
   createdAt: Date;
   status: SentTurnStatus;
@@ -71,7 +72,11 @@ export interface SentTurn {
 
 /** How a surface describes the turn it sends. */
 export interface TurnSend {
-  text: string;
+  /**
+   * The prompt: the editor's markdown (a draft, `useTakeMarkdownWith`), or
+   * text the code wrote (`writtenPrompt`) — never a plain field's string.
+   */
+  text: PromptMarkdown;
   /** Which endpoint carries it — a plain user turn when omitted. */
   delivery?: TurnDelivery;
 }

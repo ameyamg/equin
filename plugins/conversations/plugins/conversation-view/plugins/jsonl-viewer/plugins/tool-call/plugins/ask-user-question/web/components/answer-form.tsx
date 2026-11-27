@@ -1,4 +1,10 @@
 import { useState, type ReactNode } from "react";
+import {
+  EMPTY_PROMPT,
+  isBlankPrompt,
+  trimPrompt,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useDraft } from "@plugins/primitives/plugins/kept-state/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
@@ -78,7 +84,9 @@ function selectionsOf(
   questions.forEach((q, qi) => {
     const answer = answers[qi]!;
     if (onlyAnswered && !hasContent(answer, q)) return;
-    const typed = answer.otherText.trim() || null;
+    const typed = isBlankPrompt(answer.otherText)
+      ? null
+      : trimPrompt(answer.otherText);
     const selection: QuestionSelection =
       q.multiSelect || !answer.otherActive
         ? {
@@ -129,14 +137,18 @@ export function AnswerForm({
     () => emptyAnswers(questions),
     { scope: draftScope },
   );
-  const replyBinding = useDraft<string>(responseDraftStore, "", {
-    scope: draftScope,
-  });
+  const replyBinding = useDraft<PromptMarkdown>(
+    responseDraftStore,
+    EMPTY_PROMPT,
+    {
+      scope: draftScope,
+    },
+  );
   const [reply, , clearReply] = replyBinding;
   // A restored reply draft opens the field on its own.
   const [replyOpen, setReplyOpen] = useState(false);
   const showReply = replyOpen || reply.length > 0;
-  const response = reply.trim() || null;
+  const response = isBlankPrompt(reply) ? null : trimPrompt(reply);
 
   const updateAnswer = (qi: number, next: QuestionAnswer) => {
     setAnswers((prev) => prev.map((a, i) => (i === qi ? next : a)));
@@ -156,7 +168,11 @@ export function AnswerForm({
     }
   };
 
-  const setOtherText = (qi: number, value: string, multiSelect: boolean) => {
+  const setOtherText = (
+    qi: number,
+    value: PromptMarkdown,
+    multiSelect: boolean,
+  ) => {
     const current = answers[qi]!;
     if (multiSelect) {
       // Multi-select: "Other" is additive to any selected options.

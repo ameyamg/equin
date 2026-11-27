@@ -242,6 +242,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
+    - `primitives/text-editor.PromptMarkdownSchema`
     - `primitives/text-editor/paste-images.attachmentFileMarkdown`
     - `primitives/text-editor/paste-images.attachmentMarkdown`
     - `tasks/tasks-core.ConversationSchema`

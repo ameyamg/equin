@@ -1,4 +1,8 @@
 import { useCallback, useRef } from "react";
+import {
+  EMPTY_PROMPT,
+  writtenPrompt,
+} from "@plugins/primitives/plugins/text-editor/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   conversationName,
@@ -37,7 +41,7 @@ export function PromptInput({
   const sendConversationTurn = useSendConversationTurn();
   const sendAvailability = useTurnSendAvailability();
   const toast = useToast();
-  const draftBinding = useDraft(conversationPromptDraft, "", {
+  const draftBinding = useDraft(conversationPromptDraft, EMPTY_PROMPT, {
     scope: conversation.id,
   });
   const [draft, , , draftKept] = draftBinding;
@@ -61,10 +65,11 @@ export function PromptInput({
       throw new Error("Prompt editor insert handle is not mounted");
     insertNow(text);
   }, []);
+  // A quick send's text is a choice the agent offered (`<go>`), not typed.
   const sendText = useCallback(
     (text: string) => {
       if (disabled) return;
-      sendConversationTurn(conversation.id, { text });
+      sendConversationTurn(conversation.id, { text: writtenPrompt(text) });
     },
     [conversation.id, disabled, sendConversationTurn],
   );

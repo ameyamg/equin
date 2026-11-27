@@ -31,6 +31,35 @@ that sets these tokens (`defineSubTheme` + `ThemeEngine.SubTheme` +
 never a look prop or a className. Home's New app prompt is the example
 (`apps/home/new-app`, `newAppPromptTheme`).
 
+## `PromptMarkdown` — text a person writes for an agent
+
+Anything a person writes FOR AN AGENT is written in this editor, never a
+ui-kit `Textarea` / `Input`: only the editor takes pasted images and files and
+draws chips. `core/` makes that the type, not a rule to remember:
+
+- `PromptMarkdown` is a branded string; `PromptMarkdownSchema`
+  (`z.string().brand<"PromptMarkdown", "inout">()`) declares it in an
+  endpoint body (`.check(z.maxLength(n))` keeps the brand). A body field of
+  that schema has no spelling that takes a `Textarea`'s `e.target.value` — a
+  plain `string` is a tsc error at the `mutateAsync` / `fetchEndpoint` call
+  (rung 1/2 of "Fix the cause": the wrong call does not compile). The bodies
+  so declared: a conversation turn, an AskUserQuestion answer (both paths),
+  a decision's note, a proposal's decision note.
+- **The editor is the producer**: `onChange`, a kept binding's value (a store
+  whose schema is `PromptMarkdownSchema` — pin it with
+  `defineStore<PromptMarkdown>` / `defineKept<PromptMarkdown>`),
+  `useTakeMarkdownWith` and `useReadMarkdown` hand out `PromptMarkdown`.
+- Helpers that keep the brand: `EMPTY_PROMPT`, `trimPrompt`, `isBlankPrompt`.
+- Text that did not come out of the editor just now says where it came
+  from: `writtenPrompt(text)` — the code wrote it (a fixed instruction, a
+  template from config, a `<go>` choice the agent offered, the code's framing
+  around the user's parts); `storedPrompt(text)` — a prompt read back from
+  where one was kept (a stopped turn's rewound text, an answer parsed back
+  from the transcript). Neither is ever called on a plain field's text.
+- The server resolves it: `deliverEventTurn` (`tasks/orchestration/message`)
+  takes the user's parts as `PromptMarkdown` and resolves their attachment
+  refs itself; the turn / answer handlers call `resolvePromptAttachments`.
+
 ## Node extensions
 
 A `NodeExtension` is the one declaration that makes a token round-trip — this
@@ -104,7 +133,7 @@ start matching across lines.
 
 ## Plugin reference
 
-- Description: Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
+- Description: Generic Lexical-based rich text editor primitive — the prompt field: what it hands out (onChange, its kept value, useTakeMarkdownWith / useReadMarkdown) is PromptMarkdown (core), the only text an endpoint taking a person's words for an agent accepts. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
 - Web:
   - Slots: `TextEditorSlots.Plugin`
   - Slot contributors:
@@ -150,26 +179,25 @@ start matching across lines.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by:
-    - `active-data/go`
-    - `active-data/task`
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×10
+    - `primitives` ×5
+    - `tasks` ×5
+    - `active-data` ×2
     - `apps/website/improve`
-    - `conversations/agent-thread`
-    - `conversations/agents`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `hints/ask`
-    - `primitives/prompt-editor`
-    - `primitives/text-editor/composer`
-    - `primitives/text-editor/inline-chip`
-    - `primitives/text-editor/paste-images`
-    - `primitives/text-editor/pasted-text`
     - `screenshot`
-    - `tasks/decisions`
-    - `tasks/decisions/ask`
-    - `tasks/supervisor-roles/pane`
-    - `tasks/task-description`
 - Exemptions:
   - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/text-editor-impl.tsx` (debt)
+- Core:
+  - Exports (types): `PromptMarkdown`
+  - Exports (values):
+    - `EMPTY_PROMPT`
+    - `isBlankPrompt`
+    - `PromptMarkdownSchema`
+    - `storedPrompt`
+    - `trimPrompt`
+    - `writtenPrompt`
 - Sub-plugins:
   - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes…
   - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.

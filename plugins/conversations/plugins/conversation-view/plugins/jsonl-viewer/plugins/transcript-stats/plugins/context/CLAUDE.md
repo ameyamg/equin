@@ -8,9 +8,9 @@
 - Web:
   - Contributes: `TranscriptStats.Item` "context" → `ContextStat`
   - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×4
     - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
     - `conversations/conversation-view/jsonl-viewer` ×3
+    - `primitives/css/ui-kit` ×3
     - `primitives/kept-state` ×3
     - `conversations/conversation-view/pending-turn` ×2
     - `network/live` ×2
@@ -26,6 +26,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/text-editor.TextEditor`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

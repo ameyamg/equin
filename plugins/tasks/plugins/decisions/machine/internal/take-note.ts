@@ -1,19 +1,19 @@
 import { resolveAttachmentRefs } from "@plugins/conversations/server";
+import type { PromptMarkdown } from "@plugins/primitives/plugins/text-editor/core";
 import type { DecisionId } from "../../core";
 import { decisionAttachments } from "../../server/internal/schema-attachments";
 
 /**
- * A note the user wrote on a decision, taken: the attachments it references
- * linked to the decision (so the orphan sweep keeps what the thread shows),
- * and the note as its agent reads it — each attachment ref its disk path.
- * Machine-side: the disk paths are the computer's.
+ * A note the user wrote on a decision, kept with it: the attachments it
+ * references linked to the decision, so the orphan sweep keeps what the
+ * thread shows — whether the note is delivered or only kept. Delivery
+ * resolves the note for the agent itself (`deliverEventTurn`).
  */
-export async function takeDecisionNote(
+export async function keepDecisionNote(
   decisionId: DecisionId,
-  note: string,
-): Promise<string> {
-  const { text, attachmentIds } = await resolveAttachmentRefs(note);
+  note: PromptMarkdown,
+): Promise<void> {
+  const { attachmentIds } = await resolveAttachmentRefs(note);
   if (attachmentIds.length > 0)
     await decisionAttachments.add(decisionId, attachmentIds);
-  return text;
 }

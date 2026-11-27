@@ -12,6 +12,11 @@ import {
 } from "@plugins/conversations/plugins/turn-ledger/core";
 import { deliverEventTurn } from "@plugins/tasks/plugins/orchestration/plugins/message/server";
 import {
+  EMPTY_PROMPT,
+  PromptMarkdownSchema,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
+import {
   acceptedSet,
   decideProposal,
   proposalIdKind,
@@ -37,7 +42,8 @@ const ANSWERABLE: readonly ProposalState[] = ["open", "changes-requested"];
  * The user's answer to a proposal. An accept writes through the record type's
  * own path (its validation and side effects); a refusal there keeps the
  * proposal open. Every decision is then typed into the author's task as an
- * event turn, so the agent learns it whether it is working or stopped.
+ * event turn, so the agent learns it whether it is working, stopped or closed
+ * (reopened: it waits on this answer even once it ended its turn).
  */
 export async function decide(
   rawId: string,
@@ -62,7 +68,12 @@ export async function decide(
   if (!proposal) throw new HttpError(404, `Unknown proposal: ${id}`);
   if (proposal.state === target && target !== "changes-requested") {
     // Decided already, as asked: a retry after a failed delivery — told again.
-    const delivery = await tellAgent(proposal, target, proposal.decisionNote);
+    // The stored note is the one this endpoint took (a PromptMarkdown body).
+    const stored =
+      proposal.decisionNote === null
+        ? null
+        : PromptMarkdownSchema.parse(proposal.decisionNote);
+    const delivery = await tellAgent(proposal, target, stored);
     return { kind: "decided", state: target, delivery };
   }
   if (!ANSWERABLE.includes(proposal.state)) {
@@ -158,25 +169,28 @@ const DECISION_WORDS: Record<ProposalState, string> = {
 async function tellAgent(
   proposal: Proposal,
   state: ProposalState,
-  note: string | null,
+  note: PromptMarkdown | null,
 ): Promise<ProposalDelivery> {
   const revise =
     state === "changes-requested"
       ? "\nRevise it in your worktree (the same record), then run `./equin propose` again: the new revision replaces this one."
       : "";
-  const text =
-    `<proposal-decision proposal="${proposal.id}" type="${proposal.type}" record="${proposal.recordId}" decision="${state}">` +
-    `${note ?? ""}</proposal-decision>\n` +
-    `Your proposal ${proposal.id} (v${proposal.revision}) ${DECISION_WORDS[state]}.${revise}`;
-  const delivery = await deliverEventTurn(proposal.authorTaskId, {
-    id: decisionTurnId(proposal.id, state, note),
-    text,
-  });
+  const delivery = await deliverEventTurn(
+    proposal.authorTaskId,
+    {
+      id: decisionTurnId(proposal.id, state, note),
+      userText: { note: note ?? EMPTY_PROMPT },
+      text: (user) =>
+        `<proposal-decision proposal="${proposal.id}" type="${proposal.type}" record="${proposal.recordId}" decision="${state}">` +
+        `${user.note}</proposal-decision>\n` +
+        `Your proposal ${proposal.id} (v${proposal.revision}) ${DECISION_WORDS[state]}.${revise}`,
+    },
+    // The agent waits on this answer: a closed one is reopened to hear it.
+    { ifClosed: "reopen" },
+  );
   switch (delivery.kind) {
     case "delivered":
-      return "delivered";
-    case "finished":
-      return "finished";
+      return delivery.was === "closed" ? "reopened" : "delivered";
     case "no-agent":
       return "no-agent";
     case "resume-blocked":

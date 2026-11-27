@@ -16,6 +16,7 @@ import type {
   TurnId,
   TurnKind,
 } from "@plugins/conversations/plugins/turn-ledger/core";
+import type { PromptMarkdown } from "@plugins/primitives/plugins/text-editor/core";
 
 // ---------------------------------------------------------------------------
 // The delivery leg — the ONE thing that varies between the surfaces that send a
@@ -44,7 +45,7 @@ export interface TurnDelivery {
   send(
     fetchEndpoint: FetchEndpoint,
     conversationId: string,
-    text: string,
+    text: PromptMarkdown,
     turnId: TurnId,
     signal: AbortSignal,
   ): Promise<void>;

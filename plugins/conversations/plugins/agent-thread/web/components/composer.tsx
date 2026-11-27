@@ -6,6 +6,12 @@ import {
   TextEditor,
   type TextEditorText,
 } from "@plugins/primitives/plugins/text-editor/web";
+import {
+  EMPTY_PROMPT,
+  storedPrompt,
+  writtenPrompt,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
 import { resolveTextKeep } from "@plugins/primitives/plugins/kept-state/core";
 import {
   submitKept,
@@ -44,7 +50,7 @@ const sendIcon = symbol("arrow-upward");
  * user is on when it changed). The draft, and a failed send's restore, keep
  * the words alone.
  */
-export type PrepareTurn = (text: string) => string;
+export type PrepareTurn = (text: PromptMarkdown) => PromptMarkdown;
 const stopIcon = symbol("stop");
 
 /** The editor's text is the caller's `keep` (a draft binding, or transient with `value` / `onChange`). */
@@ -155,7 +161,9 @@ export function ThreadComposer({
   prepareTurn?: PrepareTurn | undefined;
 }) {
   const id = conversation.id;
-  const draftBinding = useDraft(conversationPromptDraft, "", { scope: id });
+  const draftBinding = useDraft(conversationPromptDraft, EMPTY_PROMPT, {
+    scope: id,
+  });
   const [draft, setDraft, , draftKept] = draftBinding;
   const draftRef = useLatestRef(draft);
   const sendConversationTurn = useSendConversationTurn();
@@ -172,7 +180,7 @@ export function ThreadComposer({
   });
   const stop = useEndpointMutation(stopConversation, {
     onSuccess: (data) => {
-      if (data.rewindText) setDraft(data.rewindText);
+      if (data.rewindText) setDraft(storedPrompt(data.rewindText));
       // Stopped, but the agent did not come back as Stop meant it to.
       if (data.relaunchFailure !== null)
         toast({
@@ -206,7 +214,10 @@ export function ThreadComposer({
   // Resolves `ok` once the server recorded the turn (`posted`), not ok when
   // the resume failed — what `submitKept` clears the draft on.
   const deliver = useCallback(
-    (typed: string, onNotSent?: () => void): Promise<{ ok: boolean }> => {
+    (
+      typed: PromptMarkdown,
+      onNotSent?: () => void,
+    ): Promise<{ ok: boolean }> => {
       const text = prepareTurn ? prepareTurn(typed) : typed;
       if (!ended) return sendConversationTurn(id, { text }).posted;
       // Resume needs the computer like a send does, so the gate already
@@ -247,9 +258,10 @@ export function ThreadComposer({
   // A stable identity: it is published to the provider above, and `deliver`
   // changes every render (the resume mutation's handle does), so a callback
   // over it would re-register — and re-render this — forever.
+  // A quick send's text is a choice the agent offered (`<go>`), not typed.
   const sendText = useEventCallback((text: string) => {
     if (disabled) return;
-    void deliver(text);
+    void deliver(writtenPrompt(text));
   });
   const insertRef = useRef<((text: string) => void) | null>(null);
   const insert = useCallback((text: string) => {

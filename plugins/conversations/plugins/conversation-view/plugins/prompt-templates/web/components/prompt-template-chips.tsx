@@ -1,4 +1,5 @@
 import { rowOrStale } from "@plugins/network/plugins/live/web";
+import { trimPrompt } from "@plugins/primitives/plugins/text-editor/core";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -35,7 +36,7 @@ export function FloatingTemplateChips({
   // through the same insert as ✎ — at the caret — and the editor is emptied in
   // the same step, mirroring the prompt input's own send.
   function sendTemplate(t: TemplateChipItem) {
-    const text = takeDraftWith(t.prompt).trim();
+    const text = trimPrompt(takeDraftWith(t.prompt));
     sendConversationTurn(convId, { text });
   }
 

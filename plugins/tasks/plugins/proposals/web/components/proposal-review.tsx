@@ -9,10 +9,14 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
-  Button,
-  Textarea,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+  EMPTY_PROMPT,
+  isBlankPrompt,
+  trimPrompt,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
@@ -59,7 +63,7 @@ type Mode = "idle" | "edit" | "request";
 
 const DELIVERY_WORDS: Record<ProposalDelivery, string> = {
   delivered: "The agent was told.",
-  finished: "The agent had already finished: it was not told.",
+  reopened: "The agent had closed: it was reopened and told.",
   "no-agent": "No agent ran on its task: nobody was told.",
   blocked: "The agent could not be resumed: it was not told.",
 };
@@ -87,7 +91,7 @@ export function ProposalReview({
   // The keys the user edited in their copy: with the proposal's own, the
   // only keys an accept with edits writes (never one read before a newer edit).
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState<PromptMarkdown>(EMPTY_PROMPT);
   const [refusal, setRefusal] = useState<string | null>(null);
 
   const meta = PROPOSAL_STATE_META[proposal.state];
@@ -121,6 +125,9 @@ export function ProposalReview({
     });
     onDecided?.(res.state);
   };
+  const canRequest = !isBlankPrompt(note) && note.length <= PROPOSAL_NOTE_MAX;
+  const requestChanges = () =>
+    send({ decision: "request-changes", note: trimPrompt(note) });
   const editedCopy = () =>
     Object.fromEntries(
       [...new Set([...proposal.changed, ...touched])].map((k) => [k, draft[k]]),
@@ -212,15 +219,23 @@ export function ProposalReview({
           />
         )}
         {mode === "request" && (
-          <Textarea
+          // The prompt's own editor: what the agent reads may carry pasted
+          // images, files and chips, resolved for it on delivery.
+          <TextEditor
             keep={transient(
               "a change request is a sentence typed and sent at once; it is not kept across a reload",
             )}
             autoFocus
             value={note}
-            maxLength={PROPOSAL_NOTE_MAX}
+            onChange={setNote}
+            onSubmit={() => {
+              if (canRequest) void requestChanges();
+            }}
+            submitMode="cmd-enter"
+            minRows={2}
             placeholder="What should change?"
-            onChange={(e) => setNote(e.target.value)}
+            ariaLabel="What should change?"
+            namespace="proposal-request-changes"
           />
         )}
 
@@ -277,10 +292,8 @@ export function ProposalReview({
             <>
               <Button
                 variant="default"
-                disabled={note.trim() === ""}
-                onClick={() =>
-                  send({ decision: "request-changes", note: note.trim() })
-                }
+                disabled={!canRequest}
+                onClick={requestChanges}
               >
                 Send to the agent
               </Button>

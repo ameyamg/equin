@@ -32,13 +32,27 @@ conversation id. Plan: `research/2026-10-30-tasks-message-agents.md`.
   only the `SETTLED_SHOWN` (10) started last are listed — the rest are one
   `+N older settled agents` line; `all: true` lists every one. The caller's
   own line is never hidden.
-- **`deliverEventTurn(taskId, turn)`** (server barrel) — the one path an event
-  turn takes into a task's agent, for any plugin that answers one: its latest
-  conversation (`agentOf`), resumed first when `gone`, never reopened when
-  `done` (`finished`: nothing typed), a blocked resume a refusal. `turn.id`
-  makes a retried send a no-op, `turn.onRecorded(tx)` commits the caller's
-  rows with the ledger's. `message_agent` types through the same
-  `resumeAgent` / `typeEventTurn` (`server/internal/deliver.ts`).
+- **`deliverEventTurn(taskId, turn, { ifClosed })`** (server barrel) — the one
+  path an event turn takes into a task's agent, for any plugin that answers
+  one: its latest conversation (`agentOf`), resumed first when `gone`, a
+  blocked resume a refusal.
+  - **`ifClosed` is required** — every sender decides what a `done` agent
+    gets: `"reopen"` resumes it and types (a proposal's decision: the agent
+    waits on it), `"leave"` types nothing (`finished`; a decision's answer is
+    kept on its record instead). The overloads type the answer: `finished`
+    exists only under `"leave"`, `was: "closed"` only under `"reopen"`.
+  - **What a person wrote is resolved here, never by the sender.** The turn
+    is `{ userText, text }`: `userText` the user's parts by key, each
+    `PromptMarkdown` (the prompt editor's markdown), and `text(parts)` the
+    server's framing around them. It is rendered twice — with the parts as
+    written (the ledger's shown text, so images still draw) and as the agent
+    reads them (`resolvePromptAttachments`: attachment refs as disk paths,
+    the attachments linked to the conversation). A sender that forgot to
+    resolve lost the user's images (proposals did, before).
+  - `turn.id` makes a retried send a no-op, `turn.onRecorded(tx)` commits
+    the caller's rows with the ledger's. `message_agent` types through the
+    same `resumeAgent` / `typeEventTurn` (`server/internal/deliver.ts`) with
+    no user parts, and keeps its own supervisor-only `reopen`.
 - The answer comes back the way the target already reports (its reports and
   flags, as watch events, to a supervisor) — the tool does not wait.
 
@@ -46,10 +60,11 @@ conversation id. Plan: `research/2026-10-30-tasks-message-agents.md`.
 
 ## Plugin reference
 
-- Description: Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it at its next step — resuming it first when it stopped; refused to oneself or where no agent ran; a closed one only with reopen, which needs the message.tree grant and a task of the caller's mandate tree), and list_agents, granted by message.tree (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands). The capability's describe joins the Mandate section. Names no workflow. deliverEventTurn(taskId, turn) is the one path an event turn takes into a task's agent — its latest conversation, resumed first when stopped, never reopened when closed — for any plugin that answers an agent.
+- Description: Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it at its next step — resuming it first when it stopped; refused to oneself or where no agent ran; a closed one only with reopen, which needs the message.tree grant and a task of the caller's mandate tree), and list_agents, granted by message.tree (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands). The capability's describe joins the Mandate section. Names no workflow. deliverEventTurn(taskId, turn, { ifClosed }) is the one path an event turn takes into a task's agent — its latest conversation, resumed first when stopped, a closed one reopened or left closed as the required ifClosed says — for any plugin that answers an agent; it resolves what a person wrote in the turn (userText, PromptMarkdown: attachment refs as disk paths, the attachments linked to the conversation) itself, so no sender can forget.
 - Server:
   - Contributes: `mandateCapability` "message.tree"
   - Uses:
+    - `conversations.resolvePromptAttachments`
     - `conversations.ResumeBlockedError`
     - `conversations.resumeConversation`
     - `conversations.submitTurn`
@@ -68,6 +83,7 @@ conversation id. Plan: `research/2026-10-30-tasks-message-agents.md`.
   - Exports (types):
     - `EventDelivery`
     - `EventTurn`
+    - `IfClosed`
   - Exports (values):
     - `deliverEventTurn`
     - `latestAgentConversation`

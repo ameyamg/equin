@@ -4,7 +4,6 @@ import {
   submitKept,
   useKept,
 } from "@plugins/primitives/plugins/kept-state/web";
-import { z } from "zod";
 import type { ContextUsage } from "@plugins/conversations/plugins/context-usage/core";
 import {
   conversationSystemPrompt,
@@ -31,9 +30,16 @@ import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
   Button,
   Separator,
-  Textarea,
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import {
+  EMPTY_PROMPT,
+  PromptMarkdownSchema,
+  trimPrompt,
+  writtenPrompt,
+  type PromptMarkdown,
+} from "@plugins/primitives/plugins/text-editor/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { toRelativePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
@@ -44,13 +50,14 @@ import { contextRows, tokensToAutoCompact } from "./context-math";
 
 const chevronIcon = symbol("chevron-right");
 
-const compactInstructionsDraft = defineKept({
+const compactInstructionsDraft = defineKept<PromptMarkdown>({
   owner: "conversations.context.compact-instructions",
   label: "Compaction instructions",
   tier: "work",
   stamp: "nl1v68s27p",
   cap: "8 KB",
-  schema: z.string(),
+  // Typed in the prompt editor: what the agent reads with `/compact`.
+  schema: PromptMarkdownSchema,
 });
 const compactIcon = symbol("compress");
 
@@ -103,7 +110,7 @@ export function ContextCard({
   usage: ContextUsage | null;
   onCompacted: () => void;
 }) {
-  const instructions = useKept(compactInstructionsDraft, "", {
+  const instructions = useKept(compactInstructionsDraft, EMPTY_PROMPT, {
     subject: conversationId,
   });
   const shownPath = useShownPath(conversationId);
@@ -125,9 +132,10 @@ export function ContextCard({
     void submitKept(
       instructions[3],
       (typed) => {
-        const focus = typed.trim();
+        const focus = trimPrompt(typed);
         return sendConversationTurn(conversationId, {
-          text: focus ? `/compact ${focus}` : "/compact",
+          // The command the code writes, the user's instructions after it.
+          text: writtenPrompt(focus ? `/compact ${focus}` : "/compact"),
         }).posted;
       },
       { shows: "at-once" },
@@ -150,16 +158,14 @@ export function ContextCard({
       )}
       <Separator />
       <Stack gap="sm">
-        <Textarea
-          rows={1}
+        <TextEditor
+          minRows={1}
           placeholder="Compaction instructions"
+          ariaLabel="Compaction instructions"
           keep={instructions}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              compact();
-            }
-          }}
+          onSubmit={compact}
+          submitMode="cmd-enter"
+          namespace={`compact-instructions-${conversationId}`}
         />
         <Stack direction="row" justify="end" gap="none">
           <Button

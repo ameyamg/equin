@@ -115,6 +115,7 @@ moves on and the transcript card takes it over.
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `packages/list-bound.wholeList`
+    - `primitives/text-editor.PromptMarkdownSchema`
   - Exports (types):
     - `AnswerQuestionBody`
     - `CliAnswer`
@@ -124,6 +125,7 @@ moves on and the transcript card takes it over.
     - `RelayQuestion`
     - `RelayResolution`
     - `RelayState`
+    - `ResolvedAnswer`
   - Exports (values):
     - `AnswerQuestionBodySchema`
     - `answerRelayQuestion`

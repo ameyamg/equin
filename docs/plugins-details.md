@@ -19289,6 +19289,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.liveValue`
       - `packages/list-bound.wholeList`
       - `primitives/pane.defineRoute`
+      - `primitives/text-editor.PromptMarkdownSchema`
       - `primitives/text-editor/paste-images.attachmentFileMarkdown`
       - `primitives/text-editor/paste-images.attachmentMarkdown`
       - `tasks/tasks-core.ConversationSchema`
@@ -23380,9 +23381,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Web:
                     - Contributes: `TranscriptStats.Item` "context" → `ContextStat`
                     - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md)
-                      - `primitives/css/ui-kit` ×4
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
                       - `conversations/conversation-view/jsonl-viewer` ×3
+                      - `primitives/css/ui-kit` ×3
                       - `primitives/kept-state` ×3
                       - `conversations/conversation-view/pending-turn` ×2
                       - `network/live` ×2
@@ -23398,6 +23399,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                       - `primitives/css/yield.yieldClass`
                       - `primitives/overlay/popover.InlinePopover`
+                      - `primitives/text-editor.TextEditor`
                       - `ui/icons.Icon`
                   - Cross-plugin:
                     - Uses tokens:
@@ -25156,6 +25158,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `packages/list-bound.wholeList`
+          - `primitives/text-editor.PromptMarkdownSchema`
         - Exports (types):
           - `AnswerQuestionBody`
           - `CliAnswer`
@@ -25165,6 +25168,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RelayQuestion`
           - `RelayResolution`
           - `RelayState`
+          - `ResolvedAnswer`
         - Exports (values):
           - `AnswerQuestionBodySchema`
           - `answerRelayQuestion`
@@ -62209,7 +62213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/pane`
       - Exemptions:
         - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/define-tabbed-view.tsx` (debt)
-    - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
+    - **`text-editor`** — Generic Lexical-based rich text editor primitive — the prompt field: what it hands out (onChange, its kept value, useTakeMarkdownWith / useReadMarkdown) is PromptMarkdown (core), the only text an endpoint taking a person's words for an agent accepts. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Web:
         - Slots: `TextEditorSlots.Plugin`
         - Slot contributors:
@@ -62255,26 +62259,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by:
-          - `active-data/go`
-          - `active-data/task`
+        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/text-editor/REFERENCE.md`](../plugins/primitives/plugins/text-editor/REFERENCE.md)
+          - `conversations` ×10
+          - `primitives` ×5
+          - `tasks` ×5
+          - `active-data` ×2
           - `apps/website/improve`
-          - `conversations/agent-thread`
-          - `conversations/agents`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `hints/ask`
-          - `primitives/prompt-editor`
-          - `primitives/text-editor/composer`
-          - `primitives/text-editor/inline-chip`
-          - `primitives/text-editor/paste-images`
-          - `primitives/text-editor/pasted-text`
           - `screenshot`
-          - `tasks/decisions`
-          - `tasks/decisions/ask`
-          - `tasks/supervisor-roles/pane`
-          - `tasks/task-description`
       - Exemptions:
         - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/text-editor-impl.tsx` (debt)
+      - Core:
+        - Exports (types): `PromptMarkdown`
+        - Exports (values):
+          - `EMPTY_PROMPT`
+          - `isBlankPrompt`
+          - `PromptMarkdownSchema`
+          - `storedPrompt`
+          - `trimPrompt`
+          - `writtenPrompt`
       - Plugins:
         - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes that one command.
           - Cross-plugin:
@@ -67455,7 +67458,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
         - Routes: `POST /api/decisions/answers`
       - Core:
-        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/tasks/plugins/decisions/REFERENCE.md`](../plugins/tasks/plugins/decisions/REFERENCE.md)
           - `ids` ×3
           - `fields/text/config` ×2
           - `fields` ×2
@@ -67471,6 +67474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.entityRef`
           - `network/live/query-resource.compositeKey`
           - `packages/list-bound.cappedList`
+          - `primitives/text-editor.PromptMarkdownSchema`
         - Exports (types):
           - `AnswerRefusalReason`
           - `DecisionAgent`
@@ -68051,10 +68055,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Core: `@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core/testing`
                   - `rawPolicy` — A policy as raw grants, unchecked by any capability — for a test of how a reader handles a value its capability's schema refuses, which `mandatePolicy` (parsing every grant) can never build.
-        - **`message`** — Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it at its next step — resuming it first when it stopped; refused to oneself or where no agent ran; a closed one only with reopen, which needs the message.tree grant and a task of the caller's mandate tree), and list_agents, granted by message.tree (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands). The capability's describe joins the Mandate section. Names no workflow. deliverEventTurn(taskId, turn) is the one path an event turn takes into a task's agent — its latest conversation, resumed first when stopped, never reopened when closed — for any plugin that answers an agent.
+        - **`message`** — Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it at its next step — resuming it first when it stopped; refused to oneself or where no agent ran; a closed one only with reopen, which needs the message.tree grant and a task of the caller's mandate tree), and list_agents, granted by message.tree (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands). The capability's describe joins the Mandate section. Names no workflow. deliverEventTurn(taskId, turn, { ifClosed }) is the one path an event turn takes into a task's agent — its latest conversation, resumed first when stopped, a closed one reopened or left closed as the required ifClosed says — for any plugin that answers an agent; it resolves what a person wrote in the turn (userText, PromptMarkdown: attachment refs as disk paths, the attachments linked to the conversation) itself, so no sender can forget.
           - Server:
             - Contributes: `mandateCapability` "message.tree"
             - Uses:
+              - `conversations.resolvePromptAttachments`
               - `conversations.ResumeBlockedError`
               - `conversations.resumeConversation`
               - `conversations.submitTurn`
@@ -68073,6 +68078,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `EventDelivery`
               - `EventTurn`
+              - `IfClosed`
             - Exports (values):
               - `deliverEventTurn`
               - `latestAgentConversation`
@@ -68317,7 +68323,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `IdKinds.Kind` "prp"
         - Uses: 21 symbols — full list in [`plugins/tasks/plugins/proposals/REFERENCE.md`](../plugins/tasks/plugins/proposals/REFERENCE.md)
           - `primitives/data-view` ×5
-          - `primitives/css/ui-kit` ×2
           - `config_v2/fields.FieldsForm`
           - `ids.IdKinds`
           - `infra/endpoints.useEndpointMutation`
@@ -68329,8 +68334,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
           - `primitives/inline-text.InlineText`
           - `primitives/relative-time.RelativeTime`
+          - `primitives/text-editor.TextEditor`
           - `shell/notifications.useToast`
         - Exports (types):
           - `ProposalCurrent`
@@ -68396,7 +68403,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.machineHandler`
         - Routes: `POST /api/proposals/:id/decide`
       - Core:
-        - Uses: 26 symbols — full list in [`plugins/tasks/plugins/proposals/REFERENCE.md`](../plugins/tasks/plugins/proposals/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/tasks/plugins/proposals/REFERENCE.md`](../plugins/tasks/plugins/proposals/REFERENCE.md)
           - `fields` ×3
           - `ids` ×3
           - `infra/attachments` ×3
@@ -68412,6 +68419,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/string-list/config.stringListField`
           - `infra/entities.entityRef`
           - `network/live/query-resource.compositeKey`
+          - `primitives/text-editor.PromptMarkdownSchema`
         - Exports (types):
           - `DecideProposalBody`
           - `ProposalDelivery`

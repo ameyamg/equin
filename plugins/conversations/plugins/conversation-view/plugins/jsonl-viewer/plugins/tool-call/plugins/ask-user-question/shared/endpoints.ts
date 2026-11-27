@@ -1,9 +1,11 @@
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { z } from "zod";
+import { PromptMarkdownSchema } from "@plugins/primitives/plugins/text-editor/core";
 import { turnIdKind } from "@plugins/conversations/plugins/turn-ledger/core";
 
 export const AnswerAskUserQuestionBodySchema = z.object({
-  text: z.string().min(1),
+  /** The serialized answer — the user's own text in it written in the prompt field. */
+  text: PromptMarkdownSchema.check(z.minLength(1)),
   /** The answer's ledger id, minted by the client; minted by the server when absent. */
   turnId: turnIdKind.schema.optional(),
 });

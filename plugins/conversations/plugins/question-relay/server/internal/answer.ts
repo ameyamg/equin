@@ -1,4 +1,4 @@
-import type { AnswerQuestionBody, CliAnswer, RelayQuestion } from "../../core";
+import type { CliAnswer, RelayQuestion, ResolvedAnswer } from "../../core";
 import { withPicksInResponse } from "@plugins/conversations/plugins/transcript-source/core";
 
 // The web's structured answer → the AskUserQuestion tool's own answer shape,
@@ -15,7 +15,7 @@ export type AnswerCheck =
 
 export function toCliAnswer(
   questions: readonly RelayQuestion[],
-  body: AnswerQuestionBody,
+  body: ResolvedAnswer,
 ): AnswerCheck {
   const byText = new Map(questions.map((q) => [q.question, q]));
   for (const key of Object.keys(body.selections)) {

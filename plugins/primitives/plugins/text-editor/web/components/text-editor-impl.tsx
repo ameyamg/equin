@@ -34,9 +34,12 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import {
   resolveTextKeep,
   type KeptBinding,
+  type KeptPart,
   type KeptText,
   type Transient,
 } from "@plugins/primitives/plugins/kept-state/core";
+import type { PromptMarkdown } from "../../core";
+import { editorMarkdown } from "../internal/prompt-mint";
 
 /**
  * The editor's required `keep` (kept-state's `TextKeep`): whether what is
@@ -44,17 +47,26 @@ import {
  * - kept (a `useKept` / `useDraft` binding, or a field that keeps its own
  *   text): the binding is the value; an `onChange` still runs, after it.
  * - `transient("<why>")`: the editor takes its caller's `value` / `onChange`.
+ *
+ * What it hands out is `PromptMarkdown` — the editor is that brand's producer,
+ * so an endpoint taking a person's text for an agent compiles only with it.
+ * A kept binding of `PromptMarkdown` (a draft store whose schema is
+ * `PromptMarkdownSchema`) keeps the brand on the stored value too.
  */
 export type TextEditorText =
   | {
-      keep: KeptBinding<string> | KeptText;
+      keep:
+        | KeptBinding<string>
+        | KeptText
+        | KeptBinding<PromptMarkdown>
+        | KeptPart<PromptMarkdown>;
       value?: never;
-      onChange?: (markdown: string) => void;
+      onChange?: (markdown: PromptMarkdown) => void;
     }
   | {
       keep: Transient;
       value: string;
-      onChange: (markdown: string) => void;
+      onChange: (markdown: PromptMarkdown) => void;
     };
 
 export type TextEditorProps = TextEditorText & TextEditorOptions;
@@ -102,12 +114,12 @@ export function TextEditor({
   initialSelection,
   bottomSlot,
 }: TextEditorProps) {
-  const kept = resolveTextKeep(keep);
+  const kept = resolveTextKeep<PromptMarkdown>(keep);
   const value = kept === null ? (callerValue ?? "") : kept.value;
   const onChange =
     kept === null
       ? (callerChange ?? noChange)
-      : (markdown: string) => {
+      : (markdown: PromptMarkdown) => {
           kept.set(markdown);
           callerChange?.(markdown);
         };
@@ -368,7 +380,7 @@ function ValueSyncPlugin({
   extensions,
 }: {
   value: string;
-  onChange: (markdown: string) => void;
+  onChange: (markdown: PromptMarkdown) => void;
   extensions: readonly NodeExtension[];
 }) {
   const [editor] = useLexicalComposerContext();
@@ -396,7 +408,7 @@ function ValueSyncPlugin({
       const md = serializeEditorToMarkdown(editor, extensionsRef.current);
       if (md === lastSerializedRef.current) return;
       lastSerializedRef.current = md;
-      onChangeRef.current(md);
+      onChangeRef.current(editorMarkdown(md));
     });
   }, [editor]);
 

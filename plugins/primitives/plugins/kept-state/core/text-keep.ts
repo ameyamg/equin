@@ -94,8 +94,13 @@ export interface Transient {
   readonly reason: string;
 }
 
-/** What a text-input primitive's required `keep` prop accepts. */
-export type TextKeep = KeptBinding<string> | KeptText | Transient;
+/**
+ * What a text-input primitive's required `keep` prop accepts. `T` is the
+ * text's type: a field whose text is a branded string (the prompt editor's
+ * `PromptMarkdown`) also takes a binding of that brand.
+ */
+export type TextKeep<T extends string = string> =
+  KeptBinding<T> | KeptPart<T> | Transient;
 
 /**
  * Mark a field's text as throwaway, saying why ("password", "filter: the
@@ -227,14 +232,15 @@ export function isTransient(keep: unknown): keep is Transient {
  * The value and setter a kept `keep` drives the field with, or `null` for
  * `transient` (the field keeps its caller's `value` / `onChange`).
  */
-export function resolveTextKeep(
-  keep: TextKeep,
-): { value: string; set: (next: string) => void } | null {
+export function resolveTextKeep<T extends string = string>(
+  keep: TextKeep | TextKeep<T>,
+): { value: string; set: (next: T) => void } | null {
   if (isTransient(keep)) return null;
+  // A `T` is a string, so a binding of either type takes it.
   if (Array.isArray(keep)) {
-    const binding = keep as KeptBinding<string>;
+    const binding = keep as KeptBinding<string> | KeptBinding<T>;
     return { value: binding[0], set: (next) => binding[1](next) };
   }
-  const text = keep as KeptText;
+  const text = keep as KeptPart<string> | KeptPart<T>;
   return { value: text.value, set: (next) => text.set(next) };
 }
