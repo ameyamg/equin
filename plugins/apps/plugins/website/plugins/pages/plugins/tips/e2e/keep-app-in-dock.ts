@@ -125,13 +125,13 @@ const T = {
 const assetsDir = mkdtempSync(join(tmpdir(), `tip-${SLUG}-`));
 try {
   await runFilm({
-  name: `tip-${SLUG}`,
-  out: (ctx) => nextVersion(SLUG, ctx.preview),
-  web: true,
-  options: {
-    shots: "the four screenshots, in order, comma-separated (see the header)",
-  },
-  build: (ctx) => build(ctx.option("shots")),
+    name: `tip-${SLUG}`,
+    out: (ctx) => nextVersion(SLUG, ctx.preview),
+    web: true,
+    options: {
+      shots: "the four screenshots, in order, comma-separated (see the header)",
+    },
+    build: (ctx) => build(ctx.option("shots")),
   });
 } finally {
   // The copies of the screenshots go with the render.
@@ -285,4 +285,3 @@ function build(shots: string | undefined): Composition {
     ],
   };
 }
-
