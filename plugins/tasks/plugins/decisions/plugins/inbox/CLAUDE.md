@@ -60,8 +60,8 @@ an agent opened (`tasks/decisions`). Design:
     - `sources` "Closed" → `DecisionsSource`
     - `IdKinds.Presenter` "dec"
     - `InlineChip.Tag` "dec" → `GenericIdChip`
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/decisions` ×8
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/decisions` ×9
     - `primitives/pane` ×7
     - `primitives/data-view` ×6
     - `network/live` ×5

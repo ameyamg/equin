@@ -95,6 +95,15 @@ export interface DecisionDrafts {
    * holds what was sent; a refused one stays, carrying the reason.
    */
   submit(decisions: readonly string[]): Promise<SubmitAnswersResponse>;
+  /**
+   * Send `decisions` — one agent's section — only if every one of them holds
+   * a drafted answer, read as set (so the pick made in the same handler
+   * counts). `null`: one has none, nothing sent. A Submit in flight is waited
+   * out first, then the drafts are read again (it may have taken some).
+   */
+  submitIfAllAnswered(
+    decisions: readonly string[],
+  ): Promise<SubmitAnswersResponse | null>;
   /** Why answers cannot be sent from this host (they type into agents); `null` when they can. */
   unavailable: string | null;
 }
@@ -175,5 +184,24 @@ export function useDecisionDrafts(): DecisionDrafts {
     },
     [send],
   );
-  return { drafts, part, submit, unavailable };
+  const submitIfAllAnswered = useCallback(
+    async (
+      decisions: readonly string[],
+    ): Promise<SubmitAnswersResponse | null> => {
+      // Not the one in flight's answer: it sent other drafts, maybe not these.
+      // Only its settling matters here — its failure is its own caller's.
+      while (inFlight.current !== null)
+        await Promise.allSettled([inFlight.current]);
+      const current = handle.current();
+      const all =
+        decisions.length > 0 &&
+        decisions.every((id) => {
+          const d = current[id];
+          return d !== undefined && answerOf(id, d) !== null;
+        });
+      return all ? submit(decisions) : null;
+    },
+    [handle, submit],
+  );
+  return { drafts, part, submit, submitIfAllAnswered, unavailable };
 }

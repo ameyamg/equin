@@ -25,6 +25,7 @@ import {
   SubmitBar,
   useDecisionDrafts,
   useMarkDecisionSeen,
+  useSendAnsweredSection,
 } from "@plugins/tasks/plugins/decisions/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useListStepper } from "@plugins/primitives/plugins/data-view/plugins/list/web";
@@ -144,6 +145,9 @@ function DecisionDetail({
   useMarkDecisionSeen(decision);
   const draft = useDecisionDrafts().part(decision.id);
   const answerable = isAnswerable(decision);
+  // A pick by key is an answer as a click is: the agent's section goes out
+  // once all of it is answered (the card does so for its own clicks).
+  const sendSection = useSendAnsweredSection(decision.taskId);
   // 1–9 pick the open decision's options (a second press unpicks); typing in
   // the note keeps its digits.
   useSurfaceShortcuts(
@@ -156,7 +160,10 @@ function DecisionDetail({
       handler: () => {
         const unpick = draft.value.pick === o.key;
         draft.set((d) => ({ ...d, pick: unpick ? null : o.key }));
-        if (!unpick) onAnswered();
+        if (!unpick) {
+          onAnswered();
+          sendSection();
+        }
       },
     })),
   );

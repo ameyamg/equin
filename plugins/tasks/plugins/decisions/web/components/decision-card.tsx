@@ -50,6 +50,7 @@ import {
 } from "./decision-versions";
 import { threadAsOf } from "../internal/thread-as-of";
 import { isAnswerable, type DecisionDraft } from "../internal/drafts";
+import { useSendAnsweredSection } from "../internal/section-send";
 import { DecisionCardSlots } from "../slots";
 
 /**
@@ -77,7 +78,10 @@ import { DecisionCardSlots } from "../slots";
  * `onAnswered(via)`: the user is done with this one — they picked an option
  * (`"pick"`; never an unpick) or pressed Enter in the note (`"note"`;
  * Shift+Enter is a new line, ⌘↵ stays the Submit bar's). The surface moves on
- * to the next decision. `autoFocusNote`: the note takes focus when the card
+ * to the next decision. That moment, and "Got it" / "Close without
+ * answering" turned on, also sends the agent's whole section once every one
+ * of its open decisions holds an answer (`useSendAnsweredSection`).
+ * `autoFocusNote`: the note takes focus when the card
  * mounts (a surface that moved on to it from the previous decision's note).
  */
 export function DecisionCard({
@@ -102,6 +106,13 @@ export function DecisionCard({
   seenBefore: Date | null;
 }): ReactElement {
   const versions = useDecisionVersions(decision.id);
+  // Done with this one: the surface moves on, and the agent's section goes
+  // out once every one of its decisions is answered.
+  const sendSection = useSendAnsweredSection(decision.taskId);
+  const answered = (via: AnsweredVia) => {
+    onAnswered?.(via);
+    sendSection();
+  };
   // The past version shown, null for what the decision says now. Kept per
   // showing: a card opened again starts on the current version.
   const [viewing, setViewing] = useState<string | null>(null);
@@ -188,7 +199,7 @@ export function DecisionCard({
           <Options
             options={decision.options}
             draft={draft !== undefined && isAnswerable(decision) ? draft : null}
-            onPicked={onAnswered && (() => onAnswered("pick"))}
+            onPicked={() => answered("pick")}
           />
         ) : null}
         <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
@@ -206,7 +217,8 @@ export function DecisionCard({
           <Answer
             decision={decision}
             draft={draft}
-            onAnswered={onAnswered}
+            onAnswered={answered}
+            onClosed={sendSection}
             autoFocusNote={autoFocusNote}
           />
         ) : null}
@@ -355,12 +367,15 @@ function Answer({
   decision,
   draft,
   onAnswered,
+  onClosed,
   autoFocusNote,
 }: {
   decision: DecisionRow;
   draft: KeptPart<DecisionDraft>;
   /** Enter in the note: done with this decision (`DecisionCard.onAnswered`). */
-  onAnswered: ((via: AnsweredVia) => void) | undefined;
+  onAnswered: (via: AnsweredVia) => void;
+  /** "Got it" / "Close without answering" turned on: that is its answer. */
+  onClosed: () => void;
   autoFocusNote: boolean;
 }): ReactElement {
   const agent = useLive(decisionAgent, { taskId: decision.taskId });
@@ -406,12 +421,8 @@ function Answer({
             maxHeight="16rem"
             // Enter moves on to the next decision; ⌘↵ is left to the
             // Submit bar (`bare-enter`), Shift+Enter is a new line.
-            {...(onAnswered === undefined
-              ? {}
-              : {
-                  onSubmit: () => onAnswered("note"),
-                  submitMode: "bare-enter" as const,
-                })}
+            onSubmit={() => onAnswered("note")}
+            submitMode="bare-enter"
             autoFocus={autoFocusNote}
             namespace={`decision-note-${decision.id}`}
             ariaLabel="Your note"
@@ -434,7 +445,11 @@ function Answer({
             variant={d.close ? "secondary" : "ghost"}
             aria-pressed={d.close}
             className={selfClass("start")}
-            onClick={() => draft.set((p) => ({ ...p, close: !p.close }))}
+            onClick={() => {
+              const closing = !d.close;
+              draft.set((p) => ({ ...p, close: !p.close }));
+              if (closing) onClosed();
+            }}
           >
             {decision.state === "fyi" ? "Got it" : "Close without answering"}
           </Button>

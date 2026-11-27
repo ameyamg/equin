@@ -13,7 +13,6 @@ import {
   useSurfaceShortcuts,
 } from "@plugins/primitives/plugins/shortcuts/web";
 import type { TaskId } from "@plugins/tasks/plugins/task-ids/core";
-import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { decisionAgent, decisionsList, type DecisionRow } from "../../core";
 import {
   answerOf,
@@ -21,6 +20,7 @@ import {
   useDecisionDrafts,
   type DecisionDraft,
 } from "../internal/drafts";
+import { useSubmitToasts } from "../internal/section-send";
 
 /** What the bar knows of the drafts it would send. */
 interface Tally {
@@ -121,20 +121,9 @@ export function SubmitBar({
   });
 
   const count = unavailable === null ? (tally?.ids.length ?? 0) : 0;
-  const toast = useToast();
-  // Answers recorded but not typed into their agent say so: the turn is
-  // retried from the conversation.
+  const toasts = useSubmitToasts();
   const send = async () => {
-    const response = await submit(tally?.ids ?? []);
-    for (const d of response.delivered)
-      if (d.typingFailed !== null)
-        toast({
-          type: "task",
-          category: "other",
-          title: "Answers recorded, not typed into the agent",
-          description: `${d.typingFailed} — retry the turn from the agent's conversation.`,
-          variant: "error",
-        });
+    toasts.delivered(await submit(tally?.ids ?? []));
   };
   useSurfaceShortcuts([
     {
@@ -146,16 +135,7 @@ export function SubmitBar({
       region: { root: region, pointer: false },
       when: () => count > 0,
       // The button shows its own failure; the key's goes to a toast.
-      handler: () =>
-        void send().catch((err: unknown) =>
-          toast({
-            type: "task",
-            category: "other",
-            title: "Could not submit your answers",
-            description: err instanceof Error ? err.message : String(err),
-            variant: "error",
-          }),
-        ),
+      handler: () => void send().catch(toasts.failed),
     },
   ]);
 
