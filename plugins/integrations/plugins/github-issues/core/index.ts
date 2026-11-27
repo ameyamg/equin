@@ -7,3 +7,4 @@ export {
   type IssuePick,
   type ReadableIdea,
 } from "./issue-url";
+export { ISSUE_TEMPLATES, type IssueTemplateId } from "./issue-templates";

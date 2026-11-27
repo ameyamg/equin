@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { clause } from "@plugins/network/plugins/live/plugins/filter/core";
+import {
+  and,
+  clause,
+  or,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   applyFilter,
   coerceToDomain,
@@ -258,5 +262,120 @@ describe("lowerFilterGroup — unavailable rules", () => {
   it("an incomplete rule is not unavailable — it constrains nothing, as authored", () => {
     const g = group("and", [rule("name", "contains")]);
     expect(lowerFilterGroup(g, fields, resolve, 0).unavailable).toEqual([]);
+  });
+});
+
+describe("lowerFilterGroup — clauses on a companion field", () => {
+  // A day operator that, like the date type's, also tests its field's
+  // all-day flag (`eq` / `ne`): ops it does not declare, on another column.
+  const flagged: FilterOperatorSet = {
+    match: "day",
+    domain: "instant",
+    operators: [
+      {
+        id: "on-or-after",
+        label: "On or after",
+        hasValue: true,
+        ops: ["gte"],
+        lower: (op, ctx) =>
+          typeof op !== "string"
+            ? undefined
+            : ctx.field.allDayFlag === undefined
+              ? clause(ctx.column, "gte", op)
+              : or(
+                  and(
+                    clause(ctx.field.allDayFlag, "eq", true),
+                    clause(ctx.column, "gte", op),
+                  ),
+                  and(
+                    clause(ctx.field.allDayFlag, "ne", true),
+                    clause(ctx.column, "gte", op),
+                  ),
+                ),
+      },
+    ],
+  };
+  const bool: FilterOperatorSet = {
+    match: "bool",
+    domain: "boolean",
+    operators: [
+      {
+        id: "is",
+        label: "Is",
+        hasValue: true,
+        ops: ["eq"],
+        lower: (op, { column }) => clause(column, "eq", op === true),
+      },
+    ],
+  };
+  const resolveDay = (t: string) =>
+    t === "day" ? flagged : t === "bool" ? bool : undefined;
+  interface Ev {
+    at: string;
+    allDay: boolean;
+  }
+  const when = (extra: Partial<FieldDef<Ev>> = {}): FieldDef<Ev> => ({
+    id: "at",
+    label: "At",
+    type: "day",
+    value: (r) => r.at,
+    allDayFlag: "allDay",
+    ...extra,
+  });
+  const allDay = (extra: Partial<FieldDef<Ev>> = {}): FieldDef<Ev> => ({
+    id: "allDay",
+    label: "All day",
+    type: "bool",
+    value: (r) => r.allDay,
+    ...extra,
+  });
+  const g = group("and", [
+    rule("at", "on-or-after", "2026-12-04T00:00:00.000Z"),
+  ]);
+
+  it("takes the flag's ops by the flag field's own domain, not the date operator's list", () => {
+    const { filter } = lowerFilterGroup(g, [when(), allDay()], resolveDay, 0);
+    expect(filter).toBeDefined();
+  });
+
+  it("refuses an op the flag field's source does not run", () => {
+    expect(() =>
+      lowerFilterGroup(
+        g,
+        [when(), allDay({ filterOps: ["eq"] })],
+        resolveDay,
+        0,
+      ),
+    ).toThrow(/lowered a clause on "allDay" with op "ne"/);
+  });
+
+  it("refuses a flag the view does not list", () => {
+    expect(() => lowerFilterGroup(g, [when()], resolveDay, 0)).toThrow(
+      /a companion this view does not list/,
+    );
+  });
+
+  it("refuses a clause on a column that is no companion", () => {
+    const stray: FilterOperatorSet = {
+      ...flagged,
+      operators: [
+        {
+          ...flagged.operators[0]!,
+          lower: (_op, ctx) =>
+            and(clause(ctx.column, "gte", "x"), clause("allDay", "eq", true)),
+        },
+      ],
+    };
+    expect(() =>
+      lowerFilterGroup(
+        g,
+        [
+          { id: "at", label: "At", type: "day", value: (r: Ev) => r.at },
+          allDay(),
+        ],
+        (t) => (t === "day" ? stray : resolveDay(t)),
+        0,
+      ),
+    ).toThrow(/neither its field nor a companion/);
   });
 });

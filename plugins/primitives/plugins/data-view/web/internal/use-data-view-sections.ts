@@ -17,6 +17,7 @@ import {
   type FilterOperatorSet,
   type GroupBucket,
   type GroupByRule,
+  type GroupingRow,
   type SectionCount,
   sumSectionCounts,
   type ViewState,
@@ -321,6 +322,21 @@ export function partitionIntoSections<TRow>(
     }
     return node(bucketed, above);
   };
+  // A grouping may read a companion field on the row (a date's all-day flag),
+  // through this view's own fields: one it does not list is a loud error.
+  const fieldsById = new Map(fields.map((f) => [f.id, f]));
+  const rowReader = (row: TRow): GroupingRow => ({
+    read: (fieldId) => {
+      const companion = fieldsById.get(fieldId)?.value;
+      if (companion === undefined) {
+        throw new Error(
+          `[data-view] grouping "${grouping.id}" read field "${fieldId}", which this view ` +
+            `does not list (or lists without a value).`,
+        );
+      }
+      return companion(row);
+    },
+  });
   // A paged read ordered by the grouped column, bucketed by a grouping whose
   // buckets follow the value order: every unloaded row sorts at or past the
   // read's tail, so it lands in the tail's bucket or one beyond it — never in
@@ -332,14 +348,14 @@ export function partitionIntoSections<TRow>(
     !byAppearance &&
     typeof completeness === "object" &&
     completeness.order !== null &&
-    grouping.monotone === true &&
+    grouping.monotone?.(field as FieldDef<unknown>) === true &&
     completeness.order.column === (field.column?.name ?? field.id)
       ? completeness.order.direction
       : null;
   let tailOrder: number | null = null;
   rows.forEach((row, i) => {
     const value = values[i] as FieldValue;
-    const bucketed = value == null ? null : bucketOf(value);
+    const bucketed = value == null ? null : bucketOf(value, rowReader(row));
     if (!bucketed) {
       nullBucket.rows.push(row);
       return;

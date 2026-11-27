@@ -12,9 +12,15 @@
  *
  * Backward compat: a legacy operand is a bare ISO `yyyy-mm-dd` string and keeps
  * resolving as an absolute date.
+ *
+ * An absolute date is the calendar day the user picked, in the viewer's zone:
+ * it is read by `date-picker/core`'s `fromISODay`, the inverse of the
+ * `toISODay` the exact-date calendar writes. Never `new Date(iso)`, which reads
+ * a bare `yyyy-mm-dd` as UTC midnight — the evening before, west of UTC.
  */
 
 import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
+import { fromISODay } from "@plugins/primitives/plugins/date-picker/core";
 
 export type DateUnit = "day" | "week" | "month" | "year";
 
@@ -77,9 +83,20 @@ function isDateAnchor(
   );
 }
 
+/** The `yyyy-mm-dd` of an absolute anchor (or a legacy bare string), else `null`. */
+function absoluteIso(operand: unknown): string | null {
+  if (typeof operand === "string") return operand;
+  if (isDateAnchor(operand) && typeof operand.iso === "string") {
+    return operand.iso;
+  }
+  return null;
+}
+
 /**
  * Resolve an anchor (or a legacy bare ISO string) to a start-of-(local)-day
- * epoch ms, or `null` for an empty/invalid operand (an incomplete rule).
+ * epoch ms, or `null` for an empty/invalid operand (an incomplete rule). An
+ * absolute date is the local midnight of that calendar day; a string that is
+ * not a real `yyyy-mm-dd` day is invalid.
  *
  * `now` may be a thunk: it is then called ONLY for a relative anchor, so a
  * caller that records clock reads (the DataView filter's `ctx.now` getter) sees
@@ -91,16 +108,8 @@ export function resolveAnchorDay(
 ): number | null {
   if (operand === null || operand === undefined || operand === "") return null;
 
-  if (typeof operand === "string") {
-    const t = new Date(operand).getTime();
-    return Number.isNaN(t) ? null : startOfDay(t);
-  }
-
-  if (isDateAnchor(operand)) {
-    if (typeof operand.iso !== "string" || operand.iso === "") return null;
-    const t = new Date(operand.iso).getTime();
-    return Number.isNaN(t) ? null : startOfDay(t);
-  }
+  const iso = absoluteIso(operand);
+  if (iso !== null) return fromISODay(iso)?.getTime() ?? null;
 
   if (isRelative(operand)) {
     if (typeof operand.amount !== "number" || Number.isNaN(operand.amount)) {
@@ -143,15 +152,10 @@ export function formatAnchor(operand: unknown, fmt: DateFormatter): string {
     return `${magnitude} ${noun} ${direction}`;
   }
 
-  const iso = isDateAnchor(operand)
-    ? operand.iso
-    : typeof operand === "string"
-      ? operand
-      : "";
-  if (iso === "") return "";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "";
-  return fmt.date(t, { year: "always" });
+  const iso = absoluteIso(operand);
+  const day = iso === null ? null : fromISODay(iso);
+  if (day === null) return "";
+  return fmt.date(day, { year: "always" });
 }
 
 /** Inclusive date-range operand for the `is-between` operator. */

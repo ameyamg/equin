@@ -1,12 +1,17 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import {
+  EventDateSchema,
+  eventDateProjection,
+} from "@plugins/apps/plugins/events/plugins/event-date/core";
 import { createDateFormatter } from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import { formatEventWhen, formatPlace, urlHost } from "./format";
 
-const GB = createDateFormatter({
+const GB_PREFS = {
   clock: "h23",
   dateOrder: "dmy",
   numericDate: "ymd",
-});
+} as const;
+const GB = createDateFormatter(GB_PREFS);
 
 /** Local-calendar construction (never UTC) — the formatter reads local getters. */
 const at = (iso: string): Date => new Date(iso);
@@ -57,5 +62,72 @@ describe("urlHost", () => {
   test("a non-URL is not a host", () => {
     expect(urlHost("not a url")).toBe(null);
     expect(urlHost("")).toBe(null);
+  });
+});
+
+describe("formatEventWhen west of UTC", () => {
+  // Restored to the zone in force, never by deleting `TZ`: bun re-resolves an
+  // unset `TZ` to the host's zone, not to the one the process started in, and
+  // every later suite in this process would inherit it.
+  let zone = "";
+  beforeAll(() => {
+    zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    process.env.TZ = "America/New_York";
+  });
+  afterAll(() => {
+    process.env.TZ = zone;
+  });
+
+  const NOW_NY = new Date("2026-11-19T17:00:00Z");
+  const shown = (input: object): string => {
+    const p = eventDateProjection(EventDateSchema.parse(input));
+    // Built per call, after the zone switch: a formatter caches its
+    // Intl.DateTimeFormat in the zone in force when it was first used.
+    return formatEventWhen(
+      p.startsAt,
+      p.allDay,
+      createDateFormatter(GB_PREFS),
+      NOW_NY,
+    );
+  };
+
+  test("a date-only all-day import shows its source date, not the day before", () => {
+    expect(shown({ kind: "once", startsAt: "2026-12-04", allDay: true })).toBe(
+      "Fri 4 Dec",
+    );
+  });
+
+  test("a stored all-day row read back from jsonb keeps its date", () => {
+    expect(
+      shown({
+        kind: "once",
+        startsAt: "2026-12-04T00:00:00.000Z",
+        allDay: true,
+      }),
+    ).toBe("Fri 4 Dec");
+  });
+
+  test("a recurring all-day anchor keeps its date", () => {
+    expect(
+      shown({
+        kind: "recurring",
+        startsAt: "2026-12-04",
+        allDay: true,
+        rule: { freq: "weekly" },
+      }),
+    ).toBe("Fri 4 Dec");
+  });
+
+  test("an all-day event in another year spells the source year", () => {
+    expect(shown({ kind: "once", startsAt: "2027-01-01", allDay: true })).toBe(
+      "Fri, 1 Jan 2027",
+    );
+  });
+
+  test("a timed event still shows local time", () => {
+    // 2026-12-04T00:00Z is 19:00 on 3 Dec in New York.
+    expect(
+      shown({ kind: "once", startsAt: "2026-12-04T00:00:00Z", allDay: false }),
+    ).toBe("Thu 3 Dec · 19:00");
   });
 });

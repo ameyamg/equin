@@ -8,10 +8,10 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import {
   isCurrentCloneOf,
+  RUNNING_BUN,
   sharedBunsNamed,
 } from "@plugins/packages/plugins/process-name/machine";
 import { processName } from "@plugins/packages/plugins/process-name/core";
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { sdkAgentPidsDir, sdkAgentsDir } from "../../data-dirs";
 import { installedDisclaimExec } from "./disclaim";
@@ -63,8 +63,7 @@ const facts: AgentDirFacts = {
   sharedAgentBuns: () => sharedBunsNamed(processName("agent")),
   // This backend's bun. A worktree backend on another Bun re-clones its own
   // at its agent's next start.
-  sharedBunIsCurrent: (path) =>
-    isCurrentCloneOf(path, [asAppPath(process.execPath)]),
+  sharedBunIsCurrent: (path) => isCurrentCloneOf(path, [RUNNING_BUN]),
 };
 
 async function exists(path: string): Promise<boolean> {

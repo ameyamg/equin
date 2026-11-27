@@ -5338,6 +5338,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`event-date`** — The event date format: a schema that states a recurrence once, its pure expander, its human label, its anchor-independent identity key, and the prompt fragment that documents it to the model — one folder so spec, parser and expander cannot drift.
           - Cross-plugin:
             - Imported by:
+              - `apps/events/event-list`
               - `apps/events/events-core`
               - `apps/events/refresh`
               - `apps/events/sources/salsanueva`
@@ -5345,6 +5346,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Exports (types):
               - `AnchorResolution`
+              - `CalendarDay`
               - `EventDate`
               - `EventDateProjection`
               - `EventOccurrence`
@@ -5355,9 +5357,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `describeEventDate`
               - `EVENT_DATE_PROMPT_SPEC`
+              - `eventCalendarDay`
               - `eventDateIdentityKey`
               - `eventDateProjection`
               - `EventDateSchema`
+              - `eventDateZone`
+              - `eventDayFloor`
               - `expandEventDate`
               - `MAX_EXPANDED_OCCURRENCES`
               - `nextOccurrence`
@@ -15756,7 +15761,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface/docked`
           - `apps-core/surface/solo`
           - `apps/desktop/windows`
-          - `apps/website/landing/screenshot`
       - Exemptions:
         - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/use-tab-presence.ts` (debt)
       - Plugins:
@@ -18391,8 +18395,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 116 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×116
+    - Slot contributors: 117 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×117
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -18659,11 +18663,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withListOrder`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 167 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 168 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×44
       - `debug` ×18
       - `conversations` ×15
-      - `tasks` ×13
+      - `tasks` ×14
       - `backup` ×12
       - `ui` ×11
       - `config_v2` ×9
@@ -25369,6 +25373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/process-name.cloneNamedBinary`
           - `packages/process-name.cloneSharedBun`
           - `packages/process-name.isCurrentCloneOf`
+          - `packages/process-name.RUNNING_BUN`
           - `packages/process-name.sharedBunDir`
           - `packages/process-name.sharedBunsNamed`
         - Exports (values): `heldAtClaudeLimit`
@@ -32075,6 +32080,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/date-picker.addDays`
               - `primitives/date-picker.addMonths`
+              - `primitives/date-picker.fromISODay`
               - `primitives/date-picker.isSameDay`
               - `primitives/date-picker.monthTitle`
               - `primitives/date-picker.normalizeWeekStart`
@@ -32097,19 +32103,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.DataViewSlots`
               - `primitives/date-picker.Calendar`
               - `ui/icons.Icon`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --background`
-              - `ui/tokens/color-palette --input`
-              - `ui/tokens/density --space-2xs`
-              - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
-              - `ui/tokens/type-scale --font-scale`
-              - `ui/tokens/type-scale --font-size-body`
-              - `ui/tokens/type-scale --font-weight-normal`
-              - `ui/tokens/type-scale --line-height-body`
           - Core:
+            - Uses: `primitives/date-picker.fromISODay`
             - Exports (types):
               - `DateAnchor`
               - `DateRange`
@@ -32122,6 +32117,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveAnchorDay`
               - `TODAY`
               - `withinRange`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --input`
+              - `ui/tokens/density --space-2xs`
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-scale`
+              - `ui/tokens/type-scale --font-size-body`
+              - `ui/tokens/type-scale --font-weight-normal`
+              - `ui/tokens/type-scale --line-height-body`
+          - Test helpers:
+            - Web: `@plugins/fields/plugins/date/plugins/filter/web/testing`
+              - `dateOperatorSet`
         - **`format`** — Registers the Clock / Date order / Numeric dates config and reads it live as useDateFormatter() — the formatter every surface writes a date or a time with. Registers the Clock / Date order / Numeric dates config and reads it on the server as serverDateFormatter().
           - Web:
             - Contributes: `ConfigV2.WebRegister` "date-format"
@@ -32355,6 +32365,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DynamicEnum.Options` ← `conversations.model-provider`
               - `DynamicEnum.Options` ← `fields.dynamic-enum.config`
               - `DynamicEnum.Options` ← `hints.ask`
+              - `DynamicEnum.Options` ← `tasks.auto-start.launch-option`
               - `DynamicEnum.Options` ← `tasks.automations`
               - `DynamicEnum.Options` ← `tasks.decisions.ask`
               - `DynamicEnum.Options` ← `tasks.task-triage`
@@ -32399,6 +32410,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/launch-prompts`
               - `conversations/model-provider`
               - `hints/ask`
+              - `tasks/auto-start/launch-option`
               - `tasks/automations`
               - `tasks/decisions/ask`
               - `tasks/task-triage`
@@ -36582,8 +36594,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `waitForNotBusy`
                   - `waitForScreenReady`
               - Cross-plugin:
-                - Imported by: 72 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md)
-                  - `apps` ×25
+                - Imported by: 73 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md)
+                  - `apps` ×26
                   - `conversations` ×11
                   - `primitives` ×11
                   - `page` ×8
@@ -44648,13 +44660,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `githubRunArm`
     - **`github-issues`** — GitHub new-issue links: buildIssueUrl turns a written request (its <ui-context> picks made readable, each raw tag kept in a collapsed block), the page it is about and the host's own note lines into a prefilled issues/new link held under GitHub's length cap.
       - Core:
-        - Uses: `primitives/ui-context.splitUiContext`
+        - Uses:
+          - `primitives/ui-context.splitUiContext`
+          - `primitives/ui-context.withoutUiContextUrl`
         - Exports (types):
           - `IssueDraft`
           - `IssuePick`
+          - `IssueTemplateId`
           - `ReadableIdea`
         - Exports (values):
           - `buildIssueUrl`
+          - `ISSUE_TEMPLATES`
           - `issueTitle`
           - `MAX_ISSUE_URL_LENGTH`
           - `readableIdea`
@@ -46758,11 +46774,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 335 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 336 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×88
               - `conversations` ×49
               - `debug` ×31
-              - `tasks` ×30
+              - `tasks` ×31
               - `ui` ×26
               - `primitives` ×17
               - `page` ×16
@@ -47811,7 +47827,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/bootstrap`
           - `framework/cli/build`
       - Machine:
-        - Exports (types): `NamedBinary`
+        - Exports (types):
+          - `CloneSource`
+          - `NamedBinary`
         - Exports (values):
           - `CHECKOUT_BUN_DIR`
           - `checkoutBun`
@@ -47819,6 +47837,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `cloneSharedBun`
           - `isCurrentCloneOf`
           - `refreshCheckoutBun`
+          - `RUNNING_BUN`
           - `sharedBunDir`
           - `sharedBunsNamed`
     - **`prompt-template`** — Prompt templates a person edits: `{{name}}` placeholders filled per use. templateVariables(template) lists the names a template uses, unknownTemplateVariables(template, declared) the ones a declared PromptVariable set does not offer, and renderPrompt(template, values) fills every placeholder — or refuses the whole template, naming the variables it has no value for, never rendering one blank.
@@ -56561,6 +56580,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GroupByRule`
           - `GroupEditConfig`
           - `GroupingPlanContext`
+          - `GroupingRow`
           - `HierarchyConfig`
           - `HostedToolbar`
           - `HostedToolbarForms`
@@ -62883,6 +62903,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UI_CONTEXT_RE`
           - `uiContextLabel`
           - `UiContextMetaSchema`
+          - `withoutUiContextUrl`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/ui-context/web/testing`
           - `parseLineage` — Parse a serialized lineage back into nodes (outer→inner).
@@ -65584,8 +65605,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/surface`
-          - `apps/desktop/fullscreen-budget`
-          - `apps/desktop/windows`
           - `apps/home/tour`
           - `hints/ask`
           - `shell/notifications`
@@ -67011,11 +67030,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), only records the model when the host starts the task inline itself, or clears the marker when the draft says Off.
           - Web:
-            - Contributes: `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
+            - Contributes:
+              - `ConfigV2.WebRegister` "config"
+              - `DynamicEnum.Options` "New draft default"
+              - `TaskLaunch.Option` "Auto-start" → `AutoStartLaunchControl`
             - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfigResult`
               - `conversations/model-provider.ModelChoiceLabel`
               - `conversations/model-provider.ModelSelect`
+              - `conversations/model-provider.useModelChoiceOptions`
               - `conversations/model-provider.useVisibleModels`
+              - `fields/dynamic-enum/config.DynamicEnum`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.mapRow`
               - `network/live/live-state.combineResources`
@@ -67025,19 +67051,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/launch-options.TaskLaunch`
               - `tasks/tasks-core.useTaskAttempts`
           - Server:
-            - Contributes: `taskLaunchServer` "auto-start"
+            - Contributes:
+              - `ConfigV2.Register` "config"
+              - `taskLaunchServer` "auto-start"
             - Uses:
+              - `config_v2.ConfigV2`
               - `conversations/model-provider/catalog.getModelCatalog`
               - `tasks.armTaskAutoStart`
               - `tasks/auto-start.setTaskAutoStart`
               - `tasks/launch-options.TaskLaunchServer`
           - Core:
             - Uses:
+              - `config_v2.defineConfig`
               - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
               - `conversations/model-provider.ModelChoice`
               - `conversations/model-provider.ModelChoiceSchema`
+              - `conversations/model-provider.normalizeModelChoice`
+              - `fields/dynamic-enum/config.dynamicEnumField`
               - `tasks/launch-options.defineLaunchOption`
-            - Exports (values): `autoStartLaunchOption`
+            - Exports (values):
+              - `AUTO_START_DRAFT_OFF`
+              - `autoStartConfig`
+              - `autoStartLaunchOption`
+              - `draftDefaultToValue`
           - Cross-plugin:
             - Imported by: `conversations/agent-thread`
     - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row opening its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or its agent reports — the automations.slot code watcher on every launched task, fed its agent's hand-back (reported / asking) and the task's settled / stopped / held facts through the watch plugin —, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe (and, for a file automation whose `watch` is refire, the automations.refire code watcher on each filed task, running it again as soon as that task settles), the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
@@ -67769,6 +67805,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskLaunch.Option` ← `tasks.task-preprompt`
         - Uses:
           - `config_v2/config-link.useConfigLink`
+          - `network/live/live-state.combineResources`
           - `primitives/css/spacing.Stack`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/overlay/overlay-boundary.OverlayBoundary`
@@ -67790,7 +67827,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `launchOptionValue`
           - `pickKnownOptions`
           - `TaskLaunch`
+          - `useDraftOptionDefaults`
           - `useLaunchOptionDefaults`
+          - `withDraftDefaults`
       - Server:
         - Uses: `infra/endpoints.HttpError`
         - Exports (types):
@@ -67816,6 +67855,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-effort`
           - `tasks/task-preprompt`
           - `wish`
+      - Exemptions:
+        - Exempts itself from: `react-compiler:no-silent-skips` — `web/internal/values.ts` (sanctioned)
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
@@ -69314,9 +69355,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `TaskDraftFormSlots.Action`
         - Slot contributors: `TaskDraftFormSlots.Action` ← `wish.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
-        - Uses: 51 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+        - Uses: 53 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+          - `tasks/launch-options` ×7
           - `primitives/kept-state` ×6
-          - `tasks/launch-options` ×5
           - `infra/endpoints` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/shortcuts` ×3
@@ -73519,13 +73560,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `ActionBar.Item` → `WishButton`
       - `PhoneActions.Action` "Wish" → `WishSheet`
-    - Uses: 27 symbols — full list in [`plugins/wish/REFERENCE.md`](../plugins/wish/REFERENCE.md)
+    - Uses: 29 symbols — full list in [`plugins/wish/REFERENCE.md`](../plugins/wish/REFERENCE.md)
       - `tasks/task-draft-form` ×8
+      - `tasks/launch-options` ×4
       - `primitives/css/ui-kit` ×3
       - `primitives/kept-state` ×3
       - `hints` ×2
       - `primitives/css/spacing` ×2
-      - `tasks/launch-options` ×2
       - `apps-core/phone-actions.PhoneActions`
       - `infra/endpoints.useFetchEndpoint`
       - `primitives/css/text.Text`

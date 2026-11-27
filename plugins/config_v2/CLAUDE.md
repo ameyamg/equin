@@ -525,8 +525,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
 - Web:
   - Slots: `ConfigV2.WebRegister`
-  - Slot contributors: 116 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×116
+  - Slot contributors: 117 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×117
   - Uses:
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
@@ -793,11 +793,11 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `withListOrder`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 167 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 168 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×44
     - `debug` ×18
     - `conversations` ×15
-    - `tasks` ×13
+    - `tasks` ×14
     - `backup` ×12
     - `ui` ×11
     - `config_v2` ×9

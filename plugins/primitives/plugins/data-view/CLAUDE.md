@@ -664,8 +664,14 @@ interface FieldGrouping {
   id: string; // "smart" | "day" | "value" — persisted
   label: string;
   oneBucketPerValue?: true; // identity / enum: sections can follow row order
-  monotone?: true; // buckets are contiguous spans of the value order (dates)
-  plan: (ctx: GroupingPlanContext) => (value: FieldValue) => GroupBucket | null;
+  monotone?: (field: FieldDef<unknown>) => boolean; // buckets are contiguous spans of the value order (dates)
+  plan: (
+    ctx: GroupingPlanContext,
+  ) => (value: FieldValue, row?: GroupingRow) => GroupBucket | null;
+}
+
+interface GroupingRow {
+  read(fieldId: string): FieldValue;
 }
 
 interface GroupingPlanContext {
@@ -693,6 +699,11 @@ interface GroupByRule {
 ```
 
 - **`plan` is two-phase** — whole-set work once per render, then per row.
+- **`row` reads a companion field** the grouped field declares, such as a
+  date's `allDayFlag`, which decides whether its value is a date or an
+  instant. The in-memory partition passes it, reading through the view's
+  fields (hidden ones too), and throws for a field the view does not list. It
+  is absent for an `alwaysGroup` option and for server-listed sections.
 - **`now` is injected, never read** (the partition is memoized). The host reads
   `useGroupingClock()` — local midnight, re-armed by one timer at the next midnight
   (not polling: the change instant is known). `format` is injected the same
@@ -706,6 +717,9 @@ interface GroupByRule {
   grouped column then counts every section before its tail's exactly
   ("Paging" → Counts). Never on an option-ordered, tag-tree or
   locale-compared grouping (the identity and enum groupings leave it off).
+  Asked of the grouped field: a date grouping answers `false` for a field
+  with an `allDayFlag` (an all-day row sorts, west of UTC, before the evening
+  of the day it is not on), whose sections then count as lower bounds.
 
 ### There is exactly one "None", and a grouping cannot mint a second
 
@@ -2304,6 +2318,12 @@ The nested table applies it subtree-preserving; the fold's `keep` uses the same
   default, quick filters and the rule resolution (a saved rule on one is an
   unavailable rule, with Remove). A field offered no operator is not
   filterable. Reference: Mail (`MAIL_QUERY_OPS`).
+- **A lowering may test a companion field** its field declares (a date's
+  `allDayFlag`, `or(and(flag eq true, …), and(flag ne true, …))`). Such a
+  clause is judged as a rule on the companion would be — an op of its type's
+  domain, among its own `filterOps` — not by the operator's `ops`, which
+  speak of the rule's own column; the companion must be listed. A clause on
+  any other column throws (`evaluate-filter.ts`, `assertDeclaredOps`).
 - **`useViewFilter`** lowers the view's group against `useFilterClock`;
   **`lowerSearch`** → `or(contains(col, q) …)` over `searchable` columns.
 - **Over the language's bounds** (depth 4, 50 clauses, 100 list values):
@@ -3023,6 +3043,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `GroupByRule`
     - `GroupEditConfig`
     - `GroupingPlanContext`
+    - `GroupingRow`
     - `HierarchyConfig`
     - `HostedToolbar`
     - `HostedToolbarForms`

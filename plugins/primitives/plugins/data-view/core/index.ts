@@ -109,6 +109,7 @@ export type {
   FieldGrouping,
   FieldGroupingSet,
   GroupingPlanContext,
+  GroupingRow,
   GroupBucket,
   GroupBucketAncestor,
   GroupByRule,

@@ -14,6 +14,12 @@
  * unrepresentable, and it is exactly the bug that would put a spring-forward
  * evening in the wrong bucket here.
  *
+ * **An all-day row is a date, not an instant.** A field declared with an
+ * all-day flag (`FieldDef.allDayFlag`) holds the rows that flag marks at UTC
+ * midnight of their calendar date — west of UTC, the evening before as a local
+ * instant. Such a row's day is that date, read from the row's flag (`dayOf`);
+ * every other value is an instant, and its day is the local day it falls on.
+ *
  * **The clock is injected.** `ctx.now` is a required parameter, never a
  * `Date.now()` read inside a grouping — the same argument `relativeDayLabel`
  * already makes ("an implicit clock read is exactly what makes this kind of
@@ -31,14 +37,17 @@
  */
 
 import type {
+  FieldDef,
   FieldGrouping,
   FieldValue,
   GroupBucket,
   GroupingPlanContext,
+  GroupingRow,
 } from "@plugins/primitives/plugins/data-view/core";
 import {
   addDays,
   addMonths,
+  fromISODay,
   isSameDay,
   monthTitle,
   normalizeWeekStart,
@@ -60,7 +69,7 @@ const WEEK_STARTS_ON = normalizeWeekStart(1);
 
 /** What one grouping's `plan` returns: the bucket a value falls in, or `null`
  *  when the value is not a date this type can bucket. */
-type Bucketer = (value: FieldValue) => GroupBucket | null;
+type Bucketer = (value: FieldValue, row?: GroupingRow) => GroupBucket | null;
 
 /**
  * The fifteen Smart buckets, symmetric around today: past negative, today 0,
@@ -108,10 +117,25 @@ function toDate(value: FieldValue): Date | null {
   return null;
 }
 
-/** Local midnight of the day `value` falls on, or `null` when it is not a date. */
-function toDay(value: FieldValue): Date | null {
-  const date = toDate(value);
-  return date === null ? null : startOfDay(date);
+/**
+ * The grouped field's day reader: local midnight of the day a value falls on,
+ * or `null` when it is not a date. On a row the field's all-day flag marks, the
+ * value is a calendar date held at its UTC midnight, so the day is that date;
+ * otherwise (no flag declared, the flag unset, or no row behind the value) the
+ * value is an instant and the day is the local day it falls on.
+ */
+function dayOf(
+  ctx: GroupingPlanContext,
+): (value: FieldValue, row?: GroupingRow) => Date | null {
+  const flag = ctx.field.allDayFlag;
+  return (value, row) => {
+    const date = toDate(value);
+    if (date === null) return null;
+    if (flag !== undefined && row?.read(flag) === true) {
+      return fromISODay(date.toISOString().slice(0, 10));
+    }
+    return startOfDay(date);
+  };
 }
 
 /**
@@ -137,6 +161,7 @@ function weekLabel(weekStart: Date, today: Date, fmt: DateFormatter): string {
  * informative of the two true statements.
  */
 function planSmart(ctx: GroupingPlanContext): Bucketer {
+  const toDay = dayOf(ctx);
   const today = startOfDay(new Date(ctx.now));
   const tomorrow = addDays(today, 1);
   const yesterday = addDays(today, -1);
@@ -154,8 +179,8 @@ function planSmart(ctx: GroupingPlanContext): Bucketer {
   const yearStart = new Date(today.getFullYear(), 0, 1);
   const nextYearStart = new Date(today.getFullYear() + 1, 0, 1);
 
-  return (value) => {
-    const day = toDay(value);
+  return (value, row) => {
+    const day = toDay(value, row);
     if (day === null) return null;
 
     if (isSameDay(day, today)) return SMART.today;
@@ -184,9 +209,10 @@ function planSmart(ctx: GroupingPlanContext): Bucketer {
 /** Day: one section per calendar day, "Today"/"Tomorrow"/"Yesterday" within ±1. */
 function planDay(ctx: GroupingPlanContext): Bucketer {
   const fmt = ctx.format;
+  const toDay = dayOf(ctx);
   const today = startOfDay(new Date(ctx.now));
-  return (value) => {
-    const day = toDay(value);
+  return (value, row) => {
+    const day = toDay(value, row);
     if (day === null) return null;
     return {
       key: `day:${toISODay(day)}`,
@@ -199,9 +225,10 @@ function planDay(ctx: GroupingPlanContext): Bucketer {
 /** Week: one section per `WEEK_STARTS_ON`-aligned week, named by its first day. */
 function planWeek(ctx: GroupingPlanContext): Bucketer {
   const fmt = ctx.format;
+  const toDay = dayOf(ctx);
   const today = startOfDay(new Date(ctx.now));
-  return (value) => {
-    const day = toDay(value);
+  return (value, row) => {
+    const day = toDay(value, row);
     if (day === null) return null;
     const weekStart = startOfWeek(day, WEEK_STARTS_ON);
     return {
@@ -215,8 +242,9 @@ function planWeek(ctx: GroupingPlanContext): Bucketer {
 /** Month: one section per calendar month, e.g. "May 2026". */
 function planMonth(ctx: GroupingPlanContext): Bucketer {
   const fmt = ctx.format;
-  return (value) => {
-    const day = toDay(value);
+  const toDay = dayOf(ctx);
+  return (value, row) => {
+    const day = toDay(value, row);
     if (day === null) return null;
     const monthStart = startOfMonth(day);
     return {
@@ -230,9 +258,10 @@ function planMonth(ctx: GroupingPlanContext): Bucketer {
 }
 
 /** Year: one section per calendar year, e.g. "2026". */
-function planYear(_ctx: GroupingPlanContext): Bucketer {
-  return (value) => {
-    const day = toDay(value);
+function planYear(ctx: GroupingPlanContext): Bucketer {
+  const toDay = dayOf(ctx);
+  return (value, row) => {
+    const day = toDay(value, row);
     if (day === null) return null;
     const year = day.getFullYear();
     return {
@@ -249,14 +278,25 @@ function planYear(_ctx: GroupingPlanContext): Bucketer {
  * with `ctx.format` — the user's Clock / Date order / Numeric dates settings,
  * read by the data-view host and handed in like `now`.
  */
+/**
+ * Monotone only over a field whose every value is an instant. With an all-day
+ * flag, a flagged row (UTC midnight of its date) is filed under that date
+ * while west of UTC it sorts among the evening of the day before: a timed row
+ * later in the column's order can land in an EARLIER bucket, so a paged read
+ * could not count a section before its tail exactly.
+ */
+function instantsOnly(field: FieldDef<unknown>): boolean {
+  return field.allDayFlag === undefined;
+}
+
 export const dateGroupings: FieldGrouping[] = [
   // Every one is `monotone`: each bucket is one contiguous span of time and
   // its ordinal grows with it (a fixed granularity's is the span's start;
   // Smart's ladder is ordered past → future, each rung a span the rung before
   // it ends at), so a read paged by the date column fills them in turn.
-  { id: "smart", label: "Smart", monotone: true, plan: planSmart },
-  { id: "day", label: "Day", monotone: true, plan: planDay },
-  { id: "week", label: "Week", monotone: true, plan: planWeek },
-  { id: "month", label: "Month", monotone: true, plan: planMonth },
-  { id: "year", label: "Year", monotone: true, plan: planYear },
+  { id: "smart", label: "Smart", monotone: instantsOnly, plan: planSmart },
+  { id: "day", label: "Day", monotone: instantsOnly, plan: planDay },
+  { id: "week", label: "Week", monotone: instantsOnly, plan: planWeek },
+  { id: "month", label: "Month", monotone: instantsOnly, plan: planMonth },
+  { id: "year", label: "Year", monotone: instantsOnly, plan: planYear },
 ];

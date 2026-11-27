@@ -3,7 +3,9 @@ import {
   filterColumns,
   matchesFilter,
   or,
+  opAllowsDomain,
   type Filter,
+  type FilterClause,
   type Filterable,
   type FilterDomainId,
 } from "@plugins/network/plugins/live/plugins/filter/core";
@@ -106,7 +108,15 @@ export function lowerFilterGroup<TRow>(
       },
     };
     const lowered = resolved.op.lower(node.value, ctx);
-    if (lowered !== undefined) assertDeclaredOps(lowered, resolved.op);
+    if (lowered !== undefined) {
+      assertDeclaredOps(
+        lowered,
+        resolved.op,
+        ctx.field,
+        fields,
+        resolveOperatorSet,
+      );
+    }
     return lowered;
   };
   const filter = group ? lowerNode(group) : undefined;
@@ -117,18 +127,67 @@ export function lowerFilterGroup<TRow>(
  * A lowering names only the ops its operator declares (`FilterOperator.ops`)
  * — what the Filter offers by is the declaration, so a drifted one throws
  * here rather than send a source an op it was never asked to run.
+ *
+ * The declaration is about the rule's OWN column. A lowering may also test a
+ * companion field its field declares (a date's `allDayFlag`: which rows hold
+ * a calendar date rather than an instant); such a clause is judged as a rule
+ * on that field would be — an op of its type's domain, among its own
+ * `filterOps` — never by the date operator's list, which speaks of dates.
+ * A clause on any other column throws.
  */
-function assertDeclaredOps(lowered: Filter, op: FilterOperator): void {
+function assertDeclaredOps<TRow>(
+  lowered: Filter,
+  op: FilterOperator,
+  field: FieldDef<unknown>,
+  fields: FieldDef<TRow>[],
+  resolveOperatorSet: ResolveOperatorSet,
+): void {
   const walk = (f: Filter): void => {
     if ("and" in f) f.and.forEach(walk);
     else if ("or" in f) f.or.forEach(walk);
-    else if (!op.ops.includes(f.op)) {
-      throw new Error(
-        `data-view: operator "${op.id}" lowered to op "${f.op}", which its \`ops\` (${op.ops.join(", ")}) does not declare.`,
-      );
+    else if (f.column === field.id) {
+      if (!op.ops.includes(f.op)) {
+        throw new Error(
+          `data-view: operator "${op.id}" lowered to op "${f.op}", which its \`ops\` (${op.ops.join(", ")}) does not declare.`,
+        );
+      }
+    } else {
+      assertCompanionClause(f, op, field, fields, resolveOperatorSet);
     }
   };
   walk(lowered);
+}
+
+function assertCompanionClause<TRow>(
+  f: FilterClause,
+  op: FilterOperator,
+  field: FieldDef<unknown>,
+  fields: FieldDef<TRow>[],
+  resolveOperatorSet: ResolveOperatorSet,
+): void {
+  const where = `data-view: operator "${op.id}" on "${field.id}" lowered a clause on "${f.column}"`;
+  if (f.column !== field.allDayFlag) {
+    throw new Error(
+      `${where}, which is neither its field nor a companion the field declares (allDayFlag).`,
+    );
+  }
+  const companion = fields.find((c) => c.id === f.column);
+  if (companion === undefined) {
+    throw new Error(`${where}, a companion this view does not list.`);
+  }
+  // Resolved as a rule on it would be (`resolveRuleOperator`).
+  const type = companion.type ?? "text";
+  const set = resolveOperatorSet(type);
+  if (set === undefined) {
+    throw new Error(`${where}, whose type "${type}" has no filter operators.`);
+  }
+  const offered =
+    companion.filterOps === undefined || companion.filterOps.includes(f.op);
+  if (!offered || !opAllowsDomain(f.op, set.domain)) {
+    throw new Error(
+      `${where} with op "${f.op}", which that ${set.domain} field does not take.`,
+    );
+  }
 }
 
 /**

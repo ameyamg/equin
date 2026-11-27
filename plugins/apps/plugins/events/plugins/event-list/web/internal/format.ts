@@ -1,8 +1,10 @@
+import { eventDateZone } from "@plugins/apps/plugins/events/plugins/event-date/core";
 import { canParseUrl } from "@plugins/packages/plugins/floor-compat/core";
 import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
-// Pure display formatters for an event row. Local-calendar (never UTC); dates
-// and times go through the user's DateFormatter, so a test pins its output by
-// the prefs it builds the formatter with.
+// Pure display formatters for an event row. Dates and times go through the
+// user's DateFormatter, so a test pins its output by the prefs it builds the
+// formatter with. A timed event reads in the viewer's zone; an all-day event
+// reads its own calendar date (see `eventDateZone`).
 
 /**
  * When an event happens, as a person reads it: `Thu 14 Aug`, `Thu 14 Aug ·
@@ -19,7 +21,11 @@ export function formatEventWhen(
   now: Date = new Date(),
 ): string {
   if (Number.isNaN(startsAt.getTime())) return "";
-  const day = fmt.date(startsAt, { weekday: "short", now });
+  const day = fmt.date(startsAt, {
+    weekday: "short",
+    now,
+    timeZone: eventDateZone(allDay),
+  });
   if (allDay) return day;
   return `${day} · ${fmt.time(startsAt)}`;
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import {
   TODAY,
   addUnits,
@@ -155,5 +155,55 @@ describe("formatAnchor", () => {
     expect(formatAnchor(null, FMT)).toBe("");
     expect(formatAnchor("", FMT)).toBe("");
     expect(formatAnchor(undefined, FMT)).toBe("");
+  });
+});
+
+// An absolute anchor is the calendar day the user picked, in the viewer's
+// zone. West of UTC, reading `yyyy-mm-dd` as an instant lands on UTC midnight,
+// which is the evening before: in New York, 2026-12-04T00:00Z is 19:00 on 3 Dec.
+describe("absolute anchors west of UTC (America/New_York)", () => {
+  // Restored to the zone in force, never by deleting `TZ`, which would
+  // re-resolve to the host's zone for every later suite in this process.
+  let zone = "";
+  beforeAll(() => {
+    zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    process.env.TZ = "America/New_York";
+  });
+  afterAll(() => {
+    process.env.TZ = zone;
+  });
+
+  // Local midnight of 4 Dec in New York (EST, UTC−5).
+  const DEC_4 = Date.parse("2026-12-04T05:00:00Z");
+
+  it("resolves the picked day to its local midnight", () => {
+    expect(resolveAnchorDay({ kind: "date", iso: "2026-12-04" }, NOW)).toBe(
+      DEC_4,
+    );
+    expect(resolveAnchorDay("2026-12-04", NOW)).toBe(DEC_4);
+  });
+
+  it("labels the picked day, not the one before", () => {
+    // Built after the zone switch (a formatter caches its zone on first use).
+    const fmt = createDateFormatter({
+      ...DEFAULT_DATE_FORMAT_PREFS,
+      dateOrder: "mdy",
+    });
+    expect(formatAnchor({ kind: "date", iso: "2026-12-04" }, fmt)).toBe(
+      "Dec 4, 2026",
+    );
+    expect(formatAnchor("2026-12-04", fmt)).toBe("Dec 4, 2026");
+  });
+
+  it("a day that does not exist is an incomplete rule", () => {
+    expect(resolveAnchorDay({ kind: "date", iso: "2026-02-30" }, NOW)).toBe(
+      null,
+    );
+    expect(
+      formatAnchor(
+        { kind: "date", iso: "2026-02-30" },
+        createDateFormatter(DEFAULT_DATE_FORMAT_PREFS),
+      ),
+    ).toBe("");
   });
 });
