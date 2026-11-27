@@ -3,7 +3,7 @@
 // sequence and its key ticks, a fade window). Everything they return is plain
 // data — a script may always write the object literal instead.
 
-import type { AssetManifest, Rect } from "./assets";
+import type { AssetManifest, ModifierKey, Rect } from "./assets";
 import type {
   Composition,
   GroupLayer,
@@ -322,6 +322,76 @@ export function recordedCursor(
     },
     { ...base, x, y },
   );
+}
+
+/** How a held key reads on its cap. */
+const KEY_CAP_LABEL: Record<ModifierKey, string> = {
+  Meta: "⌘",
+  Control: "Ctrl",
+  Alt: "⌥",
+  Shift: "⇧",
+};
+
+/**
+ * The keys held through each modified click of a recorded session (a
+ * ⌘-click: `Recorder.click`'s `modifiers`) as key caps riding beside the
+ * pointer — popping in as the keys go down, gone as they come up — so the
+ * viewer sees the key a screen recording cannot show. One html layer per
+ * such click, in the sequence's own coordinates like {@link recordedCursor}
+ * (place them beside it, in the same parent); `start` is the film time the
+ * sequence's frame 0 plays at.
+ */
+export function recordedKeyCaps(
+  manifest: AssetManifest,
+  name: string,
+  opts: { start?: number; size?: number } = {},
+): HtmlLayer[] {
+  const { start = 0, size = 28 } = opts;
+  const input = recordedInput(manifest, name);
+  const cap = size * 1.15;
+  return input.clicks.flatMap((c, i): HtmlLayer[] => {
+    const m = c.modifiers;
+    if (!m) return [];
+    const from = start + m.downAt;
+    const to = start + m.upAt;
+    const inDur = 0.14;
+    const outDur = 0.2;
+    // Below and right of the arrow, clear of its tip and its click ring.
+    const dx = size * 0.95;
+    const dy = size * 0.95;
+    const pts = input.cursor.filter(
+      ([t]) => start + t >= from - 1e-6 && start + t <= to + outDur + 1e-6,
+    );
+    if (pts.length === 0)
+      throw new Error(
+        `film: recording "${name}" logged no pointer during its modified click #${i}`,
+      );
+    const widths = m.keys.map((k) =>
+      KEY_CAP_LABEL[k].length > 1 ? cap * 1.6 : cap,
+    );
+    const gap = cap * 0.18;
+    const width = widths.reduce((a, b) => a + b, 0) + gap * (m.keys.length - 1);
+    const caps = m.keys
+      .map(
+        (k, j) =>
+          `<div style="width:${widths[j]}px;height:${cap}px;display:flex;align-items:center;justify-content:center;border-radius:${cap * 0.24}px;background:linear-gradient(#3a3d46,#24262d);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 ${cap * 0.08}px 0 #15161a,0 ${cap * 0.2}px ${cap * 0.5}px rgba(0,0,0,.45);color:#f4f5f8;font:600 ${KEY_CAP_LABEL[k].length > 1 ? cap * 0.42 : cap * 0.58}px 'Inter Variable',Inter,system-ui,sans-serif">${KEY_CAP_LABEL[k]}</div>`,
+      )
+      .join("");
+    return [
+      html(`<div style="display:flex;gap:${gap}px">${caps}</div>`, width, cap, {
+        start: from,
+        end: to + outDur,
+        x: pts.map(([t, x]): Key => [start + t, x + dx]),
+        y: pts.map(([t, , y]): Key => [start + t, y + dy]),
+        origin: [0, 0],
+        opacity: fade(from, inDur, to, outDur),
+        scale: [
+          [from, 0.7],
+          [from + inDur * 1.6, 1, "outBack"],
+        ],
+      }),
+    ];
+  });
 }
 
 /**

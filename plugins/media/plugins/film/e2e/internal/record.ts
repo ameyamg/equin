@@ -27,7 +27,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BrowserContext, Locator, Page, Request } from "playwright";
-import type { InputLog, Rect, Sequence } from "./assets";
+import type { InputLog, ModifierKey, Rect, Sequence } from "./assets";
 import { bundlePageScript } from "./bundle";
 import { ease, type Easing } from "./easing";
 import type { ClockBusy, FilmDatePin } from "./page/clock";
@@ -110,7 +110,13 @@ export interface Recorder {
       profile?: MoveProfile;
     },
   ): Promise<void>;
-  /** Move to a target (one gesture, see `move`), rest a beat, press, release. */
+  /**
+   * Move to a target (one gesture, see `move`), rest a beat, press, release.
+   * `modifiers` are held through the click (a ⌘-click): pressed once the hand
+   * has arrived, at the start of the beat, released a beat after the button
+   * — logged on the click (`modifiers`), so a film can show the keys.
+   * `ControlOrMeta` is ⌘ on macOS and Ctrl elsewhere, as Playwright's.
+   */
   click(
     target: RecTarget,
     opts?: {
@@ -118,6 +124,7 @@ export interface Recorder {
       dwell?: number;
       press?: number;
       via?: readonly Point[];
+      modifiers?: readonly (ModifierKey | "ControlOrMeta")[];
     },
   ): Promise<void>;
   /** Type into the focused element, one character at a time at `cps` characters per second (humanly uneven). */
@@ -162,6 +169,12 @@ export interface Recorder {
    * box, its scroll position and how far it can scroll. Viewport CSS px.
    */
   settledRect(target: Locator): Promise<SettledRect>;
+  /**
+   * Where `target`'s box will be once every running animation has finished,
+   * as {@link Recorder.settledRect} reads it — for an element in no scroller
+   * too (a menu in a portal). Viewport CSS px.
+   */
+  settledBox(target: Locator): Promise<Rect>;
   /**
    * Log `within`'s scroller position on every frame from now (the log's
    * `scroll`, `[t, scrollTop]`) until `stop()` — to check a camera move
@@ -278,6 +291,67 @@ function waver(u: number, dist: number): number {
   const w =
     0.7 * Math.sin(Math.PI * 1.7 * u + 0.6) + 0.3 * Math.sin(Math.PI * 4.3 * u);
   return amp * Math.sin(Math.PI * Math.min(1, Math.max(0, u))) * w;
+}
+
+/** The settled read behind {@link Recorder.settledRect} / {@link Recorder.settledBox}. */
+async function settledRead(target: Locator): Promise<
+  Rect & {
+    scroller: {
+      top: number;
+      height: number;
+      scrollTop: number;
+      maxScrollTop: number;
+    } | null;
+  }
+> {
+  // A target missing from the page fails now, by name: Playwright's own wait
+  // for it polls on animation frames, which the virtual clock holds still —
+  // it would wait out its 30 s and time out.
+  const n = await target.count();
+  if (n !== 1)
+    throw new Error(
+      `record: settled read of ${String(target)}: ${n === 0 ? "not on the page" : `${n} elements match — name one`}`,
+    );
+  return target.evaluate((el) => {
+    const anims = document
+      .getAnimations()
+      .filter((a) => a.timeline === document.timeline);
+    const was = anims.map((a) => a.currentTime);
+    for (const a of anims) {
+      const end = a.effect?.getComputedTiming().endTime;
+      if (typeof end === "number" && Number.isFinite(end)) a.currentTime = end;
+    }
+    let s: HTMLElement | null = el.parentElement;
+    for (; s; s = s.parentElement) {
+      const st = getComputedStyle(s);
+      if (
+        s.scrollHeight > s.clientHeight + 1 &&
+        (st.overflowY === "auto" || st.overflowY === "scroll")
+      )
+        break;
+    }
+    const b = el.getBoundingClientRect();
+    const v = s?.getBoundingClientRect();
+    const out = {
+      x: b.x,
+      y: b.y,
+      width: b.width,
+      height: b.height,
+      scroller:
+        s && v
+          ? {
+              top: v.top,
+              height: s.clientHeight,
+              scrollTop: s.scrollTop,
+              maxScrollTop: s.scrollHeight - s.clientHeight,
+            }
+          : null,
+    };
+    anims.forEach((a, i) => {
+      a.currentTime = was[i] ?? null;
+    });
+    return out;
+  });
 }
 
 export async function record(
@@ -574,8 +648,26 @@ export async function record(
     },
     async click(target, o = {}) {
       await rec.move(target, { duration: o.duration, via: o.via });
+      // Each key once: ["Meta", "ControlOrMeta"] is one ⌘ on macOS.
+      const keys = [
+        ...new Set(
+          (o.modifiers ?? []).map((k): ModifierKey =>
+            k === "ControlOrMeta"
+              ? process.platform === "darwin"
+                ? "Meta"
+                : "Control"
+              : k,
+          ),
+        ),
+      ];
+      // The keys go down as the hand arrives: the beat before the press is
+      // also the beat they are seen held.
+      const downAt = tNow();
+      for (const k of keys) await page.keyboard.down(k);
       // The beat before the press, still on target if it moves.
-      const dwell = Math.round(((o.dwell ?? 0.12) * fps) / rate);
+      const dwell = Math.round(
+        (((o.dwell ?? 0.12) + (keys.length ? MODIFIER_LEAD : 0)) * fps) / rate,
+      );
       for (let i = 0; i < dwell; i++) {
         await aim(target);
         await capture();
@@ -587,7 +679,22 @@ export async function record(
       for (let i = 0; i < n; i++) await capture();
       const upAt = tNow();
       await page.mouse.up();
-      log.clicks.push({ t, upAt, x: round(cx), y: round(cy) });
+      if (keys.length === 0) {
+        log.clicks.push({ t, upAt, x: round(cx), y: round(cy) });
+        await capture();
+        return;
+      }
+      // Released a beat after the button, as a hand lets go.
+      await rec.hold(MODIFIER_LEAD);
+      const keysUpAt = tNow();
+      for (const k of [...keys].reverse()) await page.keyboard.up(k);
+      log.clicks.push({
+        t,
+        upAt,
+        x: round(cx),
+        y: round(cy),
+        modifiers: { keys, downAt, upAt: keysUpAt },
+      });
       await capture();
     },
     async type(text, o = {}) {
@@ -745,52 +852,16 @@ export async function record(
       };
     },
     async settledRect(target) {
-      const r = await target.evaluate((el) => {
-        const anims = document
-          .getAnimations()
-          .filter((a) => a.timeline === document.timeline);
-        const was = anims.map((a) => a.currentTime);
-        for (const a of anims) {
-          const end = a.effect?.getComputedTiming().endTime;
-          if (typeof end === "number" && Number.isFinite(end))
-            a.currentTime = end;
-        }
-        let s: HTMLElement | null = el.parentElement;
-        for (; s; s = s.parentElement) {
-          const st = getComputedStyle(s);
-          if (
-            s.scrollHeight > s.clientHeight + 1 &&
-            (st.overflowY === "auto" || st.overflowY === "scroll")
-          )
-            break;
-        }
-        const b = el.getBoundingClientRect();
-        const v = s?.getBoundingClientRect();
-        const out = {
-          x: b.x,
-          y: b.y,
-          width: b.width,
-          height: b.height,
-          scroller:
-            s && v
-              ? {
-                  top: v.top,
-                  height: s.clientHeight,
-                  scrollTop: s.scrollTop,
-                  maxScrollTop: s.scrollHeight - s.clientHeight,
-                }
-              : null,
-        };
-        anims.forEach((a, i) => {
-          a.currentTime = was[i] ?? null;
-        });
-        return out;
-      });
+      const r = await settledRead(target);
       if (!r.scroller)
         throw new Error(
           `record: settledRect: ${String(target)} is in no scroller`,
         );
       return { ...r, scroller: r.scroller };
+    },
+    async settledBox(target) {
+      const { x, y, width, height } = await settledRead(target);
+      return { x, y, width, height };
     },
     async mark(name, target) {
       if (log.marks[name]) throw new Error(`record: mark "${name}" twice`);
@@ -897,6 +968,9 @@ interface FrameTiming {
   step: number;
   shot: number;
 }
+
+/** How long (page s) a click's modifier keys are held before the press and after the release. */
+const MODIFIER_LEAD = 0.25;
 
 /** How many frames a move / click waits for its element target to appear. */
 const APPEAR_FRAMES = 300;

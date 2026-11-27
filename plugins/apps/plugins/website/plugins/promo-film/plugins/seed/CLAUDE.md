@@ -192,7 +192,9 @@ seed` → record, and get the same state. Design:
     - `SONATA_SECTION_LAYOUT`
     - `writeFilmShops`
 - Cross-plugin:
-  - Imported by: `apps/website/promo-film`
+  - Imported by:
+    - `apps/website/pages/tips`
+    - `apps/website/promo-film`
 - Structure:
   - Non-standard folders: `data/`
 

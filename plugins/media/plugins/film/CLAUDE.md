@@ -122,6 +122,14 @@ whichever page renders it. So any split gives the same pictures.
   duration the script gives (holds, moves, scrolls, a click's dwell) is page
   time, so the page, the camera and the hand slow together, still one fresh
   frame per 1/fps — never a repeated frame. Logged as `input.rate`.
+- **A ⌘-click shows its key.** `click(target, { modifiers: ["ControlOrMeta"] })`
+  holds the keys from the hand's arrival to a beat after the release, logged
+  on the click (`clicks[].modifiers`); `recordedKeyCaps` draws them as key caps
+  riding beside the pointer (beside `recordedCursor`, same parent).
+- **`settledBox`** is `settledRect`'s box for an element in no scroller (a
+  menu in a portal). Both fail at once on a target that is not on the page
+  (Playwright's own wait polls on animation frames, which the virtual clock
+  holds still: it would time out after 30 s).
 - **Every frame's real time per phase** (settle, clock step, screenshot) is
   written to `<dir>/<name>.timing.json` (`frames`, and `failedFrame` — the
   phases of the frame in flight when a recording fails); a phase running over
@@ -147,6 +155,7 @@ whichever page renders it. So any split gives the same pictures.
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/canvas`
+    - `apps/website/pages/tips`
     - `apps/website/promo-film`
 - Core:
   - Exports (types): `FrameRange`

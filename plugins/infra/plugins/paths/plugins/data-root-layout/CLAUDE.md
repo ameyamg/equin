@@ -33,6 +33,7 @@
     - `apps/file-explorer/browser`
     - `apps/prototypes/files`
     - `apps/website/landing/screenshot`
+    - `apps/website/pages/tips`
     - `apps/website/promo-film`
     - `code-explorer/file-resolve`
     - `debug/sentinel`

@@ -32,6 +32,9 @@ export interface Sequence {
   input?: InputLog;
 }
 
+/** A key a click can hold down (Playwright's names). */
+export type ModifierKey = "Meta" | "Control" | "Alt" | "Shift";
+
 /**
  * Every input of a recorded session, in seconds from its frame 0 (frame i is
  * at i / fps) and CSS px of the capture viewport — what a film draws the
@@ -40,8 +43,18 @@ export interface Sequence {
 export interface InputLog {
   /** The pointer at every frame: [t, x, y], one per frame. */
   cursor: Array<[number, number, number]>;
-  /** Button presses: `t` the press, `upAt` the release. */
-  clicks: Array<{ t: number; upAt: number; x: number; y: number }>;
+  /**
+   * Button presses: `t` the press, `upAt` the release; `modifiers` the keys
+   * held through it (a ⌘-click), each a Playwright key name (`Meta`,
+   * `Control`, `Alt`, `Shift`), pressed at `downAt` and released at `upAt`.
+   */
+  clicks: Array<{
+    t: number;
+    upAt: number;
+    x: number;
+    y: number;
+    modifiers?: { keys: ModifierKey[]; downAt: number; upAt: number };
+  }>;
   /** Keys typed or pressed; `text` for a printable character. */
   keys: Array<{ t: number; key: string; text?: string }>;
   /** Named beats the script marked, with the rect of their element then (if any). */
