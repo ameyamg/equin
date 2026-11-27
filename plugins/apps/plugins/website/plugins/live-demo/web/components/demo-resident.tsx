@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -13,6 +13,8 @@ import {
   useNavigate,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
+import { usePathname } from "@plugins/primitives/plugins/pane/web";
+import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import {
   DemoBootScreen,
@@ -28,7 +30,7 @@ import {
   type DemoTargetEntry,
 } from "../internal/demo-store";
 import { landingUrl } from "../internal/demo-url";
-import { demoPagePath } from "../../core";
+import { demoPage, demoPagePath } from "../../core";
 import { DemoSiteBar } from "./demo-site-bar";
 
 /**
@@ -39,9 +41,34 @@ import { DemoSiteBar } from "./demo-site-bar";
 export function DemoResident({ children }: { children: ReactNode }): ReactNode {
   return (
     <DemoStoreProvider>
+      <SitePageTracker />
       {children}
       <DemoServer />
     </DemoStoreProvider>
+  );
+}
+
+/**
+ * Remembers the site page the visitor is on (`DemoState.cameFrom`) while it
+ * is not the demo page, so the demo page's Back to equin.ai returns to the
+ * page they came from — the apps gallery, a tip — not always the homepage.
+ * Only the site's own paths count: on a composition with several apps the
+ * site's surface stays mounted while the address shows another app.
+ */
+function SitePageTracker(): null {
+  const path = usePathname();
+  const { sawSitePage } = useDemoActions();
+  useEffect(() => {
+    if (isUnder(path, websiteApp.basePath) && !isUnder(path, demoPage.path))
+      sawSitePage(path);
+  }, [path, sawSitePage]);
+  return null;
+}
+
+/** `path` is `base` or a page below it (`/base/x`, `/base;key=v`). */
+function isUnder(path: string, base: string): boolean {
+  return (
+    path === base || path.startsWith(base + "/") || path.startsWith(base + ";")
   );
 }
 
@@ -56,7 +83,7 @@ export function DemoResident({ children }: { children: ReactNode }): ReactNode {
  * on a page without one, nothing is drawn and the server keeps running.
  */
 function DemoServer(): ReactNode {
-  const { started, target, viaMaximize } = useDemoState();
+  const { started, target, viaMaximize, cameFrom } = useDemoState();
   const demo = useDemoActions();
   const navigate = useNavigate();
   const maximize = useCallback(() => {
@@ -69,13 +96,13 @@ function DemoServer(): ReactNode {
     [navigate],
   );
   // The demo page's Back to equin.ai: into the frame it was maximized from
-  // (the morph), else the homepage — a page opened directly has no frame to
-  // shrink back into.
+  // (the morph), else the site page the visitor came from, else (the demo
+  // page opened directly) the homepage.
   const back = useCallback(() => {
     track("demo_back_to_site");
     if (viaMaximize) restore();
-    else navigate(landingUrl());
-  }, [viaMaximize, restore, navigate]);
+    else navigate(cameFrom ?? landingUrl());
+  }, [viaMaximize, restore, navigate, cameFrom]);
   if (!started) return null;
   return (
     <>

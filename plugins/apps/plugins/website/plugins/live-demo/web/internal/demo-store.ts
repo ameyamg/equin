@@ -49,6 +49,13 @@ export interface DemoState {
    * the page is left.
    */
   viaMaximize: boolean;
+  /**
+   * The last site page shown before the demo page (a route path, keyed
+   * params included: `/about/apps;app=sonata`): where the site bar's Back to
+   * equin.ai returns. `undefined` until the visitor has seen one — the demo
+   * page opened directly, whose way back is the homepage.
+   */
+  cameFrom: string | undefined;
 }
 
 const DemoStore = defineScopedStore<DemoState>({
@@ -61,6 +68,7 @@ const DemoStore = defineScopedStore<DemoState>({
   place: undefined,
   returning: false,
   viaMaximize: false,
+  cameFrom: undefined,
 });
 
 /** The store's scope: one per site surface, around its pages and the resident. */
@@ -92,6 +100,8 @@ export interface DemoActions {
   place: HostLocation;
   /** The visitor came in through the scope's gate or a join. */
   entered(how: DemoEntry): void;
+  /** The site shows `path`, a page other than the demo page. */
+  sawSitePage(path: string): void;
   /** The visitor maximized the frame: the demo page about to show offers the way back. */
   maximizing(): void;
 }
@@ -149,6 +159,9 @@ function demoActions(store: ScopedStore<DemoState>): DemoActions {
     place: {
       read: () => store.getState().place,
       subscribe: (onChange) => store.subscribe(() => onChange()),
+    },
+    sawSitePage(path) {
+      if (store.getState().cameFrom !== path) update({ cameFrom: path });
     },
     maximizing() {
       update({ viaMaximize: true });

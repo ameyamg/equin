@@ -14236,9 +14236,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Website.Resident` "Live demo" → `DemoResident`
               - `Pane.Register` "website-demo"
-            - Uses: 24 symbols — full list in [`plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md`](../plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md`](../plugins/apps/plugins/website/plugins/live-demo/REFERENCE.md)
+              - `primitives/pane` ×5
               - `apps/website/landing/screenshot/chrome` ×4
-              - `primitives/pane` ×4
               - `apps-core/app-embed` ×2
               - `apps-core/tabs` ×2
               - `apps/website/shell` ×2

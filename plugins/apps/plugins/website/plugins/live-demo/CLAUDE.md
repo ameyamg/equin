@@ -24,7 +24,9 @@ whichever page asks for it. Design:
   `dom/movable`) is drawn on the demo page for every visitor, however they
   got there: Back to equin.ai — into the homepage's frame by the morph when
   the visitor came by Maximize (`viaMaximize`, set by Maximize and cleared
-  when the page is left), else to the homepage — then the site links other
+  when the page is left), else to the site page they came from (`cameFrom`,
+  the last site page shown before the demo page: the apps gallery, a tip…),
+  else (the demo page opened directly) to the homepage — then the site links other
   plugins contribute to `LiveDemo.BarLink` (`pages/download`: Download), each
   a `DemoBarLink`. Their order is the slot's reorder config.
 - Maximize (under the frame) opens the demo page where the visitor is;
@@ -66,9 +68,9 @@ return to the frame) is module state in `web/internal/demo-store.ts`.
   - Contributes:
     - `Website.Resident` "Live demo" → `DemoResident`
     - `Pane.Register` "website-demo"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×5
     - `apps/website/landing/screenshot/chrome` ×4
-    - `primitives/pane` ×4
     - `apps-core/app-embed` ×2
     - `apps-core/tabs` ×2
     - `apps/website/shell` ×2

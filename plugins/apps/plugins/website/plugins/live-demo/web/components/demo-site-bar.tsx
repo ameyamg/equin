@@ -19,7 +19,7 @@ const backIcon = symbol("arrow-back");
  * double-click on its surface sends it home.
  *
  * `onBack` is the caller's: the morph back into the homepage's frame after a
- * Maximize, else the homepage itself.
+ * Maximize, else the site page the visitor came from, else the homepage.
  */
 export function DemoSiteBar({
   onBack,
