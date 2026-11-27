@@ -21,7 +21,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Locator, Page } from "playwright";
+import type { BrowserContext, Locator, Page } from "playwright";
 import {
   arg,
   flag,
@@ -96,6 +96,12 @@ export interface TipVideo {
   path: string;
   /** Default dark: the website's own scheme. */
   colorScheme?: "dark" | "light";
+  /**
+   * Before the route is opened: what the page must find at its first script
+   * (`context.addInitScript` — a stand-in for a native host's bridge, which a
+   * browser recording has no other way to carry).
+   */
+  init?(context: BrowserContext): Promise<void>;
   /**
    * Real-time set-up after the route has booted and before the first frame:
    * wait for what the first gesture reaches for, set browser-local state.
@@ -193,6 +199,7 @@ async function recordTake(tip: TipVideo, dir: string): Promise<void> {
         capture: false,
       });
       await installRecorderClock(context, { date: seedDate() });
+      await tip.init?.(context);
       await page.goto(pathUrl(tip.path), { waitUntil: "load" });
       await page.waitForFunction(
         () =>

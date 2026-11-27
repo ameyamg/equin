@@ -70,8 +70,11 @@ Steps:
 3. Write `e2e/<slug>.ts`: an `E2eScript` declaration
    (`target: { composition: "promo-film" }`, `kind: "tool"`, `writes: false` —
    `true` if the take saves anything, e.g. launches the Wish — `run: {
-   manual: ["heavy"], … }`) and one `await tipVideo({ slug, path, prepare?, cursor?,
-   script })`. `path` is the route opened (booted in real time, unrecorded);
+   manual: ["heavy"], … }`) and one `await tipVideo({ slug, path, init?, prepare?, cursor?,
+   script })`. `init(context)` runs before `path` is opened, for what the page
+   must find at its first script (`addInitScript`: a stand-in for a native
+   host's bridge — `e2e/keep-app-in-dock.ts` films the menu-bar panel so, and
+   its header says what the stand-in cannot show); `path` is the route opened (booted in real time, unrecorded);
    `prepare(page)` waits for what the first gesture needs; `script(r)` is the
    take. `r` is media/film's `Recorder` (`move`, `click` — with
    `{ modifiers: ["ControlOrMeta"] }` for a ⌘/Ctrl-click, drawn as a ⌘ key
