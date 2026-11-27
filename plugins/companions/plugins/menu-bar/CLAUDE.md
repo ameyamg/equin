@@ -251,7 +251,20 @@ cannot be skipped.)
   there yet): macOS appends a `persistent-apps` tile with `defaults write
   com.apple.dock`, then `killall Dock`; GNOME appends to `gsettings
   org.gnome.shell favorite-apps` (pin capability probed once: does `gsettings
-  get` answer). Already pinned → nothing runs.
+  get` answer). Already pinned → nothing runs. **The outcome is the Dock's
+  own answer**: `killall Dock` returns before the Dock relaunches, so reading
+  our write back proves nothing; the helper waits (at most 15 s, re-reading
+  `defaults export com.apple.dock` every 250 ms — the Dock has no API or
+  change signal) until the relaunched Dock has adopted the tile — stamped it
+  with a `GUID`, which the written tile lacks — and fails ("the Dock dropped
+  …" / "did not take … in") otherwise. GNOME reads `favorite-apps` back (the
+  shell never rewrites it). So `pinApp` resolving means the Dock holds it —
+  the tile never flips on a write alone. Each request and its
+  outcome is logged on both sides: the helper's `pin <id>: asked / added /
+  already / failed: …` in `logs/menu-bar/helper-stdio.log`, the panel's
+  `pin <id>: asked / pinned / failed: …` on the `menu-bar` client-log channel
+  (main's `logs/menu-bar.jsonl`). A click with no `asked` line never reached
+  the pin; `asked` on the page with none in the helper is the bridge.
 - **Read** — `equinNative.apps()` → `{ installed, pinned }` (the shims on
   disk; the Dock's `persistent-apps` / the dash's favorites matched against
   them), after the sync in flight. A failed sync is its failure.
@@ -308,6 +321,7 @@ helper build and reloads the tray onto it
     - `companions/panel.CompanionHeader`
     - `companions/panel.CompanionPanel`
     - `primitives/loading.Loading`
+    - `primitives/log-channels.clientLog`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):

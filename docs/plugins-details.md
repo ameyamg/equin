@@ -18196,6 +18196,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/panel.CompanionHeader`
           - `companions/panel.CompanionPanel`
           - `primitives/loading.Loading`
+          - `primitives/log-channels.clientLog`
           - `primitives/slot-render.defineMountSlot`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):
@@ -59318,7 +59319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `debug` ×15
           - `apps` ×13
           - `infra` ×12
@@ -59328,13 +59329,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network` ×4
           - `plugin-meta` ×3
           - `build` ×2
+          - `companions` ×2
           - `integrations` ×2
           - `reports` ×2
           - `tasks` ×2
           - `active-data/show-me`
           - `apps-core/app-preload`
           - `backup`
-          - `companions/browser-extension`
           - `config_v2`
           - `packages/source-digest/prune`
           - `primitives/log-channels/memory-persistence`

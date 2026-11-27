@@ -40,6 +40,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -457,20 +458,47 @@ pub fn gnome_pin_plan(favorites: &str, app_id: &str) -> Result<Vec<Vec<String>>,
         .collect()])
 }
 
-/// Pin an installed shim (already pinned: nothing runs).
-pub fn pin(host: &dyn Host, shim: &Shim) -> Result<(), String> {
+/// What a pin did, read back from the Dock / dash after it.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Pinned {
+    /// It was there already: nothing ran.
+    Already,
+    /// Written, and the Dock / dash now lists it.
+    Added,
+}
+
+/// How long a pin waits for the Dock to take its new tile in (relaunch and
+/// adopt it) before it calls the pin failed.
+const PIN_CONFIRM_BOUND: Duration = Duration::from_secs(15);
+
+/// Pin an installed shim (already pinned: nothing runs). The outcome is the
+/// Dock's / dash's own answer, read back after the write — on macOS once the
+/// relaunched Dock adopted the tile (see `platform::confirm_pin`): a write that
+/// ran but that the Dock did not take is a failure, never a success the tile
+/// believes.
+pub fn pin(host: &dyn Host, shim: &Shim) -> Result<Pinned, String> {
+    pin_within(host, shim, PIN_CONFIRM_BOUND)
+}
+
+fn pin_within(host: &dyn Host, shim: &Shim, bound: Duration) -> Result<Pinned, String> {
     if !can_pin(host) {
         return Err("Pinning apps is not supported on this desktop.".into());
     }
-    for argv in platform::pin_plan(host, shim)? {
+    let plan = platform::pin_plan(host, shim)?;
+    if plan.is_empty() {
+        return Ok(Pinned::Already);
+    }
+    for argv in plan {
         host.run(&argv)?;
     }
-    Ok(())
+    platform::confirm_pin(host, shim, bound)?;
+    Ok(Pinned::Added)
 }
 
 #[cfg(target_os = "macos")]
 mod platform {
     use std::path::{Path, PathBuf};
+    use std::time::{Duration, Instant};
 
     use plist::{Dictionary, Value};
     use url::Url;
@@ -624,12 +652,69 @@ mod platform {
         std::fs::remove_dir_all(&shim.path).map_err(|e| format!("{}: {e}", shim.path.display()))
     }
 
+    /// Where a pinned app is kept, in the user's words.
+    pub const PIN_PLACE: &str = "Dock";
+
     pub fn can_pin(_host: &dyn Host) -> bool {
         true
     }
 
     pub fn pin_plan(host: &dyn Host, shim: &Shim) -> Result<Vec<Vec<String>>, String> {
         Ok(dock_pin_plan(&host.run(&dock_read_argv())?, &shim.path))
+    }
+
+    /// Has the Dock taken in the tile naming `url`? Read from the Dock's
+    /// preferences as a plist (`defaults export com.apple.dock -`): `Some(true)`
+    /// once the Dock adopted it — the Dock stamps every tile it holds with a
+    /// `GUID` (and the app's `bundle-identifier`), which the tile a pin writes
+    /// lacks — `Some(false)` while it is only our write, `None` when no tile
+    /// names it (the Dock dropped it).
+    pub fn dock_adopted(export: &[u8], url: &str) -> Result<Option<bool>, String> {
+        let prefs = Value::from_reader(std::io::Cursor::new(export))
+            .map_err(|e| format!("the Dock's preferences are not a plist: {e}"))?;
+        let apps = prefs
+            .as_dictionary()
+            .and_then(|d| d.get("persistent-apps"))
+            .and_then(Value::as_array)
+            .ok_or("the Dock's preferences have no persistent-apps array")?;
+        let tile = apps.iter().filter_map(Value::as_dictionary).find(|t| {
+            t.get("tile-data")
+                .and_then(Value::as_dictionary)
+                .and_then(|d| d.get("file-data"))
+                .and_then(Value::as_dictionary)
+                .and_then(|f| f.get("_CFURLString"))
+                .and_then(Value::as_string)
+                == Some(url)
+        });
+        Ok(tile.map(|t| t.contains_key("GUID")))
+    }
+
+    /// Wait, at most `bound`, for the relaunched Dock to adopt the tile the
+    /// pin wrote. `killall Dock` returns once the signal is sent: a read right
+    /// after it reads back our own write, which the Dock may still drop (a
+    /// tile it cannot resolve) or overwrite (the old Dock flushing its list as
+    /// it quits).
+    ///
+    /// No flaw: the Dock has no API and no change signal for its tiles, so
+    /// this re-reads its preferences every 250 ms, bounded — a deadline
+    /// around a process we do not control.
+    pub fn confirm_pin(host: &dyn Host, shim: &Shim, bound: Duration) -> Result<(), String> {
+        let url = dock_file_url(&shim.path);
+        let export = ["defaults", "export", "com.apple.dock", "-"].map(String::from);
+        let start = Instant::now();
+        loop {
+            let state = dock_adopted(host.run(&export)?.as_bytes(), &url)?;
+            if state == Some(true) {
+                return Ok(());
+            }
+            if start.elapsed() >= bound {
+                return Err(match state {
+                    None => format!("the Dock dropped {} after it restarted", shim.name),
+                    _ => format!("the Dock did not take {} in within {} s", shim.name, bound.as_secs()),
+                });
+            }
+            std::thread::sleep(Duration::from_millis(250));
+        }
     }
 
     pub fn pinned(host: &dyn Host, shims: &[Shim]) -> Result<Vec<String>, String> {
@@ -645,6 +730,7 @@ mod platform {
 #[cfg(target_os = "linux")]
 mod platform {
     use std::path::{Path, PathBuf};
+    use std::time::Duration;
 
     use url::Url;
 
@@ -788,12 +874,25 @@ mod platform {
         Ok(())
     }
 
+    /// Where a pinned app is kept, in the user's words.
+    pub const PIN_PLACE: &str = "dash";
+
     pub fn can_pin(host: &dyn Host) -> bool {
         host.run(&gnome_read_argv()).is_ok()
     }
 
     pub fn pin_plan(host: &dyn Host, shim: &Shim) -> Result<Vec<Vec<String>>, String> {
         gnome_pin_plan(&host.run(&gnome_read_argv())?, &shim.app_id)
+    }
+
+    /// GNOME Shell takes `favorite-apps` as written (it never rewrites it):
+    /// read back, the favorite is there or the write did not hold.
+    pub fn confirm_pin(host: &dyn Host, shim: &Shim, _bound: Duration) -> Result<(), String> {
+        if pinned(host, std::slice::from_ref(shim))?.iter().any(|id| id == &shim.app_id) {
+            Ok(())
+        } else {
+            Err(format!("{} was written to the dash's favorites but they do not list it", shim.name))
+        }
     }
 
     pub fn pinned(host: &dyn Host, shims: &[Shim]) -> Result<Vec<String>, String> {
@@ -935,8 +1034,11 @@ impl Keeper {
 
     /// Pin an app to the Dock / dash — writing its shim first when it is not
     /// there yet (the sync has normally written it).
+    /// Every request and its outcome is logged (the helper's stdio log), so a
+    /// pin that did not land can be traced to the step that stopped it.
     pub fn pin(&self, app_id: &str) -> Result<(), String> {
-        self.exclusive(|| {
+        eprintln!("equin-desktop: pin {app_id}: asked");
+        let outcome = self.exclusive(|| {
             let host = self.host()?;
             let roots = Self::roots()?;
             let find = || shim::installed_in(&roots).into_iter().find(|s| s.app_id == app_id);
@@ -952,7 +1054,13 @@ impl Keeper {
                 }
             };
             pin(&host, &shim)
-        })
+        });
+        match &outcome {
+            Ok(Pinned::Added) => eprintln!("equin-desktop: pin {app_id}: added, the {} holds it", platform::PIN_PLACE),
+            Ok(Pinned::Already) => eprintln!("equin-desktop: pin {app_id}: already in the {}", platform::PIN_PLACE),
+            Err(e) => eprintln!("equin-desktop: pin {app_id}: failed: {e}"),
+        }
+        outcome.map(|_| ())
     }
 }
 
@@ -970,12 +1078,16 @@ mod tests {
         fetched: RefCell<Vec<String>>,
         pinned: RefCell<String>,
         fail: Option<&'static str>,
+        /// The Dock / dash write runs but is not kept (read back unchanged).
+        drop_writes: bool,
+        /// The relaunched Dock never adopts a written tile (no `GUID`).
+        never_adopt: bool,
     }
 
     impl Fake {
         fn new() -> Fake {
             let empty = if cfg!(target_os = "macos") { "(\n)" } else { "@as []" };
-            Fake { commands: RefCell::default(), fetched: RefCell::default(), pinned: RefCell::new(empty.into()), fail: None }
+            Fake { commands: RefCell::default(), fetched: RefCell::default(), pinned: RefCell::new(empty.into()), fail: None, drop_writes: false, never_adopt: false }
         }
         fn programs(&self) -> Vec<String> {
             self.commands.borrow().iter().map(|c| c[0].clone()).collect()
@@ -992,7 +1104,21 @@ mod tests {
                 "cp" => std::fs::write(&argv[3], b"helper").map(|_| String::new()).map_err(|e| e.to_string()),
                 "iconutil" => std::fs::write(&argv[5], b"icns").map(|_| String::new()).map_err(|e| e.to_string()),
                 "defaults" if argv[1] == "read" => Ok(self.pinned.borrow().clone()),
+                // The Dock's preferences as a plist: every tile written so far,
+                // stamped with a GUID as the relaunched Dock does once it adopts it.
+                "defaults" if argv[1] == "export" => {
+                    let tiles = self.pinned.borrow().trim_start_matches("(\n)").to_string();
+                    let tiles = if self.never_adopt {
+                        tiles
+                    } else {
+                        tiles.replace("<dict><key>tile-data</key>", "<dict><key>GUID</key><integer>1</integer><key>tile-data</key>")
+                    };
+                    Ok(format!(
+                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict><key>persistent-apps</key><array>{tiles}</array></dict></plist>"
+                    ))
+                }
                 "gsettings" if argv[1] == "get" => Ok(self.pinned.borrow().clone()),
+                "defaults" | "gsettings" if self.drop_writes => Ok(String::new()),
                 "defaults" => {
                     self.pinned.borrow_mut().push_str(&argv[5]);
                     Ok(String::new())
@@ -1190,12 +1316,56 @@ mod tests {
         sync(&host, &roots, &origin(), &helper(&exe, "d1"), &[app("mail", "Mail", "h1")]).unwrap();
         let mail = shim::installed_in(&roots).pop().unwrap();
         assert_eq!(read_apps(&host, &roots).unwrap().pinned, Vec::<String>::new());
-        pin(&host, &mail).unwrap();
+        assert_eq!(pin(&host, &mail).unwrap(), Pinned::Added);
         assert_eq!(read_apps(&host, &roots).unwrap().pinned, vec!["mail"]);
         let writes = |h: &Fake| h.commands.borrow().iter().filter(|c| c[1] == "write" || c[1] == "set").count();
         let n = writes(&host);
-        pin(&host, &mail).unwrap();
+        assert_eq!(pin(&host, &mail).unwrap(), Pinned::Already);
         assert_eq!(writes(&host), n, "already pinned: nothing runs");
+    }
+
+    #[test]
+    fn a_pin_the_dock_does_not_keep_is_a_failure() {
+        let (roots, exe) = home();
+        let mut host = Fake::new();
+        sync(&host, &roots, &origin(), &helper(&exe, "d1"), &[app("mail", "Mail", "h1")]).unwrap();
+        let mail = shim::installed_in(&roots).pop().unwrap();
+        host.drop_writes = true;
+        let err = pin_within(&host, &mail, Duration::from_millis(300)).unwrap_err();
+        let expected = if cfg!(target_os = "macos") { "the Dock dropped Mail" } else { "do not list it" };
+        assert!(err.contains(expected), "{err}");
+        assert_eq!(read_apps(&host, &roots).unwrap().pinned, Vec::<String>::new());
+    }
+
+    /// `killall Dock` returns before the Dock relaunches: our own write read
+    /// back is not the Dock's answer — only its adoption (a GUID) is.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_tile_the_dock_never_adopts_is_a_failure() {
+        let (roots, exe) = home();
+        let mut host = Fake::new();
+        sync(&host, &roots, &origin(), &helper(&exe, "d1"), &[app("mail", "Mail", "h1")]).unwrap();
+        let mail = shim::installed_in(&roots).pop().unwrap();
+        host.never_adopt = true;
+        let err = pin_within(&host, &mail, Duration::from_millis(300)).unwrap_err();
+        assert!(err.contains("did not take Mail in"), "{err}");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn dock_adoption_is_read_from_the_tiles_guid() {
+        let url = "file:///Users/u/Applications/equin%20Mail.app/";
+        let prefs = |tile: &str| {
+            format!("<?xml version=\"1.0\"?><plist version=\"1.0\"><dict><key>persistent-apps</key><array>{tile}</array></dict></plist>")
+        };
+        let tile = |guid: &str| {
+            format!("<dict>{guid}<key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>{url}</string></dict></dict></dict>")
+        };
+        let adopted = |x: String| platform::dock_adopted(x.as_bytes(), url).unwrap();
+        assert_eq!(adopted(prefs(&tile("<key>GUID</key><integer>7</integer>"))), Some(true));
+        assert_eq!(adopted(prefs(&tile(""))), Some(false));
+        assert_eq!(adopted(prefs("")), None);
+        assert!(platform::dock_adopted(b"not a plist", url).is_err());
     }
 
     #[cfg(target_os = "macos")]

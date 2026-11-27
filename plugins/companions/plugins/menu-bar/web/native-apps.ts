@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
+import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { NativeApps } from "../core";
 import { useNativeHost } from "./native-host";
 
@@ -78,17 +79,30 @@ async function refresh(): Promise<void> {
   }
 }
 
-/** Pin through the helper; the outcome is the app's request (then the re-read). */
+/**
+ * Pin through the helper; the outcome is the app's request (then the re-read).
+ * The helper resolves only once the Dock / dash lists the app (read back after
+ * its write), so a success here is the Dock's word. The click and its outcome
+ * are logged (the `menu-bar` channel), the helper logs its side, so a pin that
+ * did not land shows which step stopped it.
+ */
 async function pin(appId: string): Promise<void> {
   const pinApp = helper?.pinApp;
-  if (pinApp == null) return;
+  if (pinApp == null) {
+    // The pin is only drawn where the helper pins: reaching here is a bug.
+    throw new Error(`Cannot pin ${appId}: the helper offers no pinApp().`);
+  }
+  clientLog("menu-bar", `pin ${appId}: asked`);
   setRequest(appId, { state: "pinning" });
   try {
     await pinApp(appId);
+    clientLog("menu-bar", `pin ${appId}: pinned`);
     setRequest(appId, null);
   } catch (err) {
+    const message = asError(err).message;
+    clientLog("menu-bar", `pin ${appId}: failed: ${message}`, "stderr");
     // The panel shows no toasts: the failure rests on the tile.
-    setRequest(appId, { state: "failed", message: asError(err).message });
+    setRequest(appId, { state: "failed", message });
   }
   await refresh();
 }
