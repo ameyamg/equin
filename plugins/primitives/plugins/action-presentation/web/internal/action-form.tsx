@@ -135,6 +135,33 @@ export function MenuItemForm({
   );
 }
 
+/** The one channel every `PanelRowsForm` hands out: rows that already left the row have no ledger, no holds. */
+const PANEL_ROW_CHANNEL: ItemFormChannel = {
+  form: "row",
+  declare: () => () => {},
+  hold: () => () => {},
+};
+
+/**
+ * Renders `children` — actions — as rows standing in the overflow panel: the
+ * `"row"` twin of `MenuItemForm`. `ActionMenu` mounts it around its entries
+ * once the bar relocates the menu, so the entries are the panel's own rows
+ * instead of a second `⋯` inside the first. The channel is static (it declares
+ * nothing and holds nothing), so one around several actions is the same as one
+ * per action.
+ */
+export function PanelRowsForm({
+  children,
+}: {
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <ItemFormChannelContext.Provider value={PANEL_ROW_CHANNEL}>
+      {children}
+    </ItemFormChannelContext.Provider>
+  );
+}
+
 /** Shared empty rung list, so `useLatestRef`'s value is stable when nothing is declared. */
 const NO_RUNGS: readonly Exclude<ActionForm, "full">[] = [];
 

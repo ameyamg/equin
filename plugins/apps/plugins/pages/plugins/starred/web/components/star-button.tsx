@@ -6,15 +6,17 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const starIcon = symbol("star");
 
 /**
- * Presentational star toggle shared by the sidebar row action and the page
- * header. The star is drawn active (filled) when favorited, at rest when not.
+ * The star toggle, shared by the sidebar row action and the page's "⋯" menu
+ * (where, as an `IconButton`, it draws itself as a menu item or a panel row). The star is drawn active (filled) when favorited, at rest when not.
  */
 export function StarButton({ pageId }: { pageId: string }) {
   const star = useStar(pageId);
   if (star.status === "loading") {
     // Not known yet: the button's own loading state (a spinner, disabled) —
     // never the hollow star, which is what "not a favorite" looks like.
-    return <IconButton icon={starIcon} label="Loading favorites" loading />;
+    return (
+      <IconButton icon={starIcon} label="Loading favorites" loading disabled />
+    );
   }
   if (star.status === "error") {
     return (

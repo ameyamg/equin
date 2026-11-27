@@ -52,7 +52,7 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
   - Contributes:
     - `FieldPresentation.Register` "exposure:page_blocks_ext_starred"
     - `PageTree.RowActions` "star" → `StarRowAction`
-    - `PageDetail.MenuItem` "star" → `StarMenuItem`
+    - `PageDetail.MenuItem` "star" → `StarButton`
   - Uses:
     - `apps/pages/page-tree.PageDetail`
     - `apps/pages/page-tree.PageTree`
@@ -62,10 +62,7 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
     - `network/live/live-state.mapResource`
     - `network/live/live-state.ResourceErrorInline`
     - `network/live/live-state.ResourceResult`
-    - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/icon-button.IconButton`
-    - `primitives/loading.Loading`
-    - `ui/icons.Icon`
   - Exports (types): `StarredPageRow`
   - Exports (values): `StarredPageRowSchema`
 - Server:

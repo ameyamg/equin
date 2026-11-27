@@ -11,6 +11,7 @@ export {
   type ShrinkLadder,
   type YieldEagerness,
 } from "./internal/action-form";
+export { ActionMenu, type ActionMenuProps } from "./components/action-menu";
 export {
   PanelActionRow,
   type PanelActionRowProps,

@@ -70,8 +70,10 @@ export const PageDetail = {
   UnderTitle: defineRenderSlot<PageHeaderPart>({ docLabel: (p) => p.id }),
   /**
    * An entry of the page's "⋯" menu in the page-detail header (Add to
-   * favorites, …). Each contribution renders its own `DropdownMenuItem` for
-   * the open page; the menu closes on the item's click. Move to trash is the
+   * favorites, …). Each contribution renders an `IconButton` for the open
+   * page — never a raw `DropdownMenuItem`: the menu is an `ActionMenu`, which
+   * draws it as a menu item inline and as a row of the header bar's overflow
+   * panel once the bar relocates the menu there. Move to trash is the
    * menu's own last entry, after a separator — it is not contributed.
    */
   MenuItem: defineRenderSlot<{

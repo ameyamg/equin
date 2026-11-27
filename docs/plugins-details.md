@@ -8280,8 +8280,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pageDetailPane.Actions` "page-menu" → `PageMenuAction`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 108 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
-              - `primitives/css/ui-kit` ×14
+            - Uses: 104 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+              - `primitives/css/ui-kit` ×9
               - `page/editor` ×8
               - `primitives/data-view` ×8
               - `primitives/pane` ×6
@@ -8303,6 +8303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/attachments.uploadAttachment`
               - `infra/trash.useUndoableTrash`
               - `page/links.Backlinks`
+              - `primitives/action-presentation.ActionMenu`
               - `primitives/app-shell.SidebarItem`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -8447,7 +8448,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `FieldPresentation.Register` "exposure:page_blocks_ext_starred"
               - `PageTree.RowActions` "star" → `StarRowAction`
-              - `PageDetail.MenuItem` "star" → `StarMenuItem`
+              - `PageDetail.MenuItem` "star" → `StarButton`
             - Uses:
               - `apps/pages/page-tree.PageDetail`
               - `apps/pages/page-tree.PageTree`
@@ -8457,10 +8458,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state.mapResource`
               - `network/live/live-state.ResourceErrorInline`
               - `network/live/live-state.ResourceResult`
-              - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/icon-button.IconButton`
-              - `primitives/loading.Loading`
-              - `ui/icons.Icon`
             - Exports (types): `StarredPageRow`
             - Exports (values): `StarredPageRowSchema`
           - Server:
@@ -53434,13 +53432,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/row.Row`
           - `primitives/css/row.RowControlProps`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.DropdownMenu`
+          - `primitives/css/ui-kit.DropdownMenuContent`
+          - `primitives/css/ui-kit.DropdownMenuSeparator`
+          - `primitives/css/ui-kit.DropdownMenuTrigger`
           - `primitives/css/ui-kit.MenuSurfaceProvider`
+          - `primitives/css/ui-kit.Separator`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/shortcuts.formatShortcutLabel`
           - `ui/icons.Icon`
         - Exports (types):
           - `ActionForm`
+          - `ActionMenuProps`
           - `ItemFormChannel`
           - `PanelActionRowProps`
           - `ShrinkLadder`
@@ -53448,6 +53453,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `ActionFormProvider`
           - `ActionFormShield`
+          - `ActionMenu`
           - `MenuItemForm`
           - `PanelActionRow`
           - `useActionForm`
@@ -53457,6 +53463,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/tab-bar`
           - `apps/file-explorer/browser`
+          - `apps/pages/page-tree`
           - `apps/prototypes/canvas`
           - `apps/website/improve`
           - `apps/website/shell`
@@ -55791,8 +55798,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 496 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `apps` ×118
+            - Imported by: 495 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `apps` ×117
               - `primitives` ×115
               - `conversations` ×53
               - `page` ×27
@@ -59176,8 +59183,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 250 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×76
+        - Imported by: 249 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×75
           - `conversations` ×26
           - `ui` ×24
           - `tasks` ×21

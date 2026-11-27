@@ -116,6 +116,17 @@ right-click menu at once (the file explorer's `FileBrowserSlots.RowActions`).
 No bar ever assigns `"menu-item"` (`adaptive-bar`'s `formFor` hands an
 evicted widget `"row"` or `"full"`), so declaring it changes nothing in a bar.
 
+## `ActionMenu` — a "⋯" that never nests in a "⋯"
+
+`<ActionMenu label icon groups>` is an icon-triggered dropdown of actions (a page's
+"⋯"). It offers the `"row"` rung, so once a bar relocates it into its own
+overflow panel — itself a "⋯" — the trigger is dropped and its entries render
+straight into the panel as rows (`PanelRowsForm`, the `"row"` twin of
+`MenuItemForm`). Inline, the entries sit under `MenuItemForm`. Hence its
+entries must be actions with both rungs (`IconButton`), never raw
+`DropdownMenuItem`s. `groups` are separated by a rule the menu draws itself, in
+either form.
+
 ## Why there is no `probe`
 
 `probe` answered *"is this bucket empty for THIS row?"* (an action returns `null`
@@ -138,13 +149,20 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
     - `primitives/css/row.Row`
     - `primitives/css/row.RowControlProps`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.DropdownMenu`
+    - `primitives/css/ui-kit.DropdownMenuContent`
+    - `primitives/css/ui-kit.DropdownMenuSeparator`
+    - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.MenuSurfaceProvider`
+    - `primitives/css/ui-kit.Separator`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/shortcuts.formatShortcutLabel`
     - `ui/icons.Icon`
   - Exports (types):
     - `ActionForm`
+    - `ActionMenuProps`
     - `ItemFormChannel`
     - `PanelActionRowProps`
     - `ShrinkLadder`
@@ -152,6 +170,7 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
   - Exports (values):
     - `ActionFormProvider`
     - `ActionFormShield`
+    - `ActionMenu`
     - `MenuItemForm`
     - `PanelActionRow`
     - `useActionForm`
@@ -161,6 +180,7 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
   - Imported by:
     - `apps-core/tab-bar`
     - `apps/file-explorer/browser`
+    - `apps/pages/page-tree`
     - `apps/prototypes/canvas`
     - `apps/website/improve`
     - `apps/website/shell`

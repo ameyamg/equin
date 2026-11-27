@@ -5,7 +5,7 @@ import {
 } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { starredPresentation } from "./internal/presentation";
 import { StarRowAction } from "./components/star-row-action";
-import { StarMenuItem } from "./components/star-menu-item";
+import { StarButton } from "./components/star-button";
 
 export { StarredPageRowSchema } from "../shared/resources";
 export type { StarredPageRow } from "../shared/resources";
@@ -17,6 +17,6 @@ export default {
     // The exposed `starred` boolean: its type's default presentation.
     starredPresentation,
     PageTree.RowActions({ id: "star", component: StarRowAction }),
-    PageDetail.MenuItem({ id: "star", component: StarMenuItem }),
+    PageDetail.MenuItem({ id: "star", component: StarButton }),
   ],
 } satisfies PluginDefinition;
