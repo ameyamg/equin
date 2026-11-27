@@ -55,6 +55,7 @@ import {
 import { installEventsOn } from "@plugins/installer/cli";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { acquireCheckoutLock } from "./checkout-lock";
+import { assertHostPlatformPackages } from "./host-platform-packages";
 import { walkFilesWithListing } from "./dir-listing";
 
 /**
@@ -171,7 +172,7 @@ export interface EnsureDepsOptions {
   /**
    * @internal TEST SEAM. Overrides how the install is run, so the test suite can
    * exercise the freshness gate, the under-lock re-check and the failure wording
-   * without a real 10–25 s `bun install` (three agents share a checkout;
+   * without a real 10–25 s `bun install` and its platform-package check (three agents share a checkout;
    * concurrent installs are the bug under repair). Production callers pass
    * nothing and get `runBunInstall`. Mirrors how `checkout-lock.ts` exposes its
    * timings through `opts` purely so its own test can drive them.
@@ -440,12 +441,28 @@ function writeStamp(stampPath: string, signature: DepSignature): void {
 }
 
 /**
- * The real install. NO `--silent`: the freshness gate means this only runs when
+ * The real install: `bun install`, then — when it exits 0 — the check that it
+ * placed every optional platform package this host needs
+ * (`./host-platform-packages.ts`), which bun skips in silence when its fetch
+ * fails. That check throws, so `ensureDeps` writes no stamp over an install
+ * that left a binary out.
+ */
+async function runBunInstall(
+  root: string,
+  frozenLockfile: boolean,
+): Promise<InstallOutcome> {
+  const result = await spawnBunInstall(root, frozenLockfile);
+  if (result.exitCode === 0) assertHostPlatformPackages(root);
+  return result;
+}
+
+/**
+ * NO `--silent`: the freshness gate means this only runs when
  * the dep inputs actually changed, so its output is signal rather than
  * per-invocation noise — and passthrough is the whole reason a failed install can
  * no longer be invisible.
  */
-function runBunInstall(
+function spawnBunInstall(
   root: string,
   frozenLockfile: boolean,
 ): Promise<InstallOutcome> {

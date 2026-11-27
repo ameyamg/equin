@@ -151,7 +151,14 @@ freshness-gated on a `(mtimeMs,size)` signature stamped in
 walk for its inputs re-lists only directories whose stat stamp moved,
 `plugins/bootstrap/cli/dir-listing.ts`),
 serialized on `.install.lock`, and **loud** — it runs `bun install` with output
-passed through and throws a message naming the phase on failure. Every install
+passed through and throws a message naming the phase on failure. A `bun install`
+that exits 0 is not taken at its word: bun skips a failed fetch of an optional
+dependency in silence (a just-published tarball the CDN still 404s, 2026-11-27,
+left a checkout with no PgBouncer binary), so
+`plugins/bootstrap/cli/host-platform-packages.ts` then checks that every
+`optionalDependencies` entry whose `os` / `cpu` / `libc` (as `bun.lock`
+records them) match this host was installed, and throws naming the missing ones
+before the stamp is written. Every install
 site routes through it: the `bin/index.ts` bootstrap, `mise.toml`'s setup task,
 `app-artifacts.ts` stage 1, and `push`'s post-rebase install (`frozenLockfile:
 true`, so a mid-push tree is never re-resolved). The bootstrap's own call is

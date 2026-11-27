@@ -31,10 +31,12 @@ Node builtins, relative repo files and `@plugins/*` aliases only.
 `cli:bootstrap-package-free` measures this with `Bun.build`, so the check cannot
 drift from what actually loads.
 
-## Why these six and nothing else
+## Why these and nothing else
 
 They are already in the pre-install closure: `ensure-deps → checkout-lock →
-adaptive-timeout`, plus `orphan-guard`, `reexec` and `locked-bun` which
+adaptive-timeout` and `ensure-deps → host-platform-packages` (the check, after
+`bun install` exits 0, that every optional platform package this host needs was
+installed), plus `orphan-guard`, `reexec` and `locked-bun` which
 `bin/index.ts` reaches directly. A module only *some* command needs belongs in `op-runtime`, whose
 closure carries no such constraint.
 
