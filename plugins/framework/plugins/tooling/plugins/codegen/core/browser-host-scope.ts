@@ -170,7 +170,10 @@ async function resolveScopeUncached(
  * apart (`scopedEntries`): loaded when a scope asks for them, visible inside
  * that scope only, and their other halves never in the composition's backend
  * (the host's worker serves them). Empty for a composition that bundles no
- * host's declaring plugin, or that bundles its whole scope (main).
+ * host's declaring plugin, or that bundles its whole scope. Main bundles every
+ * scope plugin but those its own manifest names out (`all-exclusions`) and a
+ * host's composition names back in — the local mail provider, whose server
+ * half would be a second provider in main's backend — so it holds just those.
  */
 export async function scopedOnlyWebPlugins(
   ctx: RegistryGenContext,

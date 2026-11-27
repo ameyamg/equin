@@ -87,7 +87,13 @@ computer, so its server barrel is portable.
   "No local mailbox on this device". It only shows when nothing was seeded.
 - **Composition.**
   - `all-exclusions` gets `!apps.mail.providers.local`, so main and the site
-    never ship it. The cache's `soleProvider` requires exactly one provider.
+    never bundle it. The cache's `soleProvider` requires exactly one provider
+    (and `MailProviderConnect` one connect surface at the page root).
+  - Both still hold its web half on demand (`webScopedEntries`), because the
+    demo's scope names it — main's registry is no longer free of on-demand
+    plugins. codegen's `browser-host-scope.test.ts` holds main to carrying on
+    demand only what its own manifest names out, and `page-hosts-on-demand`
+    now checks main too.
   - The demo row opts back in with `apps.mail.providers.local`, and removes
     Gmail with `!apps.mail.providers.gmail.**`.
 

@@ -1,5 +1,6 @@
--- singularity:snapshot id=7c46b070-3117-44b4-9bd3-488900e93d77 parents=e32744f6-1cc6-4e68-a75e-691430613c7f
--- singularity:supersedes fda406ec b2fac164
+-- singularity:snapshot id=6d7d8b80-4752-4b58-9097-b466571d4fbb parents=e32744f6-1cc6-4e68-a75e-691430613c7f
+-- singularity:supersedes 6dc5d3a3
+-- singularity:supersedes 6dc5d3a3 <- fda406ec b2fac164
 -- singularity:phase expand
 CREATE TABLE "mail_local_accounts" (
 	"id" text PRIMARY KEY NOT NULL,

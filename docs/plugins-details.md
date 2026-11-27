@@ -7189,8 +7189,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.db`
               - `database.Db`
               - `database.writeAtomically`
-              - `database/admin.ExcludeFromBackup`
-              - `database/admin.ExcludeFromFork`
               - `database/sql-column.parsedJson`
               - `ids.externalIdColumn`
               - `infra/background/timer.defineTimer`
@@ -7216,6 +7214,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `_mailQueryMembers`
               - `_mailThreadBodies`
               - `_mailThreads`
+              - `CACHE_TABLES`
               - `mailCache`
               - `MailThreadUnavailableError`
               - `onMailThreadsChanged`
@@ -7347,10 +7346,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "mail.draft-attachment-links:rows"
               - `resource.declare` "mail.signature"
               - `attachments.link` "mail_drafts"
+              - `ConfigV2.Register` "mail-compose"
               - `fork-data-exclusion` "mail_drafts"
               - `fork-data-exclusion` "mail_drafts_attachments"
-              - `ConfigV2.Register` "mail-compose"
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/mail/plugins/compose/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/compose/REFERENCE.md)
               - `infra/attachments` ×4
               - `config_v2` ×2
               - `database/derived-updated-at` ×2
@@ -7361,14 +7360,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/retention` ×2
               - `network/live` ×2
               - `apps/mail/cache.mailCache`
-              - `database/admin.ExcludeFromFork`
               - `database.db`
               - `fields/date/format.serverDateFormatter`
               - `shell/notifications.recordNotification`
             - DB schema:
               - `plugins/apps/plugins/mail/plugins/compose/server/internal/schema-attachments.ts`
               - `plugins/apps/plugins/mail/plugins/compose/server/internal/tables.ts`
-            - Exports (values): `_mailDrafts`
+            - Exports (values):
+              - `_mailDraftAttachmentsTable`
+              - `_mailDrafts`
             - Register:
               - `defineJob('mail.draft-mirror')`
               - `defineJob('mail.send')`
@@ -7465,6 +7465,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/threads`
           - Exemptions:
             - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
+        - **`fixtures`** (excluded — cascade) — Mail fixtures, server half: writeMailFixture writes a MailFixture into the local mail provider through its real write paths — the account (setAccount), each label through the provider's own mailbox writes (created level by level, coloured from its palette — never through the Mail cache, which a seed leaves empty), each message through deliver, the inbound write, threaded by In-Reply-To / References in thread order, attachments' data/ files read by the caller's readData. Derives nothing else.
+          - Server:
+            - Uses:
+              - `apps/mail/providers/local.LOCAL_ACCOUNT_ID`
+              - `apps/mail/providers/local.LOCAL_MAILBOX_COLORS`
+              - `apps/mail/providers/local.localMail`
+            - Exports (types): `WriteMailFixtureOptions`
+            - Exports (values): `writeMailFixture`
+          - Core:
+            - Exports (types):
+              - `MailFixture`
+              - `MailFixtureAttachment`
+              - `MailFixtureLabel`
+              - `MailFixtureMessage`
+              - `MailFixtureParticipant`
+              - `MailFixtureThread`
         - **`isle-building`** — Mail's building on Isle: a post office built as a giant cast-iron pillar box in faded post-office red (the app's colour only on its signal flag) — letters fly into its slot, the signal arm rises when one lands, a carrier pigeon comes and goes.
           - Web:
             - Contributes: `Isle.Building` "mail"
@@ -7476,7 +7492,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`provider`** — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered one. Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
           - Web:
             - Slots: `MailProviderUi.Connect`
-            - Slot contributors: `MailProviderUi.Connect` ← `apps.mail.providers.gmail`
+            - Slot contributors:
+              - `MailProviderUi.Connect` ← `apps.mail.providers.gmail`
+              - `MailProviderUi.Connect` ← `apps.mail.providers.local`
             - Uses: `primitives/slot-render.renderIsolated`
             - Exports (types): `MailProviderConnectContribution`
             - Exports (values):
@@ -7484,6 +7502,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MailProviderUi`
           - Core:
             - Uses:
+              - `network/live/filter.canonicalizeFilter`
+              - `network/live/filter.decodeFilter`
+              - `network/live/filter.encodeFilter`
               - `network/live/filter.Filter`
               - `network/live/filter.Filterable`
               - `network/live/filter.FilterColumn`
@@ -7522,12 +7543,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MessageBody`
               - `MessageContent`
               - `MessageFacts`
+              - `MessageId`
               - `MessageListPage`
               - `OutgoingMessage`
               - `Participant`
               - `SavedDraft`
               - `SendIdentity`
               - `SentMessage`
+              - `SummaryMessage`
               - `ThreadContent`
               - `ThreadContentResult`
               - `ThreadId`
@@ -7537,6 +7560,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `assertOutgoingMessageId`
               - `changeCursor`
+              - `compileCanonicalMailQuery`
+              - `decodeCanonicalMailQuery`
+              - `deriveThreadSummary`
               - `draftId`
               - `isDeclaredMailOp`
               - `listCursor`
@@ -7560,7 +7586,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/mail/cache`
               - `apps/mail/compose`
+              - `apps/mail/fixtures`
               - `apps/mail/providers/gmail`
+              - `apps/mail/providers/local`
               - `apps/mail/reader`
               - `apps/mail/threads`
           - Server:
@@ -7644,9 +7672,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted-foreground`
               - Exemptions:
                 - Exempts itself from: `endpoints/no-raw-content-disposition` — `server/internal/content.ts` (sanctioned)
-        - **`reader`** — The Mail reader, web half: ThreadReader — one thread (mail.thread) as the reading pane draws it: the subject and message count, every message oldest first (the last and the unread open, the rest folded to a line), an HTML body in a fitted InlineFrame (an opaque origin, as tall as the message, under the mail policy: images only through this server's proxy and inline-part routes, no script of the body's, no form, frame or font load), a text body as text, each message's files opened in a tab or downloaded. Opening marks nothing read. The Mail reader, server half: mail.thread — one thread from the Mail cache (its stored body while it holds the thread's messages, else fetched from the provider), every HTML body rewritten to work inside the reader's frame policy (remote images through the image proxy, cid: images through the inline-part route, links opening a tab, refreshes and link prefetches cut), re-read when the cache learns the thread moved — and the routes the reader loads mail through: the signed image proxy and inline-part routes the opaque-origin frame reaches (public, each URL an HMAC of what it names), and the attachment route (open or download), both parts kept in infra/attachments under a name-derived id.
+            - **`local`** (excluded) — The local mail provider's browser half: its connect surface for Mail — there is nothing to connect, so it says the server's sentence (no local mailbox on this device) where a list or thread would be. The local mail provider (id `local`, "This device"): a MailProvider whose mailbox lives in this host's own database (mail_local_* tables, every time a timestamptz) — no network, no computer, so it runs on every host (the website's demo serves it from PGlite). Its query is the contract's canonical filter, compiled to SQL by the filter language's SQL half; lists page by (date, id); summaries and counts derived in SQL; every write one atomic statement appending to the change log (its seq the cursor, a thread's latest seq its version); push in-process and always live; send parses the bytes back and stores the message in Sent, threaded by In-Reply-To / References (never delivered anywhere; to the account's own address, also its Inbox). localMail.deliver is the inbound write (mail arriving — no user endpoint makes one) and localMail.setAccount sets up the one account; both are what a fixture writer calls.
+              - Web:
+                - Contributes: `MailProviderUi.Connect` "local" → `LocalMailConnect`
+                - Uses:
+                  - `apps/mail/provider.MailProviderUi`
+                  - `primitives/css/center.Center`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+              - Server:
+                - Contributes: `mail.provider` "This device"
+                - Uses:
+                  - `apps/mail/provider.MailProviders`
+                  - `database.AtomicWrite`
+                  - `database.db`
+                  - `database.Db`
+                  - `database.DbExecutor`
+                  - `database.writeAtomically`
+                  - `database/sql-column.parsedJson`
+                  - `fields/bytes/storage.bytea`
+                  - `ids.externalIdColumn`
+                  - `network/live/filter.filterSql`
+                - DB schema: `plugins/apps/plugins/mail/plugins/providers/plugins/local/server/internal/tables.ts`
+                - Exports (types): `LocalDelivery`
+                - Exports (values):
+                  - `_mailLocalAccounts`
+                  - `_mailLocalAttachments`
+                  - `_mailLocalChanges`
+                  - `_mailLocalMailboxes`
+                  - `_mailLocalMessages`
+                  - `LOCAL_ACCOUNT_ID`
+                  - `LOCAL_MAILBOX_COLORS`
+                  - `localMail`
+              - Cross-plugin:
+                - Imported by: `apps/mail/fixtures`
+        - **`reader`** — The Mail reader, web half: ThreadReader — one thread (mail.thread) as the reading pane draws it: the subject and message count, every message oldest first (the last and the unread open, the rest folded to a line), an HTML body in a fitted InlineFrame (an opaque origin, as tall as the message, under the mail policy: images only through this server's proxy and inline-part routes, no script of the body's, no form, frame or font load), a text body as text, each message's files opened in a tab or downloaded. Opening marks nothing read. The Mail reader, server half: mail.thread — one thread from the Mail cache (its stored body while it holds the thread's messages, else fetched from the provider), every HTML body rewritten to work inside the reader's frame policy (remote images through the image proxy (machine/), cid: images through the inline-part route, links opening a tab, refreshes and link prefetches cut), re-read when the cache learns the thread moved — and the routes the reader loads mail through: the signed inline-part route the opaque-origin frame reaches (public, each URL an HMAC of what it names), and the attachment route (open or download), both parts kept in infra/attachments under a name-derived id.
           - Server:
-            - Contributes: `resource.declare` "mail.thread"
+            - Contributes:
+              - `resource.declare` "mail.inline-images"
+              - `resource.declare` "mail.thread"
             - Uses:
               - `apps/mail/cache._mailAccounts`
               - `apps/mail/cache._mailMailboxes`
@@ -7663,24 +7727,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/attachments.readAttachmentBytes`
               - `infra/endpoints.endpointPath`
               - `infra/endpoints.rawEndpointHandler`
-              - `infra/safe-fetch.isUnreachableError`
-              - `infra/safe-fetch.safeFetch`
-              - `infra/safe-fetch.SsrfError`
               - `network/live.serveValue`
-            - Resources: `mail.thread` (push, notified, whole: the mailboxes one thread is in: a handful of labels, capped: READER_MESSAGES_MAX, whole: the mailboxes one message is in: a handful of labels, whole: one message's attachments, as the provider lists them, whole: one message's own address header, as the sender wrote it)
+            - Exports (values):
+              - `refused`
+              - `UNTRUSTED_HEADERS`
+              - `verifyMail`
+            - Resources:
+              - `mail.inline-images` (push, notified, capped: MAIL_INLINE_IMAGES_MAX)
+              - `mail.thread` (push, notified, whole: the mailboxes one thread is in: a handful of labels, capped: READER_MESSAGES_MAX, whole: the mailboxes one message is in: a handful of labels, whole: the inline images of one message's body, as its parts list them, whole: one message's attachments, as the provider lists them, whole: one message's own address header, as the sender wrote it)
             - Routes:
-              - `GET /api/mail/image/:sig`
               - `GET /api/mail/inline/:sig`
               - `GET /api/mail/attachment/:threadId/:messageId/:partId`
           - Web:
-            - Uses: 26 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
+              - `infra/endpoints` ×2
               - `primitives/css/fill` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `apps/mail/provider.MailProviderConnect`
               - `fields/date/format.useDateFormatter`
-              - `infra/endpoints.useAssetUrl`
               - `network/live/live-state.ResourceError`
               - `network/live.useLive`
               - `primitives/bar.Bar`
@@ -7695,8 +7761,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.gestureOf`
               - `primitives/loading.Loading`
+              - `primitives/networking.useTransport`
               - `ui/icons.Icon`
             - Exports (values): `ThreadReader`
+          - Machine:
+            - Uses: `infra/endpoints.machineHandler`
+            - Routes: `GET /api/mail/image/:sig`
           - Core:
             - Uses:
               - `infra/endpoints.blob`
@@ -7707,16 +7777,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `MailThreadRefusal`
               - `ReaderAttachment`
+              - `ReaderInlineImage`
               - `ReaderMessage`
               - `ReaderThread`
             - Exports (values):
+              - `inlineImageToken`
+              - `MAIL_INLINE_IMAGES_MAX`
               - `MAIL_THREAD_REFUSALS`
               - `mailAttachment`
               - `mailImageProxy`
+              - `mailInlineImages`
               - `mailInlinePart`
               - `mailThread`
               - `READER_MESSAGES_MAX`
               - `ReaderAttachmentSchema`
+              - `ReaderInlineImageSchema`
               - `ReaderMessageSchema`
               - `ReaderThreadSchema`
           - Cross-plugin:
@@ -13959,6 +14034,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Exports (values):
                       - `DEMO_AGENTS`
                       - `DEMO_BEFORE_AFTERS`
+                      - `DEMO_MAIL`
                       - `DEMO_PAGE_IDS`
                       - `DEMO_PLACES`
                       - `DEMO_PRACTICE_TIMER_BEFORE_AFTER`
@@ -14298,7 +14374,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/website/landing/hero`
         - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
           - Plugins:
-            - **`apps`** — The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, the ways to use equin as a whole surface — Desktop and Isle —, coming next), each card's Install and the 'Missing an app?' band going to the download page, and its Apps nav link; the page ends on the site's Try it band. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`apps`** — The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, office, leisure, tools, the ways to use equin as a whole surface — Desktop and Isle —, coming next), each card's Install and the 'Missing an app?' band going to the download page, and its Apps nav link; the page ends on the site's Try it band. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-apps"
@@ -26351,8 +26427,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 193 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×52
+    - Imported by: 194 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×53
       - `tasks` ×24
       - `conversations` ×22
       - `infra` ×19
@@ -27303,8 +27379,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
-          - `apps` ×10
+        - Imported by: 39 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+          - `apps` ×11
           - `fields` ×6
           - `infra` ×6
           - `conversations` ×3
@@ -27381,9 +27457,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Cross-plugin:
-        - Imported by: 62 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
+        - Imported by: 63 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
           - `database` ×16
-          - `apps` ×10
+          - `apps` ×11
           - `debug` ×7
           - `tasks` ×7
           - `infra` ×5
@@ -31779,6 +31855,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `bytesToBase64`
           - Cross-plugin:
             - Imported by:
+              - `apps/mail/providers/local`
               - `fields/server-capabilities-loader`
               - `page/editor-collab`
     - **`color`** — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
@@ -37828,8 +37905,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 62 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `apps` ×21
+    - Imported by: 63 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×22
       - `conversations` ×8
       - `tasks` ×7
       - `infra` ×4
@@ -46327,6 +46404,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/cache`
               - `apps/mail/provider`
               - `apps/mail/providers/gmail`
+              - `apps/mail/providers/local`
               - `fields/bool/filter`
               - `fields/date/filter`
               - `fields/enum/filter`
@@ -47122,11 +47200,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/document-head`
     - **`deadline`** — Bound an await, on AWAKE time: withDeadline(work, budgetMs, onTimeout) races a promise against armAwakeDeadline — the one timer a machine sleep does not spend (performance.now pauses through sleep; a setTimeout does not, so it re-arms for what is left) — rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means. wallNow(reason) is Date.now() with the reason the wall clock is right stated as a typed WallClockReason (retention, expiry, external, schedule, fail-open-lease, human-time, lookback, sleep-detection); the lint no-unstated-wall-age reports a bare Date.now() used as an age or a deadline check, so a deliberate wall-clock judgement can be told from one that forgot the machine sleeps.
       - Cross-plugin:
-        - Imported by: 87 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
+        - Imported by: 89 plugins — full list in [`plugins/packages/plugins/deadline/REFERENCE.md`](../plugins/packages/plugins/deadline/REFERENCE.md)
           - `infra` ×24
+          - `apps` ×14
           - `debug` ×14
           - `framework` ×13
-          - `apps` ×12
           - `conversations` ×5
           - `database` ×3
           - `integrations` ×2
@@ -47428,22 +47506,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTimeSlicer`
           - `createTurnQueue`
           - `yieldMacrotask`
-    - **`mime`** — RFC 5322 / 2045 message builder in plain JS, on every host: buildMimeMessage({ from, to, cc, bcc, subject, date, messageId, inReplyTo, references, text, html, attachments }) → the message's bytes — headers folded at 78 columns, non-ASCII words as RFC 2047 encoded-words, addresses with quoted display names, a text/plain (and text/html) body in quoted-printable UTF-8, multipart/alternative and multipart/mixed with base64 attachments (RFC 2231 filenames) — and newMessageId(domain), a fresh Message-ID.
+    - **`mime`** — RFC 5322 / 2045 message builder in plain JS, on every host: buildMimeMessage({ from, to, cc, bcc, subject, date, messageId, inReplyTo, references, text, html, attachments }) → the message's bytes — headers folded at 78 columns, non-ASCII words as RFC 2047 encoded-words, addresses with quoted display names, a text/plain (and text/html) body in quoted-printable UTF-8, multipart/alternative and multipart/mixed with base64 attachments (RFC 2231 filenames) — newMessageId(domain), a fresh Message-ID — and its reader: parseMimeMessage(bytes) → the headers (encoded words decoded, address lists parsed, Message-ID / In-Reply-To / References), the first text and HTML bodies decoded from their transfer encoding and charset, and every other leaf part as an attachment (RFC 2231 filenames, Content-ID); decodeEncodedWords / parseAddressList / parseMailbox for headers read elsewhere.
       - Cross-plugin:
-        - Imported by: `apps/mail/compose`
+        - Imported by:
+          - `apps/mail/compose`
+          - `apps/mail/providers/gmail`
+          - `apps/mail/providers/local`
       - Exemptions:
-        - Exempts itself from: `endpoints/no-raw-content-disposition` — `core/internal/build.ts` (sanctioned)
+        - Exempts itself from:
+          - `endpoints/no-raw-content-disposition` — `core/internal/build.ts` (sanctioned)
+          - `endpoints/no-raw-content-disposition` — `core/internal/parse.ts` (sanctioned)
       - Core:
         - Exports (types):
           - `MimeAddress`
           - `MimeAttachment`
           - `MimeMessage`
+          - `ParsedAddress`
+          - `ParsedMimeAttachment`
+          - `ParsedMimeBody`
+          - `ParsedMimeMessage`
         - Exports (values):
           - `buildMimeMessage`
+          - `decodeEncodedWords`
+          - `decoderFor`
           - `encodeQuotedPrintable`
           - `encodeWord`
           - `formatAddress`
           - `newMessageId`
+          - `parseAddressList`
+          - `parseMailbox`
+          - `parseMimeMessage`
     - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Opens through packages/timed-fs (so a read through the descriptor is counted, timed and guarded once per file, like a readFile), otherwise node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
       - Core:
         - Uses:
@@ -53881,8 +53973,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 149 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×46
+            - Imported by: 150 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×47
               - `primitives` ×31
               - `page` ×18
               - `conversations` ×12
@@ -54903,8 +54995,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 483 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×117
+            - Imported by: 484 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×118
               - `conversations` ×79
               - `primitives` ×57
               - `debug` ×39
@@ -55166,8 +55258,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×38
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 456 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×116
+            - Imported by: 457 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×117
               - `conversations` ×84
               - `primitives` ×50
               - `debug` ×39
@@ -59490,8 +59582,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
-          - `apps` ×9
+        - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+          - `apps` ×10
           - `primitives` ×7
           - `conversations` ×5
           - `network` ×5
@@ -60542,6 +60634,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tab-origin`
               - `apps-core/tabs`
               - `apps/website/crawlable`
+              - `apps/website/landing/screenshot`
               - `apps/website/live-demo`
               - `apps/website/shell`
               - `framework/web-core`

@@ -657,7 +657,8 @@ const SCOPED_ENTRIES_DIR = "web";
  * The `scopedEntries` of `bundle`'s web registry: the page scope of every
  * browser host a bundled plugin declares, minus the bundle's own plugins
  * (`scopedOnlyWebPlugins`) — each with its `dependsOn` pruned to the plugins
- * the registry lists (own ∪ scoped). Empty for main, which bundles every scope.
+ * the registry lists (own ∪ scoped). Empty for a composition bundling its
+ * whole scope; main's holds only what its manifest names out of main.
  */
 async function collectScopedEntries(
   ctx: RegistryGenContext,

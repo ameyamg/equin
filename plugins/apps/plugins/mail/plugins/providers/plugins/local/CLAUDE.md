@@ -8,7 +8,11 @@ from the browser's PGlite. Design:
 
 - **Not on main.** `all-exclusions` negates it (`!apps.mail.providers.local`):
   the cache serves exactly one provider, so a composition ships it instead of
-  Gmail (`agent-manager-demo` names it and negates Gmail).
+  Gmail (`agent-manager-demo` names it and negates Gmail). Main's page (and the
+  website's) still holds its web half **on demand** (the web registry's
+  `webScopedEntries`), since the live demo's scope names it: loaded into the
+  demo on Enter and visible only there, so main's page root never sees a
+  second `MailProviderUi.Connect` and main's backend never a second provider.
 - **Tables** (`server/internal/tables.ts`): `mail_local_accounts` (one row,
   id `local`), `mail_local_mailboxes` (labels only: role mailboxes are the
   provider's constants), `mail_local_messages` (participants and

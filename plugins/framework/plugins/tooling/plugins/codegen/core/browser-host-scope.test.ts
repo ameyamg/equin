@@ -1,6 +1,8 @@
 /**
  * What a composition carries on demand, over the real repo: main bundles
- * every plugin, so nothing; the standalone website bundles the workspace
+ * every scope's web plugin except the ones its own manifest names out (the
+ * local mail provider: Mail serves one provider, and main's is Gmail), so
+ * only those — never one a removal cascade dropped; the standalone website bundles the workspace
  * demo's declaring plugin, so the demo's page scope beyond the site's own
  * plugins — web plugins only, none of them in the site's bundle (its
  * backend), and the web registry renders them as `webScopedEntries`.
@@ -24,7 +26,10 @@ import {
   resolveHostScope,
   scopedOnlyWebPlugins,
 } from "./browser-host-scope";
-import { readCompositionManifestsFromDisk } from "./main-bundle";
+import {
+  readCompositionManifestsFromDisk,
+  resolveMainComposition,
+} from "./main-bundle";
 import {
   buildRegistryGenContext,
   renderCollectedDirRegistry,
@@ -41,9 +46,17 @@ async function repoContext() {
 }
 
 describe("scopedOnlyWebPlugins over the repo", () => {
-  test("main carries nothing on demand: it bundles every scope", async () => {
+  test("main carries on demand only the scope plugins its manifest names out", async () => {
     const ctx = await repoContext();
-    expect(await scopedOnlyWebPlugins(ctx, ctx.mainBundle)).toEqual([]);
+    const main = resolveMainComposition(ctx.graph, ctx.root);
+    const scoped = await scopedOnlyWebPlugins(ctx, ctx.mainBundle);
+    // Every other scope plugin is main's own: nothing falls out of main's
+    // bundle by a cascade and reaches the demo on demand unnoticed.
+    expect(scoped.filter((id) => !main.negated.has(id))).toEqual([]);
+    // The one main names out (`all-exclusions`) that the demo names back in:
+    // its server half would be a second mail provider in main's backend, its
+    // web half a second connect surface at main's page root.
+    expect(scoped).toEqual([asPluginId("apps.mail.providers.local")]);
   });
 
   test("the website carries the demo's page scope beyond its own plugins, web plugins only", async () => {

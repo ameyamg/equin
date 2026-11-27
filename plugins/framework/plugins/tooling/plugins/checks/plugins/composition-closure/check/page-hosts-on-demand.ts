@@ -10,7 +10,6 @@ import {
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import { manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import {
@@ -37,13 +36,14 @@ const PAGE_SCOPE = /^["'`]page["'`]$/;
  * in that composition — unless its plugin says that is right.
  *
  * A composition that bundles a browser host's declaring plugin but not its
- * whole scope (the standalone website and its live demo) holds the rest on
+ * whole scope (the standalone website and its live demo; main too, for a
+ * plugin its manifest names out and the demo names back in) holds the rest on
  * demand: loaded into the scope, left out of every read at the page root. A
  * root mount declared `scope: "page"` (`RootScope`, web-sdk) is mounted only
  * at the page root — so one belonging to an on-demand plugin is mounted
- * nowhere. On main's `/demo` the same host runs (main bundles every plugin),
- * so nothing there shows what the site lacks: the site's error collectors were
- * missing that way.
+ * nowhere. Main's `/demo` runs every host main bundles itself, so it does not
+ * show what the site lacks: the site's error collectors were missing that way.
+ * Every composition is checked, main included.
  *
  * Each one is a decision: the composition holds the plugin as its own (the
  * host is page chrome it needs), the host serves every scope (`scope:
@@ -68,7 +68,6 @@ export const pageHostsOnDemand: Check = {
     const manifests = items.map(manifestItemToManifest);
     const problems: string[] = [];
     for (const item of items) {
-      if (item.id === MAIN_COMPOSITION_ID) continue;
       const flat = flattenManifest(manifestItemToManifest(item), manifests);
       const { bundle } = resolveComposition(graph, flat);
       if (bundle.size === 0) continue;
