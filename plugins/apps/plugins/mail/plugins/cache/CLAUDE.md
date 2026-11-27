@@ -3,8 +3,41 @@
 The Mail app's cache: mail loaded **on demand** behind the provider contract
 (`mail/provider`), never a mirror of the mailbox. Design: §3–4 of
 [`research/2026-11-26-apps-mail-on-demand-cache-provider.md`](../../../../../../research/2026-11-26-apps-mail-on-demand-cache-provider.md).
-It never names a provider: it serves the one registered `MailProviders.Provider`
-(v1: one account).
+It never names a provider. It serves one account (v1), on one of the registered
+`MailProviders.Provider`s — a composition may register several (the local
+demo mailbox beside Gmail: promo-film did, 2026-11-27, and every
+`mail.account-status` read failed while the cache demanded exactly one):
+
+- **Which provider** (`resolveProvider`, engine): the one chosen in Settings →
+  Config → Mail account (`mailAccountConfig`; options from the registered
+  connect surfaces), else the one whose `connectedAccount()` is not
+  `not-connected` (offline counts: its cached mail still answers). Several
+  connected: the one whose account the cache already holds; none held →
+  refused `provider-not-chosen` (a refusal of its own on `mail.threads`,
+  `mail.mailboxes` and `mail.thread`; the list and the reader draw
+  `MailProviderChoice` in place — a button per provider, writing the same
+  setting). None connected → refused `not-connected` with each provider's
+  sentence.
+- **One account row.** A read resolving an account drops every other row
+  (another provider's, its cache cascading) and notifies, so the status,
+  the boot preload, an offline read and compose can only ever name one.
+- **The status and the boot preload** read no connection: the one account
+  row among the eligible providers (the chosen one, else all registered).
+  None → `none`, never a failure, so a page with the health row never waits
+  on Mail.
+- **A choice applies at once**: `watchProviderChoice` notifies
+  `mail.threads`, `mail.mailboxes`, `mail.account-status` and re-decides the
+  tick when the setting moves.
+- **Compose** asks `sender(writtenFrom)` with the draft's account: a draft
+  written from an account Mail left is refused `MailNotConnectedError`,
+  never sent through another.
+- **Push**: every registered provider's push is listened to; a change syncs
+  when it is the account's provider (or before the first read resolved one).
+- **Known gap**: the local provider stores its mailbox in this host's
+  Postgres, and its calls run inside the cache's loaders. Those tables are
+  in no declared read, so on a Bun host the route-drift guard reports them
+  once (it fails open). Their changes reach Mail through the provider's own
+  change log and push.
 
 ## What it serves (`core`)
 
@@ -302,27 +335,38 @@ offline, the byte budget, prefetch (speculative priority, neighbours first).
 
 ## Plugin reference
 
-- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, conversations kept in the list cache, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, the eviction sweeps and the summary cap (least recently used out, threads no query holds first, a held one's query coverage cut back above it) — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
+- Description: The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, conversations kept in the list cache, bodies prefetched per run) and the Mail account's provider (automatic: the connected one; or a registered provider by name, offered from their connect surfaces) for Settings → Config; MailProviderChoice — the same choice drawn in place of a mail list or thread refused provider-not-chosen (several accounts connected). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, the eviction sweeps and the summary cap (least recently used out, threads no query holds first, a held one's query coverage cut back above it) — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister` "mail-account"
     - `ConfigV2.WebRegister` "mail-cache"
+    - `DynamicEnum.Options` "Mail provider"
     - `HealthReport.Row` "Mail"
   - Uses:
+    - `apps/mail/provider.MailProviderUi`
     - `config_v2.ConfigV2`
+    - `config_v2.useSetConfig`
     - `fields/date/format.useDateFormatter`
+    - `fields/dynamic-enum/config.DynamicEnum`
     - `network/live.useLive`
+    - `primitives/css/center.Center`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
     - `shell/health-report.HealthReport`
+  - Exports (values): `MailProviderChoice`
 - Server:
-  - Contributes: 24 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 25 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `backup-data-exclusion` ×6
     - `change-feed-exclusion` ×6
     - `fork-data-exclusion` ×6
     - `resource.declare` ×5
-    - `ConfigV2.Register` "mail-cache"
+    - `ConfigV2.Register` ×2
   - Uses:
     - `apps/mail/provider.MailProviders`
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `config_v2.watchConfig`
     - `database.db`
     - `database.Db`
     - `database.writeAtomically`
@@ -374,26 +418,19 @@ offline, the byte budget, prefetch (speculative priority, neighbours first).
     - `PATCH /api/mail/labels/:id`
     - `DELETE /api/mail/labels/:id`
 - Core:
-  - Uses:
-    - `apps/mail/provider.MAIL_QUERY_OPS`
-    - `apps/mail/provider.Mailbox`
-    - `apps/mail/provider.MAILBOX_ROLES`
-    - `apps/mail/provider.MailboxId`
-    - `apps/mail/provider.roleMailboxId`
-    - `apps/mail/provider.THREAD_PARTICIPANTS_MAX`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/mail/provider` ×6
+    - `network/live` ×3
+    - `fields/text/config` ×2
     - `config_v2.defineConfig`
-    - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/dynamic-enum/config.dynamicEnumField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/string-list/config.stringListField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.textField`
+    - `fields.nullable`
     - `infra/endpoints.defineEndpoint`
-    - `network/live.liveCollection`
-    - `network/live.LiveRowsCollection`
-    - `network/live.liveValue`
     - `packages/list-bound.cappedList`
   - Exports (types):
     - `MailAccountStatus`
@@ -415,6 +452,7 @@ offline, the byte budget, prefetch (speculative priority, neighbours first).
     - `isMailRole`
     - `MAIL_THREADS_MAX_LIMIT`
     - `MAIL_THREADS_REFUSALS`
+    - `mailAccountConfig`
     - `mailAccountStatus`
     - `MailAccountStatusSchema`
     - `mailboxViewFilter`

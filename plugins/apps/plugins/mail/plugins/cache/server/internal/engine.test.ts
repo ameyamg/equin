@@ -78,7 +78,7 @@ function harness(opts: FakeMailProviderOptions) {
   const ops: MailOpJob[] = [];
   const cache = createMailCache({
     db: t.db,
-    definition: () => f.definition,
+    providers: () => ({ all: [f.definition], chosen: null }),
     refuse: (code, message) => mailThreads.refuse(code, message),
     notifyThreads: (ids) => {
       notified++;

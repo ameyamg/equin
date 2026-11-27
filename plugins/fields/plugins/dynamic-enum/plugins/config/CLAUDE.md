@@ -23,6 +23,7 @@ text input when no contribution matches.
   - Slots: `DynamicEnum.Options`
   - Slot contributors:
     - `DynamicEnum.Options` ← `apps-core.app-rail-framing`
+    - `DynamicEnum.Options` ← `apps.mail.cache`
     - `DynamicEnum.Options` ← `conversations.conversation-category`
     - `DynamicEnum.Options` ← `conversations.conversation-view.launch-prompts`
     - `DynamicEnum.Options` ← `conversations.model-provider`
@@ -67,6 +68,7 @@ text input when no contribution matches.
     - `useDynamicEnumSampleOptions`
 - Cross-plugin:
   - Imported by:
+    - `apps/mail/cache`
     - `conversations/conversation-category`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/model-provider`

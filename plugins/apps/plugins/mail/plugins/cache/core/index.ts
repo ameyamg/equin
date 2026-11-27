@@ -18,7 +18,7 @@ export {
   type MailAccountStatus,
   type MailPushStatus,
 } from "./internal/account-status";
-export { mailCacheConfig } from "./internal/config";
+export { mailAccountConfig, mailCacheConfig } from "./internal/config";
 export {
   applyMailOp,
   inMailTrash,

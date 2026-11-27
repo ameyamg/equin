@@ -4,7 +4,8 @@ Writing mail (design §6, step 7 of
 [`research/2026-11-26-apps-mail-on-demand-cache-provider.md`](../../../../../../research/2026-11-26-apps-mail-on-demand-cache-provider.md)):
 compose, reply, reply all, forward, drafts, attachments and the outbox with
 undo send. It names no provider: it writes through the account the cache
-serves (`mailCache.sender()`), the bytes built by `packages/mime`.
+serves (`mailCache.sender(writtenFrom)`: a draft's own account, refused when
+Mail has moved to another), the bytes built by `packages/mime`.
 
 ## The draft is a server row (`mail_drafts`)
 

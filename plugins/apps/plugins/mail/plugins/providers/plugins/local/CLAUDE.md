@@ -7,8 +7,11 @@ from the browser's PGlite. Design:
 [`research/2026-11-27-global-mail-in-browser-demo.md`](../../../../../../../../research/2026-11-27-global-mail-in-browser-demo.md) §1.
 
 - **Not on main.** `all-exclusions` negates it (`!apps.mail.providers.local`):
-  the cache serves exactly one provider, so a composition ships it instead of
-  Gmail (`agent-manager-demo` names it and negates Gmail). Main's page (and the
+  main's Mail is the user's Gmail, so a demo composition ships it instead of
+  Gmail (`agent-manager-demo` names it and negates Gmail). A composition
+  may ship both (promo-film does): the cache then serves whichever is
+  connected — this one only once a seed set up its account — or the one
+  chosen in Settings → Config → Mail account (`mail/cache`). Main's page (and the
   website's) still holds its web half **on demand** (the web registry's
   `webScopedEntries`), since the live demo's scope names it: loaded into the
   demo on Enter and visible only there, so main's page root never sees a

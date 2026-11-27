@@ -3,11 +3,13 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 
 /**
  * What a mail provider draws in the browser. A provider kind contributes its
- * own (`providers/*`); a consumer renders the registered one and names none.
+ * own (`providers/*`); a consumer renders the registered ones and names none.
  */
 export interface MailProviderConnectContribution {
   /** The provider kind (`MailProviderDefinition.id`, e.g. `gmail`). */
   id: string;
+  /** Its name as a person picks it (`MailProviderDefinition.label`): Settings → Config → Mail account's options. */
+  label: string;
   /**
    * In place of a list the account cannot answer (`not-connected`): what is
    * missing and the control that fixes it, in place — never a route to

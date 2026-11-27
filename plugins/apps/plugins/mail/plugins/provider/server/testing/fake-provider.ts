@@ -107,6 +107,8 @@ export type FakeMailProviderOptions = {
   changesPageMax?: number;
   /** The fake's declared `listOrderSlackMs` (default 0: it lists and cuts by `date`). */
   listOrderSlackMs?: number;
+  /** The provider kind's id and label (default `fake`, "Fake mail"): two fakes stand for two registered providers. */
+  kind?: { id: string; label: string };
   /** The connected account (default `fake-account`, `fake@example.com`). */
   account?: { accountId: string; address: string };
   /** The provider's push (default none: the cache's fallback tick). */
@@ -658,8 +660,8 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
   };
 
   const definition: MailProviderDefinition = {
-    id: "fake",
-    label: "Fake mail",
+    id: opts.kind?.id ?? "fake",
+    label: opts.kind?.label ?? "Fake mail",
     capabilities: {
       mailboxModel: "labels",
       mailboxDefinitions: "in-changes",

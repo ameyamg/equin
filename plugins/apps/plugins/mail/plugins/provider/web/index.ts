@@ -6,7 +6,7 @@ export { MailProviderConnect } from "./components/provider-connect";
 
 export default {
   description:
-    "Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered one.",
+    "Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered ones (several: each, one under the other).",
   contributions: [],
   slots: MailProviderUi,
 } satisfies PluginDefinition;

@@ -1,0 +1,5 @@
+// @hash a4a724a127ad
+{
+  // Which mail account Mail reads. Automatic uses the one that is connected; choose one only when several are (a demo mailbox on this device beside Gmail).
+  "provider": ""
+}

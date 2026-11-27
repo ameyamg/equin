@@ -96,6 +96,9 @@ const MAIL_THREADS_PAGE = 25;
  *
  * - `not-connected` — the mail account needs (re)connecting; the UI renders
  *   the provider's connect action in place of the list;
+ * - `provider-not-chosen` — several providers' accounts are connected and
+ *   none is chosen (Settings → Config → Mail account); the UI draws the
+ *   choice in place of the list;
  * - `offline-not-cached` — the provider cannot be reached and the cache does
  *   not cover this window (a covered one still answers offline);
  * - `filter-refused` — the provider cannot run one of the filter's rules (the
@@ -103,6 +106,7 @@ const MAIL_THREADS_PAGE = 25;
  */
 export const MAIL_THREADS_REFUSALS = [
   "not-connected",
+  "provider-not-chosen",
   "offline-not-cached",
   "filter-refused",
 ] as const;

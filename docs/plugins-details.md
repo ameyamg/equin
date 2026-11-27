@@ -7175,27 +7175,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/keyboard-party/isle-building`
     - **`mail`** — Mail (rebuild) — umbrella for the new Mail app: the provider-neutral mail contract, its providers (Gmail first), the cache, the shell and the threads list.
       - Plugins:
-        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, conversations kept in the list cache, bodies prefetched per run) for Settings → Config. The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, the eviction sweeps and the summary cap (least recently used out, threads no query holds first, a held one's query coverage cut back above it) — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
+        - **`cache`** — The Mail cache, browser half: the health report's Mail row (absent until Mail has been opened with an account) — attention while the account needs reconnecting, the last sync step failed or push is set up but down, grey while offline (cached mail still shown), ok once synced, saying how changes arrive (instant updates by push, or the fallback tick and why).; registers the cache's budgets (message body budget, conversations kept in the list cache, bodies prefetched per run) and the Mail account's provider (automatic: the connected one; or a registered provider by name, offered from their connect surfaces) for Settings → Config; MailProviderChoice — the same choice drawn in place of a mail list or thread refused provider-not-chosen (several accounts connected). The Mail cache, server half: the mail_* tables (one account, its mailboxes, cached thread summaries, per-query coverage and members), mail.threads served external — a window answered from coverage, else filled from the provider's date-ordered message list (cut at the coverage floor widened by the provider's declared clock slack, summaries fetched only when not cached, stale or missing the listed message), one sync step per account (coalesced: a read's catch-up, every change the provider's push signals, a 30 s tick while any mail view is subscribed and push is not live — the documented no-polling exception — and a 10-min job on main) applying the provider's changes since the cursor, re-checking locally maintained queries per message and re-listing the others, notifying open windows and relisting the mailbox counts, a reset marking everything stale — mail.account-status (connection, change signal — push state and whether the fallback ticks — last sync and its failure), refused typed when not connected / offline and not cached / a filter rule the provider cannot run — mail.mailboxes with the provider's counts, the eviction sweeps and the summary cap (least recently used out, threads no query holds first, a held one's query coverage cut back above it) — and triage (POST /api/mail/threads/apply): an op (Done, read / unread, labels, trash, spam, move to Inbox) written into the cache first (each message as the op leaves it, the locally maintained queries re-checked, the windows notified), then to the provider by the durable mail.apply-op job (serial, retried; given up, the threads re-read from the provider) — and label create (a / path, missing levels made), rename and delete.
           - Web:
             - Contributes:
+              - `ConfigV2.WebRegister` "mail-account"
               - `ConfigV2.WebRegister` "mail-cache"
+              - `DynamicEnum.Options` "Mail provider"
               - `HealthReport.Row` "Mail"
             - Uses:
+              - `apps/mail/provider.MailProviderUi`
               - `config_v2.ConfigV2`
+              - `config_v2.useSetConfig`
               - `fields/date/format.useDateFormatter`
+              - `fields/dynamic-enum/config.DynamicEnum`
               - `network/live.useLive`
+              - `primitives/css/center.Center`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `shell/health-report.HealthReport`
+            - Exports (values): `MailProviderChoice`
           - Server:
-            - Contributes: 24 contributions — full list in [`plugins/apps/plugins/mail/plugins/cache/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/cache/REFERENCE.md)
+            - Contributes: 25 contributions — full list in [`plugins/apps/plugins/mail/plugins/cache/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/cache/REFERENCE.md)
               - `backup-data-exclusion` ×6
               - `change-feed-exclusion` ×6
               - `fork-data-exclusion` ×6
               - `resource.declare` ×5
-              - `ConfigV2.Register` "mail-cache"
+              - `ConfigV2.Register` ×2
             - Uses:
               - `apps/mail/provider.MailProviders`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+              - `config_v2.watchConfig`
               - `database.db`
               - `database.Db`
               - `database.writeAtomically`
@@ -7247,26 +7258,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PATCH /api/mail/labels/:id`
               - `DELETE /api/mail/labels/:id`
           - Core:
-            - Uses:
-              - `apps/mail/provider.MAIL_QUERY_OPS`
-              - `apps/mail/provider.Mailbox`
-              - `apps/mail/provider.MAILBOX_ROLES`
-              - `apps/mail/provider.MailboxId`
-              - `apps/mail/provider.roleMailboxId`
-              - `apps/mail/provider.THREAD_PARTICIPANTS_MAX`
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/mail/plugins/cache/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/cache/REFERENCE.md)
+              - `apps/mail/provider` ×6
+              - `network/live` ×3
+              - `fields/text/config` ×2
               - `config_v2.defineConfig`
-              - `fields.nullable`
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
+              - `fields/dynamic-enum/config.dynamicEnumField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
               - `fields/string-list/config.stringListField`
-              - `fields/text/config.enumTextField`
-              - `fields/text/config.textField`
+              - `fields.nullable`
               - `infra/endpoints.defineEndpoint`
-              - `network/live.liveCollection`
-              - `network/live.LiveRowsCollection`
-              - `network/live.liveValue`
               - `packages/list-bound.cappedList`
             - Exports (types):
               - `MailAccountStatus`
@@ -7288,6 +7292,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isMailRole`
               - `MAIL_THREADS_MAX_LIMIT`
               - `MAIL_THREADS_REFUSALS`
+              - `mailAccountConfig`
               - `mailAccountStatus`
               - `MailAccountStatusSchema`
               - `mailboxViewFilter`
@@ -7509,13 +7514,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md)
               - `apps/isle/buildings` ×22
             - Exports (values): `pillarBox`
-        - **`provider`** — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered one. Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
+        - **`provider`** — Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered ones (several: each, one under the other). Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
           - Web:
             - Slots: `MailProviderUi.Connect`
             - Slot contributors:
               - `MailProviderUi.Connect` ← `apps.mail.providers.gmail`
               - `MailProviderUi.Connect` ← `apps.mail.providers.local`
-            - Uses: `primitives/slot-render.renderIsolated`
+            - Uses:
+              - `primitives/css/spacing.Stack`
+              - `primitives/slot-render.renderIsolated`
             - Exports (types): `MailProviderConnectContribution`
             - Exports (values):
               - `MailProviderConnect`
@@ -7759,12 +7766,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GET /api/mail/inline/:sig`
               - `GET /api/mail/attachment/:threadId/:messageId/:partId`
           - Web:
-            - Uses: 28 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/mail/plugins/reader/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reader/REFERENCE.md)
               - `infra/endpoints` ×2
               - `primitives/css/fill` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
+              - `apps/mail/cache.MailProviderChoice`
               - `apps/mail/provider.MailProviderConnect`
               - `fields/date/format.useDateFormatter`
               - `network/live/live-state.ResourceError`
@@ -7888,7 +7896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
               - `thread-actions` "triage" → `RowTriage`
-            - Uses: 58 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses: 59 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `primitives/data-view` ×9
               - `network/live/live-state` ×5
               - `primitives/css/ui-kit` ×5
@@ -7899,6 +7907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing` ×2
               - `primitives/data-view/list` ×2
               - `tag-tree/picker` ×2
+              - `apps/mail/cache.MailProviderChoice`
               - `apps/mail/provider.MailProviderConnect`
               - `apps/mail/reader.ThreadReader`
               - `fields/date/format.useDateFormatter`
@@ -32332,6 +32341,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots: `DynamicEnum.Options`
             - Slot contributors:
               - `DynamicEnum.Options` ← `apps-core.app-rail-framing`
+              - `DynamicEnum.Options` ← `apps.mail.cache`
               - `DynamicEnum.Options` ← `conversations.conversation-category`
               - `DynamicEnum.Options` ← `conversations.conversation-view.launch-prompts`
               - `DynamicEnum.Options` ← `conversations.model-provider`
@@ -32376,6 +32386,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useDynamicEnumSampleOptions`
           - Cross-plugin:
             - Imported by:
+              - `apps/mail/cache`
               - `conversations/conversation-category`
               - `conversations/conversation-view/launch-prompts`
               - `conversations/model-provider`
@@ -54170,8 +54181,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 150 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×47
+            - Imported by: 151 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×48
               - `primitives` ×31
               - `page` ×18
               - `conversations` ×12
@@ -55192,8 +55203,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 485 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×118
+            - Imported by: 487 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×120
               - `conversations` ×79
               - `primitives` ×57
               - `debug` ×39
@@ -55455,8 +55466,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×38
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 460 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×117
+            - Imported by: 461 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×118
               - `conversations` ×84
               - `primitives` ×50
               - `debug` ×39
@@ -55781,8 +55792,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 495 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `apps` ×117
+            - Imported by: 496 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `apps` ×118
               - `primitives` ×115
               - `conversations` ×53
               - `page` ×27

@@ -39,7 +39,7 @@ export const mailMailboxes = liveCollection("mail.mailboxes", {
   },
   id: "id",
   // Its reads need the account, as mail.threads' do (MAIL_THREADS_REFUSALS).
-  refusals: ["not-connected", "offline-not-cached"],
+  refusals: ["not-connected", "provider-not-chosen", "offline-not-cached"],
   all: {
     orderBy: [["name", "asc"]],
     // Gmail caps an account at 10,000 labels; the account measured on

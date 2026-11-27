@@ -4,6 +4,7 @@ import {
   applyMailThreadOp,
   createMailLabel,
   deleteMailLabel,
+  mailAccountConfig,
   mailCacheConfig,
   updateMailLabel,
 } from "../core";
@@ -18,6 +19,7 @@ import {
   mailMailboxesServed,
   mailSync,
   mailThreadsServed,
+  watchProviderChoice,
 } from "./internal/served";
 
 export { mailCache, onMailThreadsChanged } from "./internal/served";
@@ -67,6 +69,7 @@ export default {
     ...mailAccountStatusServed.declare,
     ...cacheTableExclusions,
     ConfigV2.Register({ descriptor: mailCacheConfig }),
+    ConfigV2.Register({ descriptor: mailAccountConfig }),
   ],
   register: [
     mailQueriesRetention,
@@ -77,5 +80,6 @@ export default {
   ],
   onReady: () => {
     listenToPush();
+    watchProviderChoice();
   },
 } satisfies ServerPluginDefinition;

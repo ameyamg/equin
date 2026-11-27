@@ -22,6 +22,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MailProviderConnect } from "@plugins/apps/plugins/mail/plugins/provider/web";
+import { MailProviderChoice } from "@plugins/apps/plugins/mail/plugins/cache/web";
 import {
   mailThreads,
   type MailThreadRow,
@@ -265,6 +266,9 @@ function refusalState(failure: DataViewReadFailure): ReactNode | undefined {
   const { error } = failure;
   if (!(error instanceof ResourceError)) return undefined;
   const code = error.code as MailThreadsRefusal | null;
+  if (code === "provider-not-chosen") {
+    return <MailProviderChoice message={error.message} />;
+  }
   if (code !== "not-connected") return undefined;
   return <MailProviderConnect message={error.message} />;
 }

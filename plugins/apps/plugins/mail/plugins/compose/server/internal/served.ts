@@ -62,7 +62,7 @@ function onBackgroundError(what: string, err: unknown): void {
 export const outbox = createOutbox({
   db,
   dateFormatter: serverDateFormatter,
-  sender: () => mailCache.sender(),
+  sender: (writtenFrom) => mailCache.sender(writtenFrom),
   thread: (id) => mailCache.thread(id),
   forwardedFileId: (a) => nameUuid([a.threadId, a.messageId, a.partId]),
   forwardedFile: async (a) => {

@@ -85,7 +85,7 @@ function harness(
   const background: unknown[] = [];
   const cache = createMailCache({
     db: t.db,
-    definition: () => f.definition,
+    providers: () => ({ all: [f.definition], chosen: null }),
     refuse: (code, message) => mailThreads.refuse(code, message),
     notifyThreads: () => {},
     notifyMailboxes: () => {},

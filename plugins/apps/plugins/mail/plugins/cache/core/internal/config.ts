@@ -1,5 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
 
 // The Mail cache's budgets (design §3; the user's call: 500 MB of bodies,
 // about 50k thread summaries, prefetch of the top 25), in Settings → Config. Read per use on the server
@@ -28,6 +29,27 @@ export const mailCacheConfig = defineConfig({
       label: "Bodies prefetched per run",
       description:
         "How many threads' content Mail fetches ahead of you each time a view is read, a thread opened or new mail arrives — the open thread's neighbours first, then the Inbox's unread. Fetched at the provider's lowest priority, only while its per-minute quota is mostly idle (Gmail: at most six threads a minute, fewer while other mail work runs — so a run of 25 takes minutes), so it never delays new mail or the views you open; 0 turns prefetch off.",
+    }),
+  },
+});
+
+/**
+ * Which mail provider the account is on (Settings → Config → Mail account),
+ * a provider kind's id (`MailProviderDefinition.id`). Empty (the default) is
+ * automatic: the one provider whose account is connected — the cache asks
+ * every registered one (`resolveProvider` in the engine), never counts them.
+ * Set it only where several are connected (a demo's local mailbox beside
+ * Gmail). Its options are the registered providers' connect surfaces
+ * (`web/index.ts`).
+ */
+export const mailAccountConfig = defineConfig({
+  name: "mail-account",
+  fields: {
+    provider: dynamicEnumField({
+      default: "",
+      label: "Mail provider",
+      description:
+        "Which mail account Mail reads. Automatic uses the one that is connected; choose one only when several are (a demo mailbox on this device beside Gmail).",
     }),
   },
 });

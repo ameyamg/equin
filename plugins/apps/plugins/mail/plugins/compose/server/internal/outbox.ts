@@ -62,8 +62,8 @@ export type OutboxDeps = {
   db: Db;
   /** The user's date formatter, read when a quote is written (`serverDateFormatter`). */
   dateFormatter: () => DateFormatter;
-  /** The account mail is written from (`mailCache.sender`). */
-  sender: () => Promise<MailSender>;
+  /** The account mail is written from (`mailCache.sender`), refusing a draft written from another (`writtenFrom`: the draft's account; null for a new draft). */
+  sender: (writtenFrom: string | null) => Promise<MailSender>;
   /** A thread's content as the reader reads it (`mailCache.thread`). */
   thread: (id: string) => Promise<Pick<MailThreadRead, "content">>;
   /** One file of a forwarded message, kept (its attachment id) or fetched and kept. */
@@ -301,7 +301,7 @@ export function createOutbox(deps: OutboxDeps) {
     const existing = await row(id);
     if (existing && existing.state !== "discarded") return toDraft(existing);
     if (existing) throw new HttpError(409, "This draft was discarded.");
-    const sender = await deps.sender();
+    const sender = await deps.sender(null);
     const domain = domainOf(sender.address);
     if (s.kind === "new") {
       return toDraft(
@@ -497,7 +497,7 @@ export function createOutbox(deps: OutboxDeps) {
 
   /** The account's signature as the editor shows it (`mail.signature`), read from the provider now. */
   async function signature(): Promise<{ text: string | null }> {
-    const sender = await deps.sender();
+    const sender = await deps.sender(null);
     const identity = await sender.provider.sendIdentity(sender.address);
     return { text: signatureText(identity.signature) };
   }
@@ -535,7 +535,7 @@ export function createOutbox(deps: OutboxDeps) {
       if (r === null) return;
       if (r.state === "discarded") {
         if (r.providerDraftId !== null || r.draftCreateAttempt === "unknown") {
-          const sender = await deps.sender();
+          const sender = await deps.sender(r.accountId);
           const draft = await providerDraftOf(r, sender.provider);
           if (draft !== null)
             await sender.provider.deleteDraft(toDraftId(draft));
@@ -552,7 +552,7 @@ export function createOutbox(deps: OutboxDeps) {
           .where(eq(_mailDrafts.id, id));
         return;
       }
-      const sender = await deps.sender();
+      const sender = await deps.sender(r.accountId);
       const existing = await providerDraftOf(r, sender.provider);
       if (existing === null) {
         // A create whose answer is lost is looked up, never made twice.
@@ -636,7 +636,7 @@ export function createOutbox(deps: OutboxDeps) {
     await draftMutex.run(id, async () => {
       let r = await row(id);
       if (r === null) return;
-      const sender = await deps.sender();
+      const sender = await deps.sender(r.accountId);
       if (r.state === "sent") {
         // A retry after the send landed: only the provider draft may be left.
         if (r.providerDraftId !== null || r.draftCreateAttempt !== null)

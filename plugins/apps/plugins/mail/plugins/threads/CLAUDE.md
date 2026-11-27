@@ -112,7 +112,7 @@ overlay start), as the prototype's `.pane` does.
     - `Pane.Register` "mail-thread"
     - `Pane.Register` "mail-threads"
     - `thread-actions` "triage" → `RowTriage`
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×9
     - `network/live/live-state` ×5
     - `primitives/css/ui-kit` ×5
@@ -123,6 +123,7 @@ overlay start), as the prototype's `.pane` does.
     - `primitives/css/spacing` ×2
     - `primitives/data-view/list` ×2
     - `tag-tree/picker` ×2
+    - `apps/mail/cache.MailProviderChoice`
     - `apps/mail/provider.MailProviderConnect`
     - `apps/mail/reader.ThreadReader`
     - `fields/date/format.useDateFormatter`

@@ -102,12 +102,14 @@ export type ReaderThread = z.infer<typeof ReaderThreadSchema>;
 /**
  * Why a thread is not answered — typed, never a server failure:
  * `gone` (deleted, or no such thread), `not-connected` (render the provider's
- * connect action), `offline-not-cached` (no current body cached and the
+ * connect action), `provider-not-chosen` (several connected: draw the
+ * choice), `offline-not-cached` (no current body cached and the
  * provider cannot be reached).
  */
 export const MAIL_THREAD_REFUSALS = [
   "gone",
   "not-connected",
+  "provider-not-chosen",
   "offline-not-cached",
 ] as const;
 export type MailThreadRefusal = (typeof MAIL_THREAD_REFUSALS)[number];

@@ -128,13 +128,16 @@ A `Filter` tree (`network/live/plugins/filter`) over `MAIL_QUERY_COLUMNS`:
   `unreachable` when the connection cannot be checked now — no mail call). `open` answers the account's ONE
   provider in the process, so there is one quota pacer per account.
 - **Registration (`server`):** `MailProviders.Provider(definition)` in
-  `contributions`. The cache serves the one registered provider (v1: one
-  account) and never names one; `mailProviderById(id)` finds one by id.
+  `contributions`. Several may be registered (a composition shipping the
+  local demo mailbox beside Gmail): the cache serves one account (v1) and
+  resolves its provider from Settings' choice or from which one is connected
+  (`mail/cache`), never from how many are registered, and never names one;
+  `mailProviderById(id)` finds one by id.
 
 ## Testing (`server/testing`)
 
 `createFakeMailProvider({ mailboxes?, threads?, changesPageMax?,
-listOrderSlackMs?, account?, push? })` is an in-memory label-model provider with the
+listOrderSlackMs?, kind?, account?, push? })` is an in-memory label-model provider with the
 contract's semantics: per-message queries (its provider query is the
 canonical filter JSON), messages newest first, a per-message `before` cut, a
 per-message `providerSkewMs` (the provider's clock off `date`, as Gmail's),
@@ -157,13 +160,15 @@ The cache and e2e tests run on it, never on Gmail.
 
 ## Plugin reference
 
-- Description: Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered one. Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
+- Description: Mail providers, web half: the MailProviderUi.Connect slot — each provider kind's connect surface, drawn in place of a mail list or thread its account cannot answer (not connected) — MailProviderConnect renders the registered ones (several: each, one under the other). Registers mail providers: MailProviders.Provider(definition) — a provider kind's id, capabilities, its pure compileQuery and open(accountId), which answers the account's one provider in this process — and mailProviderById, the one lookup the cache uses by the id an account names.
 - Web:
   - Slots: `MailProviderUi.Connect`
   - Slot contributors:
     - `MailProviderUi.Connect` ← `apps.mail.providers.gmail`
     - `MailProviderUi.Connect` ← `apps.mail.providers.local`
-  - Uses: `primitives/slot-render.renderIsolated`
+  - Uses:
+    - `primitives/css/spacing.Stack`
+    - `primitives/slot-render.renderIsolated`
   - Exports (types): `MailProviderConnectContribution`
   - Exports (values):
     - `MailProviderConnect`

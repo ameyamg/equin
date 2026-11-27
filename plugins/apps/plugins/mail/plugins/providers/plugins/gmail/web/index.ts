@@ -10,7 +10,11 @@ export default {
   description:
     "The Gmail provider's browser half: its connect surface for Mail (the shared Gmail access state and the control that fixes it, in place), and Gmail instant updates in Settings → Accounts (under Google): grant the Pub/Sub scope, turn on the Pub/Sub API in the OAuth client's project, then Enable — which creates the topic, Gmail's publisher grant, this backend's subscription and the watch — and, once on, whether it delivers and Turn off.",
   contributions: [
-    MailProviderUi.Connect({ id: "gmail", component: GmailConnect }),
+    MailProviderUi.Connect({
+      id: "gmail",
+      label: "Gmail",
+      component: GmailConnect,
+    }),
     Auth.Integration({
       id: "gmail-instant-updates",
       name: "Gmail instant updates",

@@ -6,11 +6,12 @@ import { serveCollection } from "@plugins/network/plugins/live/server";
 import { MailProviders } from "@plugins/apps/plugins/mail/plugins/provider/server";
 import type { MailProviderDefinition } from "@plugins/apps/plugins/mail/plugins/provider/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { getConfig } from "@plugins/config_v2/server";
+import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import {
   mailAccountStatus,
+  mailAccountConfig,
   mailCacheConfig,
   mailInboxView,
   mailMailboxes,
@@ -28,15 +29,20 @@ import {
   _mailThreads,
 } from "./tables";
 
-/** The one provider kind v1 serves; the cache never names it. */
-function soleProvider(): MailProviderDefinition {
-  const all = MailProviders.Provider.getContributions();
-  if (all.length !== 1) {
-    throw new Error(
-      `mail cache: v1 serves one mail provider, ${all.length} are registered (${all.map((p) => p.id).join(", ") || "none"})`,
-    );
-  }
-  return all[0]!;
+/**
+ * The registered provider kinds and the one chosen in Settings (empty:
+ * automatic). The engine resolves the account's provider from them — the
+ * cache never names one, and never assumes only one is registered.
+ */
+function providers(): {
+  all: readonly MailProviderDefinition[];
+  chosen: string | null;
+} {
+  const chosen = getConfig(mailAccountConfig).provider;
+  return {
+    all: MailProviders.Provider.getContributions(),
+    chosen: chosen === "" ? null : chosen,
+  };
 }
 
 /** Who hears that threads changed (the reader's `mail.thread` value): `undefined` is "maybe any". */
@@ -56,7 +62,7 @@ export function onMailThreadsChanged(
 
 export const mailCache = createMailCache({
   db,
-  definition: soleProvider,
+  providers,
   refuse: (code, message) => mailThreads.refuse(code, message),
   notifyThreads: (ids) => {
     mailThreadsServed.notify(ids === undefined ? undefined : { ids: [...ids] });
@@ -64,8 +70,8 @@ export const mailCache = createMailCache({
   },
   notifyMailboxes: () => mailMailboxesServed.notify(),
   notifyStatus: () => mailAccountStatusServed.notify(),
-  changeSignal: () => ({
-    push: pushStatus(),
+  changeSignal: (definition) => ({
+    push: pushStatusOf(definition),
     everyMs: SYNC_TICK_MS,
     idleEveryMs: isMain() ? SYNC_IDLE_MS : null,
     watching,
@@ -131,9 +137,16 @@ export const mailSync = mailChangeSignal(() => mailCache.sync());
 /** Whether any mail view is subscribed (`mail.threads`' one watcher). */
 let watching = false;
 
-function pushStatus(): MailPushStatus {
-  const push = soleProvider().push;
+function pushStatusOf(
+  definition: MailProviderDefinition | null,
+): MailPushStatus {
+  const push = definition?.push ?? null;
   return push === null ? { kind: "none" } : push.state();
+}
+
+/** The push of the account's provider as last resolved (none before the first read: the tick runs). */
+function pushStatus(): MailPushStatus {
+  return pushStatusOf(mailCache.currentProvider());
 }
 
 /**
@@ -149,33 +162,73 @@ function reconcileTick(): void {
 }
 
 /**
- * Listens to the provider's push (a no-op without one): every change it
- * signals runs a sync step (coalesced with any other), and every move of its
- * state re-decides the tick — a push going live also syncs, catching up
- * what moved while it was not. Returns the unsubscribe.
+ * Listens to every registered provider's push (one without is skipped): a
+ * change signalled by the account's provider runs a sync step (coalesced
+ * with any other), and every move of a push's state re-decides the tick — the
+ * account's push going live also syncs, catching up what moved while it was
+ * not. Another provider's push is not the account's: its changes are not
+ * synced once the account is known. Returns the unsubscribe.
  */
 export function listenToPush(): () => void {
-  const push = soleProvider().push;
-  if (push === null) return () => {};
   const syncNow = () => {
     mailCache
       .sync()
       .catch((err: unknown) => onBackgroundError("push sync", err));
   };
-  let wasLive = push.state().kind === "live";
-  const unlisten = push.listen({
-    changed: syncNow,
-    state: () => {
-      const live = push.state().kind === "live";
-      if (live && !wasLive) syncNow();
-      wasLive = live;
-      reconcileTick();
+  // Before the first read resolved the account (a restart), any push's
+  // change syncs: the step resolves the account itself.
+  const isAccounts = (definition: MailProviderDefinition) => {
+    const current = mailCache.currentProvider();
+    return current === null || current.id === definition.id;
+  };
+  const unlisten = MailProviders.Provider.getContributions().flatMap(
+    (definition) => {
+      const push = definition.push;
+      if (push === null) return [];
+      let wasLive = push.state().kind === "live";
+      return [
+        push.listen({
+          changed: () => {
+            if (isAccounts(definition)) syncNow();
+          },
+          state: () => {
+            const live = push.state().kind === "live";
+            if (live && !wasLive && isAccounts(definition)) syncNow();
+            wasLive = live;
+            reconcileTick();
+          },
+        }),
+      ];
     },
-  });
+  );
   // Push may have moved before this listener existed (plugins' onReady run
   // in no set order): decide the tick on its state now.
   reconcileTick();
-  return unlisten;
+  return () => {
+    for (const u of unlisten) u();
+  };
+}
+
+/**
+ * A provider chosen in Settings → Config → Mail account applies at once:
+ * every open view, the sidebar and the status re-read (the next read
+ * resolves the account on the chosen provider, dropping the other's cache),
+ * and the tick is re-decided on the provider the status now names.
+ */
+export function watchProviderChoice(): void {
+  let chosen: string | undefined;
+  watchConfig(mailAccountConfig, ({ provider }) => {
+    // The watcher fires at once with the current value: nothing moved.
+    if (chosen === undefined || chosen === provider) {
+      chosen = provider;
+      return;
+    }
+    chosen = provider;
+    mailThreadsServed.notify();
+    mailMailboxesServed.notify();
+    mailAccountStatusServed.notify();
+    reconcileTick();
+  });
 }
 
 const CACHE_READS = {

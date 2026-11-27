@@ -37,6 +37,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { MailProviderConnect } from "@plugins/apps/plugins/mail/plugins/provider/web";
+import { MailProviderChoice } from "@plugins/apps/plugins/mail/plugins/cache/web";
 import {
   avatarColor,
   fullName,
@@ -142,6 +143,9 @@ function ReadFailure({ error }: { error: Error }): ReactNode {
       : null;
   if (code === "not-connected") {
     return <MailProviderConnect message={error.message} />;
+  }
+  if (code === "provider-not-chosen") {
+    return <MailProviderChoice message={error.message} />;
   }
   return (
     <Center axis="both" className="h-full p-xl">

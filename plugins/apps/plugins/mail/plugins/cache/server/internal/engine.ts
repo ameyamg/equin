@@ -9,6 +9,7 @@ import {
   lt,
   lte,
   max,
+  ne,
   notExists,
   notInArray,
   or,
@@ -49,6 +50,7 @@ import {
   threadId as toThreadId,
   type AttachmentMeta,
   type ChangeCursor,
+  type ConnectedMailAccount,
   type Mailbox,
   type MailboxId,
   type MailCallOptions,
@@ -158,7 +160,8 @@ const PREFETCH_INBOX_PAGE = 25;
 export class MailThreadUnavailableError extends Error {
   override name = "MailThreadUnavailableError";
   constructor(
-    readonly reason: "gone" | "not-connected" | "offline-not-cached",
+    readonly reason:
+      "gone" | "not-connected" | "provider-not-chosen" | "offline-not-cached",
     message: string,
   ) {
     super(message);
@@ -179,8 +182,17 @@ export type MailAttachmentRead = { meta: AttachmentMeta; bytes: Uint8Array };
 
 export type MailCacheDeps = {
   db: Db;
-  /** The provider kind the account is on (v1: the one registered). */
-  definition: () => MailProviderDefinition;
+  /**
+   * The provider kinds this app registers, and the one chosen in Settings →
+   * Config → Mail account (`chosen`, null: automatic). The account's
+   * provider is resolved from them (`resolveProvider`), never from how many
+   * are registered: a composition may ship several (a demo's local mailbox
+   * beside Gmail).
+   */
+  providers: () => {
+    all: readonly MailProviderDefinition[];
+    chosen: string | null;
+  };
   refuse: (code: MailThreadsRefusal, message: string) => Error;
   /** Every subscribed `mail.threads` window re-reads (`ids`: the threads that changed, for the by-id tuples). */
   notifyThreads: (ids?: readonly string[]) => void;
@@ -188,11 +200,10 @@ export type MailCacheDeps = {
   notifyMailboxes: () => void;
   /** `mail.account-status` re-reads (a sync step ended, the tick started or stopped). */
   notifyStatus: () => void;
-  /** How changes reach the cache now (the fallback tick, and whether it runs). */
-  changeSignal: () => Extract<
-    MailAccountStatus,
-    { kind: "account" }
-  >["changeSignal"];
+  /** How changes reach the cache now for the account's provider (the fallback tick, and whether it runs). */
+  changeSignal: (
+    definition: MailProviderDefinition,
+  ) => Extract<MailAccountStatus, { kind: "account" }>["changeSignal"];
   /** A background run's failure that is not "offline": surfaced, never dropped. */
   onBackgroundError: (what: string, err: unknown) => void;
   /** The stored bodies' byte budget, read per store (default {@link MAIL_BODY_BUDGET_BYTES}). */
@@ -370,10 +381,120 @@ export function createMailCache(deps: MailCacheDeps) {
 
   // ── the account ─────────────────────────────────────────────────────────
 
+  /** The account's provider as last resolved (null before any): what a sync caller reads push by. */
+  let current: MailProviderDefinition | null = null;
+
+  /** The providers the account may be on: the chosen one, else every registered one. */
+  function eligibleProviders(): readonly MailProviderDefinition[] {
+    const { all, chosen } = deps.providers();
+    return chosen === null ? all : all.filter((p) => p.id === chosen);
+  }
+
+  /**
+   * The account row the cache holds among `providers` — at most one: a read
+   * resolving an account drops every other (`account()`). No provider call:
+   * what the status and a boot preload read.
+   */
+  async function heldAccountRow(
+    providers: readonly MailProviderDefinition[],
+  ): Promise<{
+    row: typeof _mailAccounts.$inferSelect;
+    definition: MailProviderDefinition;
+  } | null> {
+    if (providers.length === 0) return null;
+    const [row] = await db
+      .select()
+      .from(_mailAccounts)
+      .where(
+        inArray(
+          _mailAccounts.providerId,
+          providers.map((p) => p.id),
+        ),
+      )
+      .orderBy(
+        sql`${_mailAccounts.syncedAt} desc nulls last`,
+        desc(_mailAccounts.createdAt),
+      )
+      .limit(1);
+    if (!row) return null;
+    return {
+      row,
+      definition: providers.find((p) => p.id === row.providerId)!,
+    };
+  }
+
+  const providerNames = (ps: readonly MailProviderDefinition[]) =>
+    ps.map((p) => p.label).join(", ") || "none";
+
+  /**
+   * Which registered provider the account is on, and its connection:
+   * - chosen in Settings → that one (refused `not-connected` when this app
+   *   does not register it);
+   * - else the one provider whose account is connected, or cannot be checked
+   *   now (offline) — asked of each registered provider, no mail call;
+   * - several: the one the cache already holds the account of (the one Mail
+   *   was on); none held → refused `provider-not-chosen` (the UI draws the
+   *   choice in place);
+   * - none: refused `not-connected` with each provider's own sentence.
+   */
+  async function resolveProvider(): Promise<{
+    definition: MailProviderDefinition;
+    connection: ConnectedMailAccount;
+  }> {
+    const { all, chosen } = deps.providers();
+    if (chosen !== null) {
+      const definition = all.find((p) => p.id === chosen);
+      if (definition === undefined) {
+        throw deps.refuse(
+          "not-connected",
+          `Mail is set to read "${chosen}", which this app does not include (it has: ${providerNames(all)}). Choose another in Settings → Config → Mail account.`,
+        );
+      }
+      return { definition, connection: await definition.connectedAccount() };
+    }
+    if (all.length === 0) {
+      throw deps.refuse("not-connected", "This app includes no mail provider.");
+    }
+    if (all.length === 1) {
+      return {
+        definition: all[0]!,
+        connection: await all[0]!.connectedAccount(),
+      };
+    }
+    const answers = await Promise.all(
+      all.map(async (definition) => ({
+        definition,
+        connection: await definition.connectedAccount(),
+      })),
+    );
+    const usable = answers.filter((a) => a.connection.kind !== "not-connected");
+    if (usable.length === 1) return usable[0]!;
+    if (usable.length === 0) {
+      throw deps.refuse(
+        "not-connected",
+        answers
+          .map((a) =>
+            a.connection.kind === "not-connected"
+              ? `${a.definition.label}: ${a.connection.message}`
+              : a.definition.label,
+          )
+          .join(" "),
+      );
+    }
+    const held = await heldAccountRow(usable.map((a) => a.definition));
+    if (held !== null) {
+      return usable.find((a) => a.definition.id === held.definition.id)!;
+    }
+    throw deps.refuse(
+      "provider-not-chosen",
+      `Several mail accounts are connected (${providerNames(usable.map((a) => a.definition))}): choose the one Mail reads.`,
+    );
+  }
+
   /** The connected account, its row made (a different address than the row's: the cache is someone else's, deleted). */
   async function account(): Promise<Account> {
-    const definition = deps.definition();
-    const c = await definition.connectedAccount();
+    const { definition, connection: c } = await resolveProvider();
+    current = definition;
     if (c.kind === "not-connected") {
       throw deps.refuse("not-connected", c.message);
     }
@@ -389,6 +510,20 @@ export function createMailCache(deps: MailCacheDeps) {
       ) {
         await db.delete(_mailAccounts).where(eq(_mailAccounts.id, c.accountId));
         row = undefined;
+      }
+      // One account (v1): any other the cache holds — another provider's,
+      // Mail having moved to this one (Settings' choice, or the other one
+      // disconnected) — is someone else's mailbox now: its cache goes, so
+      // the status, the boot preload and an offline read can only ever name
+      // this one.
+      const others = await db
+        .delete(_mailAccounts)
+        .where(ne(_mailAccounts.id, c.accountId))
+        .returning({ id: _mailAccounts.id });
+      if (others.length > 0) {
+        deps.notifyThreads();
+        deps.notifyMailboxes();
+        deps.notifyStatus();
       }
       if (!row) {
         [row] = await db
@@ -1706,7 +1841,9 @@ export function createMailCache(deps: MailCacheDeps) {
     // offline with nothing held).
     if (err instanceof ResourceRefusal) {
       return new MailThreadUnavailableError(
-        err.code === "not-connected" ? "not-connected" : "offline-not-cached",
+        err.code === "not-connected" || err.code === "provider-not-chosen"
+          ? err.code
+          : "offline-not-cached",
         err.message,
       );
     }
@@ -2078,14 +2215,10 @@ export function createMailCache(deps: MailCacheDeps) {
   async function held(
     w: MailWindowQuery,
   ): Promise<{ held: true; rows: MailThreadRow[] } | { held: false }> {
-    const definition = deps.definition();
-    const accounts = await db
-      .select()
-      .from(_mailAccounts)
-      .where(eq(_mailAccounts.providerId, definition.id));
-    const [row] = accounts;
-    if (accounts.length !== 1 || row!.cursor === null) return { held: false };
-    const mailboxes = await cachedMailboxes(row!.id);
+    const held = await heldAccountRow(eligibleProviders());
+    if (held === null || held.row.cursor === null) return { held: false };
+    const { row, definition } = held;
+    const mailboxes = await cachedMailboxes(row.id);
     if (mailboxes.length === 0) return { held: false };
     const canonical = canonicalizeFilter(
       w.where as MailQuery,
@@ -2101,12 +2234,12 @@ export function createMailCache(deps: MailCacheDeps) {
       .from(_mailQueries)
       .where(
         and(
-          eq(_mailQueries.accountId, row!.id),
+          eq(_mailQueries.accountId, row.id),
           eq(_mailQueries.providerQuery, compiled.providerQuery),
         ),
       );
     if (!qr || (await missing(qr, w)) > 0) return { held: false };
-    const a: Pick<Account, "id"> = { id: row!.id };
+    const a: Pick<Account, "id"> = { id: row.id };
     return { held: true, rows: await answer(a, qr, w, false) };
   }
 
@@ -2164,14 +2297,9 @@ export function createMailCache(deps: MailCacheDeps) {
    * records a reconnect or a revocation).
    */
   async function status(): Promise<MailAccountStatus> {
-    const definition = deps.definition();
-    const [row] = await db
-      .select()
-      .from(_mailAccounts)
-      .where(eq(_mailAccounts.providerId, definition.id))
-      .orderBy(desc(_mailAccounts.createdAt))
-      .limit(1);
-    if (!row || row.cursor === null) return { kind: "none" };
+    const held = await heldAccountRow(eligibleProviders());
+    if (held === null || held.row.cursor === null) return { kind: "none" };
+    const { row, definition } = held;
     const f = row.syncFailure;
     if (f?.kind === "not-connected") {
       return {
@@ -2184,7 +2312,7 @@ export function createMailCache(deps: MailCacheDeps) {
       kind: "account",
       address: row.address,
       connection: f?.kind === "offline" ? "offline" : "connected",
-      changeSignal: deps.changeSignal(),
+      changeSignal: deps.changeSignal(definition),
       mailboxColors:
         definition.capabilities.mailboxColors === null
           ? null
@@ -2644,10 +2772,19 @@ export function createMailCache(deps: MailCacheDeps) {
    * The account mail is written from (compose: drafts and sends) — its id,
    * address and provider — as a read names it: refused `not-connected`, and
    * offline the account the cache holds (whose provider calls then fail
-   * `MailUnreachableError`, so a send waits in the outbox).
+   * `MailUnreachableError`, so a send waits in the outbox). `writtenFrom`:
+   * the account a draft was written from (null: a new one) — a draft of an
+   * account Mail is no longer on (its provider switched) is refused
+   * `MailNotConnectedError`, never sent or mirrored through another account.
    */
-  async function sender(): Promise<MailSender> {
+  async function sender(writtenFrom: string | null): Promise<MailSender> {
     const a = await account();
+    if (writtenFrom !== null && writtenFrom !== a.id) {
+      throw new MailNotConnectedError(
+        `This draft was written from another mail account (${writtenFrom}) than the one Mail reads now (${a.id}).`,
+        true,
+      );
+    }
     const [row] = await db
       .select({ address: _mailAccounts.address })
       .from(_mailAccounts)
@@ -2657,6 +2794,8 @@ export function createMailCache(deps: MailCacheDeps) {
   }
 
   return {
+    /** The account's provider as last resolved (null before the first read): its push is the change signal. */
+    currentProvider: (): MailProviderDefinition | null => current,
     sender,
     apply,
     applyAtProvider,
