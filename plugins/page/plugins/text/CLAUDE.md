@@ -33,6 +33,7 @@ The bulleted-list block is the second consumer of the same primitive.
     - `apps/pages/page-tree`
     - `page/annotations/agent-notes/agent-page`
     - `page/annotations/instructions/instructions-page`
+    - `page/document-field`
     - `page/inline-page-link`
     - `page/math/equation`
     - `page/turn-into-page`

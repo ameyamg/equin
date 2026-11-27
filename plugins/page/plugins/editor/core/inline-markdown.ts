@@ -1007,13 +1007,21 @@ function scanSpan(
   attrs: ScanAttrs,
   out: RichText,
   literal: boolean,
+  trace?: InlineScanTrace,
 ): void {
   let buf = "";
+  // The source index of each character in `buf`, kept only when tracing.
+  let bufSource: number[] = [];
   const flush = (): void => {
     if (buf.length > 0) {
       out.push(runWith(buf, attrs));
+      if (trace) trace.sourceOf.push(...bufSource);
       buf = "";
+      bufSource = [];
     }
+  };
+  const syntax = (start: number, end: number): void => {
+    if (trace && end > start) trace.syntax.push([start, end]);
   };
   let i = from;
   while (i < to) {
@@ -1028,11 +1036,14 @@ function scanSpan(
           ? { text: s.text.slice(i, j), link: attrs.link }
           : { text: s.text.slice(i, j) },
       );
+      if (trace) for (let k = i; k < j; k++) trace.sourceOf.push(k);
       i = j;
       continue;
     }
     if (isEscapeAt(s, i, to)) {
       buf += escapedCharAt(s, i);
+      if (trace) bufSource.push(i + 1);
+      syntax(i, i + 1);
       i += 2;
       continue;
     }
@@ -1042,6 +1053,7 @@ function scanSpan(
         const tag = matchTag(s, i, to);
         if (tag) {
           flush();
+          syntax(i, tag.contentStart);
           scanSpan(
             s,
             tag.contentStart,
@@ -1053,7 +1065,9 @@ function scanSpan(
             },
             out,
             false,
+            trace,
           );
+          syntax(tag.contentEnd, tag.end);
           i = tag.end;
           continue;
         }
@@ -1062,6 +1076,7 @@ function scanSpan(
         const link = matchLink(s, i, to);
         if (link) {
           flush();
+          syntax(i, link.textStart);
           scanSpan(
             s,
             link.textStart,
@@ -1069,7 +1084,9 @@ function scanSpan(
             { ...attrs, link: link.url },
             out,
             false,
+            trace,
           );
+          syntax(link.textEnd, link.end);
           i = link.end;
           continue;
         }
@@ -1077,6 +1094,7 @@ function scanSpan(
       const delim = matchDelimiter(s, i, to);
       if (delim) {
         flush();
+        syntax(i, delim.contentStart);
         scanSpan(
           s,
           delim.contentStart,
@@ -1084,15 +1102,66 @@ function scanSpan(
           { ...attrs, marks: sortMarks([...attrs.marks, ...delim.marks]) },
           out,
           delim.marks.includes("code"),
+          trace,
         );
+        syntax(delim.contentEnd, delim.end);
         i = delim.end;
         continue;
       }
     }
     buf += s.text[i]!;
+    if (trace) bufSource.push(i);
     i += 1;
   }
   flush();
+}
+
+/** What a traced scan records beside its runs — see {@link InlineScan}. */
+interface InlineScanTrace {
+  syntax: [start: number, end: number][];
+  sourceOf: number[];
+}
+
+/**
+ * {@link parseInlineMarkdown}'s answer, with WHERE in the source each part of
+ * it came from — for an editor showing the markdown itself (its syntax dimmed,
+ * its marks drawn on their own text) and for one that edits it by marks.
+ *
+ * Read off the very scan the parse runs (a traced `scanSpan`), so a surface
+ * drawing the source can never disagree with what the parse makes of it.
+ */
+export interface InlineScan {
+  /** The runs — exactly `parseInlineMarkdown(text, protectedSpans)`. */
+  runs: RichText;
+  /**
+   * Source ranges `[start, end)` that are syntax, not text: delimiters, the
+   * `<u>` / `<color …>` tags and their closers, a link's `[` and `](url)`, an
+   * escape's backslash. In source order, never overlapping.
+   */
+  syntax: [start: number, end: number][];
+  /**
+   * For each character of the runs' text (concatenated, in order), the index of
+   * the source character it reads — so `sourceOf.length` is the runs' length,
+   * and an escape's character maps to the escaped character, not the backslash.
+   */
+  sourceOf: number[];
+}
+
+/** {@link parseInlineMarkdown}, traced — see {@link InlineScan}. */
+export function scanInlineMarkdown(
+  text: string,
+  protectedSpans: RegExp[],
+): InlineScan {
+  const s: Scan = { text, masked: maskProtected(text, protectedSpans) };
+  const out: RichText = [];
+  const trace: InlineScanTrace = { syntax: [], sourceOf: [] };
+  scanSpan(s, 0, text.length, { marks: [] }, out, false, trace);
+  trace.syntax.sort((a, b) => a[0] - b[0]);
+  return {
+    runs: coalesce(out),
+    syntax: trace.syntax,
+    sourceOf: trace.sourceOf,
+  };
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
@@ -6,6 +6,7 @@ import {
   $isRangeSelection,
   COLLABORATION_TAG,
   HISTORIC_TAG,
+  HISTORY_PUSH_TAG,
   PASTE_TAG,
 } from "lexical";
 import { useBlockEditor } from "../block-editor-context";
@@ -59,9 +60,40 @@ import {
  * violated.
  */
 export function InlineMarkdownPlugin({ blockId }: { blockId: string }) {
-  const [editor] = useLexicalComposerContext();
   const { recordDocEdit } = useBlockEditor();
   const recordDocEditRef = useLatestRef(recordDocEdit);
+  const schedule = useCallback(
+    (edit: (tags: readonly string[]) => void) =>
+      recordDocEditRef.current(blockId, "Format text", () => edit([])),
+    [blockId, recordDocEditRef],
+  );
+  return <InlineAutoformatPlugin schedule={schedule} />;
+}
+
+/**
+ * The autoformat itself, for any Lexical editor — the guard set and the
+ * transform, with the undo boundary left to the host: `schedule(edit)` runs
+ * `edit` OUTSIDE the current update (a microtask later at the earliest — see
+ * the header), handing it the update tags the transform should carry.
+ *
+ * A page block schedules through `recordDocEdit` (one entry on the page's
+ * stack); an editor with Lexical's own history passes {@link
+ * scheduleWithLexicalHistory}, so the transform is its own history entry.
+ */
+export function InlineAutoformatPlugin({
+  schedule,
+  $skip,
+}: {
+  schedule(edit: (tags: readonly string[]) => void): void;
+  /**
+   * Inside the read, with the caret where it is: `true` where typed text is
+   * not markdown (a code box) — no autoformat there.
+   */
+  $skip?: () => boolean;
+}) {
+  const [editor] = useLexicalComposerContext();
+  const scheduleRef = useLatestRef(schedule);
+  const skipRef = useLatestRef($skip);
 
   useEffect(() => {
     // Latch: the microtask below both mutates the editor and (via the collab
@@ -127,6 +159,7 @@ export function InlineMarkdownPlugin({ blockId }: { blockId: string }) {
               ? anchor.offset === prev.offset + 1
               : anchor.offset === 1;
           if (!typedOneChar) return null;
+          if (skipRef.current?.()) return null;
 
           return $scanInlineFormat();
         });
@@ -137,13 +170,24 @@ export function InlineMarkdownPlugin({ blockId }: { blockId: string }) {
         // re-verifies the plan against live state there and returns false if
         // anything drifted — a legitimate typed outcome, not a swallowed error.
         // Nothing changed in that case, so nothing lands on the undo stack.
-        recordDocEditRef.current(blockId, "Format text", () => {
+        scheduleRef.current((tags) => {
           pending = false;
-          applyInlineFormat(editor, plan);
+          applyInlineFormat(editor, plan, tags);
         });
       },
     );
-  }, [editor, blockId, recordDocEditRef]);
+  }, [editor, scheduleRef, skipRef]);
 
   return null;
+}
+
+/**
+ * {@link InlineAutoformatPlugin}'s schedule for an editor under Lexical's own
+ * `HistoryPlugin`: one microtask later (outside the update), tagged
+ * `HISTORY_PUSH_TAG` so one undo restores the literal delimiters.
+ */
+export function scheduleWithLexicalHistory(
+  edit: (tags: readonly string[]) => void,
+): void {
+  queueMicrotask(() => edit([HISTORY_PUSH_TAG]));
 }

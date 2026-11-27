@@ -160,6 +160,21 @@ export function runsToLexical(
 }
 
 /**
+ * Append runs to the end of `parent` — any inline-holding element, not only the
+ * root's paragraph: a document field holds many blocks in one editor, each its
+ * own element. Same materialization as {@link runsToLexical} (marks, colour,
+ * links, `\n` → `LineBreakNode`, tokens). Must be called inside an
+ * `editor.update()`.
+ */
+export function $appendRunsTo(
+  parent: ElementNode,
+  runs: RichText,
+  extensions: readonly InlineTokenExtension[] = [],
+): void {
+  for (const run of runs) appendRun(parent, run, extensions);
+}
+
+/**
  * Append runs to the END of the editor's content — into the last paragraph
  * (creating one for an empty root) — preserving marks/color/link and
  * materializing extension tokens, exactly like {@link runsToLexical}. Must be
@@ -260,6 +275,21 @@ function walkNode(
   }
   // Decorator (e.g. inline page link) → unmarked token run.
   out.push({ text: tokenOf(node, extensions), ...(link ? { link } : {}) });
+}
+
+/**
+ * The runs one inline-holding element carries — {@link serializeBlockRuns}'s
+ * walk over a single element, for an editor whose root holds many blocks. Must
+ * be called inside a read or an update.
+ */
+export function $runsOfElement(
+  element: ElementNode,
+  extensions: readonly InlineTokenExtension[] = [],
+): RichText {
+  const runs: RichText = [];
+  for (const child of element.getChildren())
+    walkNode(child, undefined, runs, extensions);
+  return coalesce(runs);
 }
 
 /**

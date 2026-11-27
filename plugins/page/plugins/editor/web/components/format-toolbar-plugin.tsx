@@ -12,8 +12,6 @@ import {
   SELECTION_CHANGE_COMMAND,
   COMMAND_PRIORITY_LOW,
 } from "lexical";
-import { $getSelectionStyleValueForProperty } from "@lexical/selection";
-import { $isLinkNode } from "@lexical/link";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   hasBox,
@@ -28,6 +26,7 @@ import {
   type ColorToken,
   type Mark,
 } from "../../core";
+import { useFormatSource } from "../internal/format-source";
 import { Editor } from "../slots";
 import {
   FormatToolbarProvider,
@@ -43,39 +42,6 @@ function emptyActive(): Record<Mark, boolean> {
   const out = {} as Record<Mark, boolean>;
   for (const m of MARK_ORDER) out[m] = false;
   return out;
-}
-
-/**
- * The href the current range selection sits within, or `null`. Walks up from the
- * selection's anchor node — a selection is "in a link" when its anchor is inside
- * a `LinkNode`. Must run inside an `editorState.read`.
- */
-function selectionLink(): string | null {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection)) return null;
-  // Walking the anchor's ancestors is the standard "am I inside a link" probe.
-  let cur: ReturnType<typeof selection.anchor.getNode> | null =
-    selection.anchor.getNode();
-  for (; cur; cur = cur.getParent()) {
-    if ($isLinkNode(cur)) return cur.getURL();
-  }
-  return null;
-}
-
-/**
- * The color token applied uniformly across the selection, or `null` when it has
- * no color or mixes several. Reads the CSS `color` style off the selection and
- * maps `var(--rt-color-<token>)` back to its token. Must run inside a
- * `editorState.read`.
- */
-function selectionColor(): ColorToken | null {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection)) return null;
-  // `$getSelectionStyleValueForProperty` returns "" when the value is not uniform
-  // across the selection, which we treat as "no single color".
-  const value = $getSelectionStyleValueForProperty(selection, "color", "");
-  const match = /var\(--rt-color-([a-z]+)\)/.exec(value);
-  return match ? (match[1] as ColorToken) : null;
 }
 
 /** On-screen position of a floating surface (viewport coordinates). */
@@ -236,6 +202,10 @@ type Presentation =
  */
 export function FormatToolbarPlugin() {
   const [editor] = useLexicalComposerContext();
+  // Where this editor's marks live — format bits, or a markdown source's own
+  // spelling (`internal/format-source.tsx`). The snapshot and every control
+  // go through it.
+  const source = useFormatSource();
   const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [active, setActive] = useState<Record<Mark, boolean>>(emptyActive);
   const [link, setLink] = useState<string | null>(null);
@@ -282,6 +252,12 @@ export function FormatToolbarPlugin() {
 
     if (selection.isCollapsed()) {
       // ---- the CUE: a caret, and what it will type with ----
+      // Only where marks are typed WITH the caret: in a source they are
+      // characters, and the caret carries none.
+      if (!source.caretCue) {
+        setPresentation(null);
+        return;
+      }
       // The DOM must agree it is a caret. The anchor rect below is read off the
       // DOM selection, so a native selection that has not collapsed with the
       // model would hand us a whole selection's box rather than a caret's.
@@ -359,15 +335,14 @@ export function FormatToolbarPlugin() {
       return;
     }
 
-    const next = {} as Record<Mark, boolean>;
-    for (const mark of MARK_ORDER) next[mark] = selection.hasFormat(mark);
-    setActive(next);
-    setLink(selectionLink());
-    setColor(selectionColor());
+    const snapshot = source.$read();
+    setActive(snapshot.active);
+    setLink(snapshot.link);
+    setColor(snapshot.color);
 
     setPosition(fitSurface(rect, barRef.current, BAR_ESTIMATE, "above"));
     setPresentation({ kind: "bar" });
-  }, [editor]);
+  }, [editor, source]);
 
   const setPinned = useCallback(
     (next: boolean) => {
@@ -421,8 +396,8 @@ export function FormatToolbarPlugin() {
   }, [editor, update]);
 
   const value = useMemo<FormatToolbarValue>(
-    () => ({ editor, active, link, color, setPinned }),
-    [editor, active, link, color, setPinned],
+    () => ({ editor, source, active, link, color, setPinned }),
+    [editor, source, active, link, color, setPinned],
   );
 
   if (!presentation && !pinned) return null;

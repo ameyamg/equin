@@ -252,6 +252,7 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
     - `apps/pages/page-tree`
     - `infra/trash`
     - `page/bookmark`
+    - `page/document-field`
     - `page/editor`
     - `page/embed`
     - `page/formatting/link`

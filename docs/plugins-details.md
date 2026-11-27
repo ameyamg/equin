@@ -49045,7 +49045,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.symbol`
         - Exports (values): `bulletedListBlock`
       - Cross-plugin:
-        - Imported by: `apps/pages/welcome/quick-create`
+        - Imported by:
+          - `apps/pages/welcome/quick-create`
+          - `page/document-field`
     - **`callout`** — Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary, and serves page.blocks-by-type — the live blocks of one type, which the callouts' saved-icon source follows at type = callout.
       - Web:
         - Contributes:
@@ -49154,7 +49156,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
           - `ui/tokens/type-scale --line-height-code`
-        - Imported by: `page/code-block/mermaid-insert`
+        - Imported by:
+          - `page/code-block/mermaid-insert`
+          - `page/document-field`
       - Plugins:
         - **`mermaid-insert`** — `/mermaid` in the page editor: turns the caret's line into a code block set to mermaid, shown split — its source above the drawn diagram (the code-preview registry draws it).
           - Web:
@@ -49243,6 +49247,71 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --border`
           - `ui/tokens/density --space-sm`
+        - Imported by: `page/document-field`
+    - **`document-field`** — Document field: one editable field holding several paragraphs, headings, lists, a quote, code and dividers, read and written as Pages' text format, with a Markdown | Rich switch — both faces editable, with the page editor's selection toolbar and shortcuts in each.
+      - Web:
+        - Uses:
+          - `page/editor.BLOCK_TEXT_THEME`
+          - `page/editor.FormatShortcutsPlugin`
+          - `page/editor.FormatSourceProvider`
+          - `page/editor.FormatToolbarPlugin`
+          - `page/editor.InlineAutoformatPlugin`
+          - `page/editor.isValidLinkUrl`
+          - `page/editor.scheduleWithLexicalHistory`
+          - `primitives/css/pin.Pin`
+          - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/dom/scroll-reveal.focusElement`
+          - `primitives/latest-ref.useLatestRef`
+          - `primitives/undo-redo.localUndoProps`
+        - Exports (types):
+          - `DocumentFieldMode`
+          - `DocumentFieldProps`
+        - Exports (values):
+          - `DocumentField`
+          - `DocumentFieldModeSwitch`
+      - Core:
+        - Uses: 29 symbols — full list in [`plugins/page/plugins/document-field/REFERENCE.md`](../plugins/page/plugins/document-field/REFERENCE.md)
+          - `page/editor` ×20
+          - `page/bulleted-list.bulletedListBlock`
+          - `page/code-block.codeBlock`
+          - `page/divider.dividerBlock`
+          - `page/heading/heading-1.heading1Block`
+          - `page/heading/heading-2.heading2Block`
+          - `page/heading/heading-3.heading3Block`
+          - `page/numbered-list.numberedListBlock`
+          - `page/quote.quoteBlock`
+          - `page/text.textBlock`
+        - Exports (types):
+          - `BlockPoint`
+          - `DocumentBlockType`
+          - `DocumentDialect`
+          - `SourceFormat`
+          - `SourceFormatState`
+          - `SourceLine`
+          - `SourceLineKind`
+          - `SourceRange`
+          - `SourceSegment`
+        - Exports (values):
+          - `applySourceFormat`
+          - `blockPointOf`
+          - `DOCUMENT_BLOCK_TYPES`
+          - `documentBlockHandle`
+          - `documentMarkdownContext`
+          - `isDocumentBlockType`
+          - `lineSegments`
+          - `parseDocument`
+          - `serializeDocument`
+          - `sourceFormatState`
+          - `sourceLines`
+          - `sourceOffsetOf`
+      - Cross-plugin:
+        - Uses tokens: 26 vars — full list in [`plugins/page/plugins/document-field/REFERENCE.md`](../plugins/page/plugins/document-field/REFERENCE.md)
+          - `ui/tokens/type-scale` ×18
+          - `ui/tokens/color-palette` ×4
+          - `ui/tokens/density` ×2
+          - `ui/tokens/font-family --font-mono`
+          - `ui/tokens/shape --radius`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
@@ -49346,6 +49415,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollabHydrationReason`
           - `CollabHydrationReport`
           - `EditorScope`
+          - `FormatSnapshot`
+          - `FormatSource`
           - `FormatToolbarValue`
           - `FrameCandidate`
           - `FrameGeometry`
@@ -49372,6 +49443,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `BLOCK_INDENT`
           - `BLOCK_INSET`
+          - `BLOCK_TEXT_THEME`
           - `blockContentScope`
           - `BlockEditor`
           - `blockRowIn`
@@ -49387,11 +49459,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor`
           - `filterInsertEntries`
           - `flattenSections`
+          - `FormatShortcutsPlugin`
+          - `FormatSourceProvider`
+          - `FormatToolbarPlugin`
           - `FRAME_PAD_X`
           - `FRAME_PAD_Y`
           - `frameBoxLeft`
           - `FrameHoverProvider`
           - `getBlockTextExtensions`
+          - `InlineAutoformatPlugin`
           - `isValidLinkUrl`
           - `MarkButton`
           - `MARKER_GUTTER`
@@ -49406,6 +49482,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `registerBlockTextExtensionSource`
           - `RichTextField`
           - `RunsRenderer`
+          - `scheduleWithLexicalHistory`
           - `selectableText`
           - `TextBlockLayout`
           - `undoConflictReportSink`
@@ -49598,6 +49675,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IdentifiedBlock`
           - `InlineFormatContext`
           - `InlineFormatMatch`
+          - `InlineScan`
           - `InlineSyntax`
           - `IsAnchor`
           - `Mark`
@@ -49734,6 +49812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runsToLexical`
           - `runsToXmlText`
           - `samePageKind`
+          - `scanInlineMarkdown`
           - `semanticsAttrs`
           - `serializeBlockRuns`
           - `SerializedBlockSchema`
@@ -49777,8 +49856,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 93 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
-          - `page` ×61
+        - Imported by: 94 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+          - `page` ×62
           - `apps` ×16
           - `reports` ×4
           - `active-data` ×3
@@ -50079,6 +50158,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.textDataSchema`
               - `ui/icons.symbol`
             - Exports (values): `heading1Block`
+          - Cross-plugin:
+            - Imported by: `page/document-field`
         - **`heading-2`** — Heading 2 block type for the page editor. Heading 2 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-2" → `BlockTextRenderer`
@@ -50093,6 +50174,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.textDataSchema`
               - `ui/icons.symbol`
             - Exports (values): `heading2Block`
+          - Cross-plugin:
+            - Imported by: `page/document-field`
         - **`heading-3`** — Heading 3 block type for the page editor. Heading 3 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-3" → `BlockTextRenderer`
@@ -50107,6 +50190,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.textDataSchema`
               - `ui/icons.symbol`
             - Exports (values): `heading3Block`
+          - Cross-plugin:
+            - Imported by: `page/document-field`
     - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Image block type: registers its `data` schema (attachment + width) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "image" → `ImageBlock`
@@ -50568,6 +50653,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.textDataSchema`
           - `ui/icons.symbol`
         - Exports (values): `numberedListBlock`
+      - Cross-plugin:
+        - Imported by: `page/document-field`
     - **`open-as-page`** — Open as page, in the block ⋮⋮ menu: opens one block — a card, a heading with its nested lines, a toggle — as a page of its own beside the current one, editable and saving to the page that holds it. Contributed into Editor.BlockMenuItem, and absent where the host declared no PageNavigation.openBlock, on a sub-page row (which already opens), and on the block a view is already zoomed into.
       - Web:
         - Contributes: `Editor.BlockMenuItem` → `OpenAsPageItem`
@@ -51020,6 +51107,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --spacing`
+        - Imported by: `page/document-field`
     - **`read-only-view`** — Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
       - Web:
         - Uses: 37 symbols — full list in [`plugins/page/plugins/read-only-view/REFERENCE.md`](../plugins/page/plugins/read-only-view/REFERENCE.md)
@@ -51295,6 +51383,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree`
           - `page/annotations/agent-notes/agent-page`
           - `page/annotations/instructions/instructions-page`
+          - `page/document-field`
           - `page/inline-page-link`
           - `page/math/equation`
           - `page/turn-into-page`
@@ -54657,10 +54746,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×22
               - `apps` ×18
-              - `page` ×9
+              - `page` ×10
               - `conversations` ×5
               - `tasks` ×4
               - `apps-core/app-rail`
@@ -55409,12 +55498,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×3
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×7
               - `debug` ×5
               - `stats` ×5
-              - `page` ×3
+              - `page` ×4
               - `config_v2` ×2
               - `conversations` ×2
               - `fields` ×2
@@ -55601,11 +55690,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 494 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 495 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `apps` ×117
               - `primitives` ×115
               - `conversations` ×53
-              - `page` ×26
+              - `page` ×27
               - `debug` ×25
               - `tasks` ×23
               - `ui` ×22
@@ -57668,10 +57757,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+            - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
               - `apps` ×23
               - `primitives` ×17
-              - `page` ×6
+              - `page` ×7
               - `conversations` ×4
               - `apps-core` ×2
               - `search` ×2
@@ -58718,10 +58807,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), useEventCallback(fn) is the stable-identity callback built on it, and useLatestStore(value) / useLatestSelector(store, select) hand a per-render value down to many memoized readers, each re-rendering only when its own selected answer changes. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×35
           - `apps` ×26
-          - `page` ×5
+          - `page` ×6
           - `conversations` ×3
           - `apps-core` ×2
           - `debug` ×2
@@ -62699,6 +62788,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree`
           - `infra/trash`
           - `page/bookmark`
+          - `page/document-field`
           - `page/editor`
           - `page/embed`
           - `page/formatting/link`
@@ -72000,12 +72090,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 577 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 578 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×129
               - `conversations` ×94
               - `primitives` ×84
               - `debug` ×42
-              - `page` ×33
+              - `page` ×34
               - `plugin-meta` ×27
               - `ui` ×26
               - `tasks` ×21
@@ -72161,13 +72251,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 374 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 375 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×76
               - `primitives` ×76
               - `conversations` ×50
               - `debug` ×29
               - `ui` ×28
-              - `page` ×20
+              - `page` ×21
               - `plugin-meta` ×13
               - `tasks` ×13
               - `fields` ×9
@@ -72272,7 +72362,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Tokens used by: 162 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 163 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
               - `apps` ×24
               - `plugin-meta` ×23
@@ -72282,12 +72372,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports` ×7
               - `infra` ×5
               - `tasks` ×5
+              - `page` ×3
               - `ui` ×3
               - `active-data` ×2
               - `auth` ×2
               - `build` ×2
               - `code-explorer` ×2
-              - `page` ×2
               - `config_v2/settings`
               - `hints`
               - `music/chord-box`
@@ -72638,11 +72728,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 431 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 432 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×84
               - `primitives` ×64
-              - `page` ×35
+              - `page` ×36
               - `debug` ×28
               - `ui` ×25
               - `tasks` ×16
@@ -72841,14 +72931,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Tokens used by: 248 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 249 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×67
               - `conversations` ×39
               - `primitives` ×39
               - `debug` ×15
               - `plugin-meta` ×14
+              - `page` ×11
               - `tasks` ×11
-              - `page` ×10
               - `fields` ×7
               - `ui` ×7
               - `review` ×4

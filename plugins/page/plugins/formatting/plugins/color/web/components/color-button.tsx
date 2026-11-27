@@ -1,11 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import {
-  $getSelection,
-  $isRangeSelection,
-  $setSelection,
-  type BaseSelection,
-} from "lexical";
-import { $patchStyleText } from "@lexical/selection";
+import { $getSelection, $setSelection, type BaseSelection } from "lexical";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -37,9 +31,9 @@ function tokenLabel(token: ColorToken): string {
  * current color, opening a popover swatch grid of the closed palette plus a
  * "Default" reset.
  *
- * Each swatch applies the color to the selection via `$patchStyleText` with
- * `color: var(--rt-color-<token>)` (the same `--rt-color-*` contract the
- * converter persists); "Default" clears it with `color: null`. Swatch fills come
+ * Each swatch applies the color to the selection through the toolbar's format
+ * source (`$patchStyleText` with `color: var(--rt-color-<token>)` in rich text,
+ * a `<color value>` tag in a markdown source); "Default" clears it. Swatch fills come
  * from the palette tokens (CSS vars), never raw hex — the whole point of the
  * token group. Selection survival mirrors the link control: pin the bar + restore
  * the snapshot inside `editor.update` so blurring into the popover can't drop the
@@ -75,10 +69,7 @@ export function ColorButton() {
   const applyColor = (token: ColorToken) => {
     editor.update(() => {
       if (savedSelection.current) $setSelection(savedSelection.current.clone());
-      const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        $patchStyleText(selection, { color: colorCssValue(token) });
-      }
+      toolbar.source.$setColor(token);
     });
     editor.focus();
     closePopover();

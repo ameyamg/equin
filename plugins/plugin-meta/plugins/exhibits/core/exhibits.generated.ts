@@ -29,6 +29,7 @@ export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/claude-cli", id: "infra.claude-cli", loader: () => import("@plugins/infra/plugins/claude-cli/exhibits"), dependsOn: [] },
   { pluginPath: "infra/plugins/claude-cli/plugins/sign-in", id: "infra.claude-cli.sign-in", loader: () => import("@plugins/infra/plugins/claude-cli/plugins/sign-in/exhibits"), dependsOn: [] },
   { pluginPath: "media/plugins/player", id: "media.player", loader: () => import("@plugins/media/plugins/player/exhibits"), dependsOn: [] },
+  { pluginPath: "page/plugins/document-field", id: "page.document-field", loader: () => import("@plugins/page/plugins/document-field/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/adaptive-bar", id: "primitives.adaptive-bar", loader: () => import("@plugins/primitives/plugins/adaptive-bar/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
   { pluginPath: "primitives/plugins/css/plugins/color-picker", id: "primitives.css.color-picker", loader: () => import("@plugins/primitives/plugins/css/plugins/color-picker/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/column", id: "primitives.css.column", loader: () => import("@plugins/primitives/plugins/css/plugins/column/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },

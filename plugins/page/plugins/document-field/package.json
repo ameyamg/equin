@@ -1,0 +1,12 @@
+{
+  "name": "@equin/plugin-page-document-field",
+  "description": "Document field: one editable field holding several paragraphs, headings, lists, a quote, code and dividers, read and written as Pages' text format, with a Markdown | Rich switch.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "lexical": "^0.53.0",
+    "@lexical/react": "^0.53.0",
+    "@lexical/link": "^0.53.0",
+    "@lexical/selection": "^0.53.0"
+  }
+}

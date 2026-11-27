@@ -1,6 +1,5 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ReactNode } from "react";
-import { FORMAT_TEXT_COMMAND } from "lexical";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -21,7 +20,8 @@ export interface MarkButtonProps {
 /**
  * The single home for a boolean-mark toolbar button. Reads the live `active`
  * snapshot from `FormatToolbarContext` (no per-button selection listener) and on
- * click dispatches `FORMAT_TEXT_COMMAND(mark)` against the toolbar's editor.
+ * click toggles the mark through the toolbar's format source (Lexical's
+ * `FORMAT_TEXT_COMMAND` for rich text, the delimiters for a markdown source).
  *
  * `onMouseDown` preventDefault keeps the DOM text selection intact when the
  * button is clicked, so toggling a mark applies to the still-selected span
@@ -56,7 +56,9 @@ export function MarkButton({
       // Keep the editor's text selection: clicking the button must not blur/move
       // the caret, or the mark would toggle nothing.
       onMouseDown={(e) => e.preventDefault()}
-      onClick={() => toolbar.editor.dispatchCommand(FORMAT_TEXT_COMMAND, mark)}
+      onClick={() =>
+        toolbar.editor.update(() => toolbar.source.$toggleMark(mark))
+      }
       className={cn(isActive && "bg-accent text-accent-foreground")}
     />
   );

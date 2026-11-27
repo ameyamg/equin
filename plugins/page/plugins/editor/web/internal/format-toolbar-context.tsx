@@ -1,17 +1,24 @@
 import { createContext, useContext } from "react";
 import type { LexicalEditor } from "lexical";
 import type { ColorToken, Mark } from "../../core";
+import type { FormatSource } from "./format-source";
 
 /**
  * Shared state for the floating format toolbar. A single owner
  * (`FormatToolbarPlugin`) recomputes the selection snapshot on every selection
  * change and publishes it here; each `Editor.FormatAction` button just reads the
- * snapshot and dispatches commands through `editor`. Buttons never register their
+ * snapshot and applies its format through `source`, in an `editor` update. Buttons never register their
  * own selection listeners — the snapshot is computed once.
  */
 export interface FormatToolbarValue {
   /** The Lexical editor that owns the current selection. */
   editor: LexicalEditor;
+  /**
+   * Where that editor's marks live. A control applies its format through it,
+   * inside `editor.update` — never by dispatching a Lexical format command
+   * itself, so it works on a markdown source as on rich text.
+   */
+  source: FormatSource;
   /** Whether each mark is active for the current selection. */
   active: Record<Mark, boolean>;
   /** The href the selection sits within, or `null` when not inside a link. */

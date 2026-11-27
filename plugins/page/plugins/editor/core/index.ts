@@ -138,10 +138,12 @@ export {
   INLINE_SYNTAXES,
   matchInlineFormat,
   parseInlineMarkdown,
+  scanInlineMarkdown,
   serializeInlineMarkdown,
 } from "./inline-markdown";
 export type {
   AgentCodeSpan,
+  InlineScan,
   InlineSyntax,
   InlineFormatMatch,
   InlineFormatContext,
@@ -151,6 +153,8 @@ export type {
 
 export {
   $appendRuns,
+  $appendRunsTo,
+  $runsOfElement,
   colorCssValue,
   marksOfTextNode,
   runsToLexical,

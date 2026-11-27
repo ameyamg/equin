@@ -230,6 +230,8 @@ export function $scanInlineFormat(): InlineFormatPlan | null {
 export function applyInlineFormat(
   editor: LexicalEditor,
   plan: InlineFormatPlan,
+  /** Further update tags — `HISTORY_PUSH_TAG` under Lexical's own history. */
+  tags: readonly string[] = [],
 ): boolean {
   // One mutable holder rather than two captured `let`s: TypeScript's
   // control-flow analysis does not reset a captured `let`'s narrowing across the
@@ -249,10 +251,11 @@ export function applyInlineFormat(
       // Deliberately NOT `SKIP_DOM_SELECTION_TAG`: unlike split's background
       // truncation of the block the user is LEAVING, this caret placement must
       // reach the DOM — the user is standing right here and keeps typing.
-      // Deliberately NOT `HISTORY_PUSH_TAG` either: there is no Lexical
-      // `HistoryPlugin` in this app (the undo stack is the surface-level one),
-      // so the tag would address a listener that does not exist.
+      // Not `HISTORY_PUSH_TAG` by itself either: a page block has no Lexical
+      // `HistoryPlugin` (its undo stack is the surface-level one). An editor
+      // that does (a document field) passes it in `tags`.
       $addUpdateTag(INLINE_FORMAT_TAG);
+      for (const tag of tags) $addUpdateTag(tag);
 
       // --- Abort unless the plan still describes live state. -----------------
       // Stricter than the block-level plugin's "recompute the remainder at

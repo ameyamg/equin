@@ -31,6 +31,19 @@ export { MarkButton } from "./components/mark-button";
 export type { MarkButtonProps } from "./components/mark-button";
 export { useFormatToolbar } from "./internal/format-toolbar-context";
 export type { FormatToolbarValue } from "./internal/format-toolbar-context";
+// The page's text-editing kit for a Lexical editor that is not a page block —
+// a document field holding many blocks in one editor: the selection toolbar
+// and shortcuts (over a pluggable format source: format bits, or a markdown
+// source's own spelling), typing-time inline autoformat, and the shared theme.
+export { FormatToolbarPlugin } from "./components/format-toolbar-plugin";
+export { FormatShortcutsPlugin } from "./components/format-shortcuts-plugin";
+export { FormatSourceProvider } from "./internal/format-source";
+export type { FormatSnapshot, FormatSource } from "./internal/format-source";
+export {
+  InlineAutoformatPlugin,
+  scheduleWithLexicalHistory,
+} from "./components/inline-markdown-plugin";
+export { BLOCK_TEXT_THEME } from "./internal/block-text-theme";
 export type {
   BlockAnchorProps,
   BlockChrome,

@@ -5,7 +5,6 @@ import {
   COMMAND_PRIORITY_LOW,
   type BaseSelection,
 } from "lexical";
-import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -27,7 +26,7 @@ const linkIcon = symbol("link");
  * Selection survival: opening the popover moves focus into the input, which would
  * collapse the editor selection. We (1) pin the toolbar so the bar doesn't tear
  * down, and (2) snapshot the live `RangeSelection` on open and restore it inside
- * the `editor.update` before dispatching `TOGGLE_LINK_COMMAND`, so the link
+ * the `editor.update` before applying the link through the toolbar's format source, so the link
  * applies to the originally-selected span. `LinkForm` normalizes the URL
  * (`https://` / `mailto:` defaulting, allowed-protocol gate) before Apply ever
  * reaches us; Remove passes `null`.
@@ -85,13 +84,13 @@ export function LinkButton() {
 
   const apply = ({ href }: LinkFormResult) => {
     withSavedSelection(() => {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, href);
+      toolbar.source.$setLink(href);
     });
   };
 
   const remove = () => {
     withSavedSelection(() => {
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+      toolbar.source.$setLink(null);
     });
   };
 

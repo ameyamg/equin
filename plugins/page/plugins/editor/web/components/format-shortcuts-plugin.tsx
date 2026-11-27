@@ -1,12 +1,9 @@
 import { useEffect } from "react";
-import {
-  FORMAT_TEXT_COMMAND,
-  KEY_DOWN_COMMAND,
-  COMMAND_PRIORITY_NORMAL,
-  type TextFormatType,
-} from "lexical";
+import { KEY_DOWN_COMMAND, COMMAND_PRIORITY_NORMAL } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { OPEN_LINK_POPOVER_COMMAND } from "../internal/link-command";
+import { useFormatSource } from "../internal/format-source";
+import type { Mark } from "../../core";
 
 /**
  * Closed keyboard-shortcut set for the inline marks. Always mounted (independent
@@ -40,7 +37,7 @@ import { OPEN_LINK_POPOVER_COMMAND } from "../internal/link-command";
  * `KEY_MODIFIER_COMMAND` dispatch alike. Exactly one dispatch per shortcut, ours.
  * Spec: `e2e/format-shortcuts-verify.ts`.
  */
-const SHORTCUTS: { key: string; shift: boolean; format: TextFormatType }[] = [
+const SHORTCUTS: { key: string; shift: boolean; format: Mark }[] = [
   { key: "b", shift: false, format: "bold" },
   { key: "i", shift: false, format: "italic" },
   { key: "u", shift: false, format: "underline" },
@@ -50,6 +47,9 @@ const SHORTCUTS: { key: string; shift: boolean; format: TextFormatType }[] = [
 
 export function FormatShortcutsPlugin() {
   const [editor] = useLexicalComposerContext();
+  // The toolbar's own source, so ⌘B means what the Bold button means — a
+  // format bit in rich text, `**` in a markdown source.
+  const source = useFormatSource();
 
   useEffect(() => {
     return editor.registerCommand(
@@ -80,7 +80,8 @@ export function FormatShortcutsPlugin() {
         for (const sc of SHORTCUTS) {
           if (sc.key === key && sc.shift === event.shiftKey) {
             event.preventDefault();
-            editor.dispatchCommand(FORMAT_TEXT_COMMAND, sc.format);
+            // A command listener already runs inside an update.
+            source.$toggleMark(sc.format);
             return true;
           }
         }
@@ -88,7 +89,7 @@ export function FormatShortcutsPlugin() {
       },
       COMMAND_PRIORITY_NORMAL,
     );
-  }, [editor]);
+  }, [editor, source]);
 
   return null;
 }

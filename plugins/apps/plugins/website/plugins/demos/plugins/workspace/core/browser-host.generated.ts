@@ -564,6 +564,7 @@ export const browserHost = {
     "page.code-block.mermaid-insert",
     "page.container",
     "page.divider",
+    "page.document-field",
     "page.editor",
     "page.embed",
     "page.file",

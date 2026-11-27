@@ -5816,6 +5816,16 @@
       "name": "@equin/plugin-page-divider",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/document-field": {
+      "name": "@equin/plugin-page-document-field",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/link": "^0.53.0",
+        "@lexical/react": "^0.53.0",
+        "@lexical/selection": "^0.53.0",
+        "lexical": "^0.53.0",
+      },
+    },
     "plugins/page/plugins/editor": {
       "name": "@equin/plugin-page-editor",
       "version": "0.0.1",
@@ -11407,6 +11417,8 @@
     "@equin/plugin-page-cover": ["@equin/plugin-page-cover@workspace:plugins/page/plugins/cover"],
 
     "@equin/plugin-page-divider": ["@equin/plugin-page-divider@workspace:plugins/page/plugins/divider"],
+
+    "@equin/plugin-page-document-field": ["@equin/plugin-page-document-field@workspace:plugins/page/plugins/document-field"],
 
     "@equin/plugin-page-editor": ["@equin/plugin-page-editor@workspace:plugins/page/plugins/editor"],
 

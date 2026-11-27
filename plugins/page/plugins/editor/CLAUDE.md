@@ -2437,6 +2437,8 @@ mint a dangling one.
     - `CollabHydrationReason`
     - `CollabHydrationReport`
     - `EditorScope`
+    - `FormatSnapshot`
+    - `FormatSource`
     - `FormatToolbarValue`
     - `FrameCandidate`
     - `FrameGeometry`
@@ -2463,6 +2465,7 @@ mint a dangling one.
   - Exports (values):
     - `BLOCK_INDENT`
     - `BLOCK_INSET`
+    - `BLOCK_TEXT_THEME`
     - `blockContentScope`
     - `BlockEditor`
     - `blockRowIn`
@@ -2478,11 +2481,15 @@ mint a dangling one.
     - `Editor`
     - `filterInsertEntries`
     - `flattenSections`
+    - `FormatShortcutsPlugin`
+    - `FormatSourceProvider`
+    - `FormatToolbarPlugin`
     - `FRAME_PAD_X`
     - `FRAME_PAD_Y`
     - `frameBoxLeft`
     - `FrameHoverProvider`
     - `getBlockTextExtensions`
+    - `InlineAutoformatPlugin`
     - `isValidLinkUrl`
     - `MarkButton`
     - `MARKER_GUTTER`
@@ -2497,6 +2504,7 @@ mint a dangling one.
     - `registerBlockTextExtensionSource`
     - `RichTextField`
     - `RunsRenderer`
+    - `scheduleWithLexicalHistory`
     - `selectableText`
     - `TextBlockLayout`
     - `undoConflictReportSink`
@@ -2689,6 +2697,7 @@ mint a dangling one.
     - `IdentifiedBlock`
     - `InlineFormatContext`
     - `InlineFormatMatch`
+    - `InlineScan`
     - `InlineSyntax`
     - `IsAnchor`
     - `Mark`
@@ -2825,6 +2834,7 @@ mint a dangling one.
     - `runsToLexical`
     - `runsToXmlText`
     - `samePageKind`
+    - `scanInlineMarkdown`
     - `semanticsAttrs`
     - `serializeBlockRuns`
     - `SerializedBlockSchema`
@@ -2868,8 +2878,8 @@ mint a dangling one.
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page` ×61
+  - Imported by: 94 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page` ×62
     - `apps` ×16
     - `reports` ×4
     - `active-data` ×3
