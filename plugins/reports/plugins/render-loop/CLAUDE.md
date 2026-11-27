@@ -133,6 +133,7 @@ does not own.
     - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `apps/website/pages/foundations`
+    - `apps/website/pages/plugin-system`
     - `apps/website/pages/story/data-views`
     - `apps/website/pages/story/essay`
     - `apps/website/pages/story/heads`

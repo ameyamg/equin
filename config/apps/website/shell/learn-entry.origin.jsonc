@@ -1,4 +1,4 @@
-// @hash b4e058fee9a2
+// @hash 11f86a0a036f
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.website.pages.foundations:foundations",
+    "apps.website.pages.plugin-system:plugin-system",
     "apps.website.pages.story:story",
     "apps.website.pages.tips:tips"
   ]

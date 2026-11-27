@@ -1,0 +1,11 @@
+{
+  "name": "@equin/plugin-apps-website-pages-plugin-system",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.170.0"
+  }
+}

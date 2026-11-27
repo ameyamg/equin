@@ -91,26 +91,13 @@ allowlisting a copy.
     - `useInView`
     - `useNear`
 - Cross-plugin:
-  - Imported by:
-    - `apps/deploy/analytics/collect`
-    - `apps/website/pages/foundations`
-    - `apps/website/pages/story/data-views`
-    - `apps/website/pages/story/essay`
-    - `apps/website/pages/story/heads`
-    - `apps/website/pages/story/skills-graph`
-    - `apps/website/pages/vision`
-    - `conversations/agent-thread`
-    - `conversations/conversation-ui/item`
-    - `conversations/conversation-view/jsonl-viewer`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×8
+    - `primitives` ×6
+    - `conversations` ×3
     - `hints`
     - `media/player`
     - `network/live/live-state`
-    - `primitives/css/working-dots`
-    - `primitives/cursor-pagination`
-    - `primitives/data-view`
-    - `primitives/dom/auto-scroll`
-    - `primitives/outline/scroll-spy`
-    - `primitives/pane`
     - `stats`
 - Exemptions:
   - Exempts itself from:

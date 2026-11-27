@@ -95,27 +95,14 @@ hover.
     - `Website.PageEnd`
     - `Website.FooterLink`
     - `WebsiteHeader`
-  - Slot contributors:
-    - `Website.Section` ← `apps.website.landing.contact`
-    - `Website.Section` ← `apps.website.landing.hero`
-    - `Website.Section` ← `apps.website.landing.layers`
-    - `Website.Section` ← `apps.website.landing.screenshot`
-    - `Website.Section` ← `apps.website.landing.story-link`
-    - `Website.Section` ← `apps.website.landing.try`
-    - `Website.Layer` ← `apps.website.pages.privacy`
-    - `Website.Resident` ← `apps.website.live-demo`
-    - `Website.LearnEntry` ← `apps.website.pages.foundations`
-    - `Website.LearnEntry` ← `apps.website.pages.story`
-    - `Website.LearnEntry` ← `apps.website.pages.tips`
-    - `Website.PageEnd` ← `apps.website.landing.try`
+  - Slot contributors: 21 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `WebsiteHeader` ×7
+    - `Website.Section` ×6
+    - `Website.LearnEntry` ×4
     - `Website.FooterLink` ← `apps.website.pages.privacy`
-    - `WebsiteHeader` ← `apps.website.improve`
-    - `WebsiteHeader` ← `apps.website.pages.apps`
-    - `WebsiteHeader` ← `apps.website.pages.download`
-    - `WebsiteHeader` ← `apps.website.pages.guide`
-    - `WebsiteHeader` ← `apps.website.pages.vision`
-    - `WebsiteHeader` ← `apps.website.shell`
-    - `WebsiteHeader` ← `primitives.pane`
+    - `Website.Layer` ← `apps.website.pages.privacy`
+    - `Website.PageEnd` ← `apps.website.landing.try`
+    - `Website.Resident` ← `apps.website.live-demo`
   - Contributes:
     - `Apps.App` "equin" → `WebsiteLayout`
     - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
@@ -230,8 +217,8 @@ hover.
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×22
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×23
     - `companions/browser-extension/equin-site`
     - `hints/help-menu`
 

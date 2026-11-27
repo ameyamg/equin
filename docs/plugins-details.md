@@ -2301,6 +2301,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/pages/apps`
                   - `apps/website/pages/download`
                   - `apps/website/pages/foundations`
+                  - `apps/website/pages/plugin-system`
                   - `apps/website/pages/privacy`
                   - `apps/website/pages/tips`
                   - `apps/website/pages/vision`
@@ -14006,6 +14007,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/download`
               - `apps/website/pages/foundations`
               - `apps/website/pages/guide`
+              - `apps/website/pages/plugin-system`
               - `apps/website/pages/privacy`
               - `apps/website/pages/story`
               - `apps/website/pages/tips`
@@ -14608,6 +14610,46 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `guidePage`
               - Cross-plugin:
                 - Imported by: `hints/help-menu`
+            - **`plugin-system`** — The plugin system page of the equin website: the /about/plugin-system pane explaining how equin is put together as one scroll-driven isometric zoom out — a plugin as a glass brick, plugins landing in a slot, the shared infrastructure, one app rising on it, a feature removed and the database swapped, the whole city of apps, and standalone builds lit as subsets of it — eight chapters scrolling over a pinned WebGL stage with a chapter strip under the header, and its entry in the header's Learn menu. The plugin system page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+              - Web:
+                - Contributes:
+                  - `Pane.Register` "website-plugin-system"
+                  - `Website.LearnEntry` "Plugin system" → `PluginSystemNavItem`
+                  - `ThemeEngine.SubTheme` "plugin system night"
+                - Uses:
+                  - `apps/deploy/analytics/collect.observeSectionReach`
+                  - `apps/website/shell.Website`
+                  - `apps/website/shell.WebsiteChrome`
+                  - `apps/website/shell.WebsiteHeader`
+                  - `apps/website/shell.WebsiteHero`
+                  - `apps/website/shell.WebsiteLearnLink`
+                  - `apps/website/shell.websitePagePart`
+                  - `primitives/css/theme-boundary.Theme`
+                  - `primitives/dom/auto-scroll.findScrollParent`
+                  - `primitives/dom/element-size.useResizeObserver`
+                  - `primitives/dom/in-view.createInViewWatcher`
+                  - `primitives/dom/scroll-reveal.revealElement`
+                  - `primitives/pane.defineRoute`
+                  - `primitives/pane.Pane`
+                  - `primitives/pane.useOpenPane`
+                  - `reports/render-loop.AnimationHost`
+                  - `ui/theme-engine.ThemeEngine`
+                - Exports (values): `pluginSystemPane`
+              - Server:
+                - Contributes: `apps.website.crawlable.page` "/about/plugin-system"
+                - Uses: `apps/website/crawlable.WebsitePages`
+              - Core:
+                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Exports (values): `pluginSystemPage`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/chart --chart-1`
+                  - `ui/tokens/color-palette --background`
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/density --space-2xl`
+                  - `ui/tokens/font-family --font-sans`
             - **`privacy`** — The privacy page of the equin website and the consent prompt that links to it: the /about/privacy pane (this browser's choice, what a visit records, the two ways a return is recognised — a random key kept in the browser when the visitor accepts, else the daily hash — and how long it is kept), its Privacy link in the footer, and the prompt floating over every page (Website.Layer) until the browser answers Reject or Accept. The privacy page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
@@ -14960,27 +15002,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Website.PageEnd`
               - `Website.FooterLink`
               - `WebsiteHeader`
-            - Slot contributors:
-              - `Website.Section` ← `apps.website.landing.contact`
-              - `Website.Section` ← `apps.website.landing.hero`
-              - `Website.Section` ← `apps.website.landing.layers`
-              - `Website.Section` ← `apps.website.landing.screenshot`
-              - `Website.Section` ← `apps.website.landing.story-link`
-              - `Website.Section` ← `apps.website.landing.try`
-              - `Website.Layer` ← `apps.website.pages.privacy`
-              - `Website.Resident` ← `apps.website.live-demo`
-              - `Website.LearnEntry` ← `apps.website.pages.foundations`
-              - `Website.LearnEntry` ← `apps.website.pages.story`
-              - `Website.LearnEntry` ← `apps.website.pages.tips`
-              - `Website.PageEnd` ← `apps.website.landing.try`
+            - Slot contributors: 21 contributors — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+              - `WebsiteHeader` ×7
+              - `Website.Section` ×6
+              - `Website.LearnEntry` ×4
               - `Website.FooterLink` ← `apps.website.pages.privacy`
-              - `WebsiteHeader` ← `apps.website.improve`
-              - `WebsiteHeader` ← `apps.website.pages.apps`
-              - `WebsiteHeader` ← `apps.website.pages.download`
-              - `WebsiteHeader` ← `apps.website.pages.guide`
-              - `WebsiteHeader` ← `apps.website.pages.vision`
-              - `WebsiteHeader` ← `apps.website.shell`
-              - `WebsiteHeader` ← `primitives.pane`
+              - `Website.Layer` ← `apps.website.pages.privacy`
+              - `Website.PageEnd` ← `apps.website.landing.try`
+              - `Website.Resident` ← `apps.website.live-demo`
             - Contributes:
               - `Apps.App` "equin" → `WebsiteLayout`
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
@@ -15095,8 +15124,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --font-weight-semibold`
-            - Imported by: 24 plugins — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 25 plugins — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+              - `apps` ×23
               - `companions/browser-extension/equin-site`
               - `hints/help-menu`
 
@@ -55638,8 +55667,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+              - `apps` ×11
               - `apps-core` ×8
               - `primitives` ×3
               - `hints` ×2
@@ -55872,8 +55901,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 495 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `apps` ×117
+            - Imported by: 496 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `apps` ×118
               - `primitives` ×115
               - `conversations` ×53
               - `page` ×27
@@ -57571,9 +57600,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
               - `primitives` ×11
-              - `apps` ×8
+              - `apps` ×9
               - `conversations` ×5
               - `apps-core/tab-surface`
               - `layouts/miller`
@@ -57701,9 +57730,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×26
-              - `apps` ×16
+              - `apps` ×17
               - `shell` ×2
               - `active-data/go`
               - `companions/panel`
@@ -57755,26 +57784,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useInView`
               - `useNear`
           - Cross-plugin:
-            - Imported by:
-              - `apps/deploy/analytics/collect`
-              - `apps/website/pages/foundations`
-              - `apps/website/pages/story/data-views`
-              - `apps/website/pages/story/essay`
-              - `apps/website/pages/story/heads`
-              - `apps/website/pages/story/skills-graph`
-              - `apps/website/pages/vision`
-              - `conversations/agent-thread`
-              - `conversations/conversation-ui/item`
-              - `conversations/conversation-view/jsonl-viewer`
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/dom/plugins/in-view/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/in-view/REFERENCE.md)
+              - `apps` ×8
+              - `primitives` ×6
+              - `conversations` ×3
               - `hints`
               - `media/player`
               - `network/live/live-state`
-              - `primitives/css/working-dots`
-              - `primitives/cursor-pagination`
-              - `primitives/data-view`
-              - `primitives/dom/auto-scroll`
-              - `primitives/outline/scroll-spy`
-              - `primitives/pane`
               - `stats`
           - Exemptions:
             - Exempts itself from:
@@ -57944,8 +57960,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×23
+            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×24
               - `primitives` ×17
               - `page` ×7
               - `conversations` ×4
@@ -60524,8 +60540,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 105 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×105
+        - Slot contributors: 106 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×106
         - Contributes: 136 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
@@ -60838,8 +60854,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 221 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×78
+        - Imported by: 222 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×79
           - `conversations` ×33
           - `debug` ×29
           - `active-data` ×14
@@ -64657,6 +64673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
         - Imported by:
           - `apps/website/pages/foundations`
+          - `apps/website/pages/plugin-system`
           - `apps/website/pages/story/data-views`
           - `apps/website/pages/story/essay`
           - `apps/website/pages/story/heads`
@@ -71743,10 +71760,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 56 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 57 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×20
           - `ThemeEngine.Theme` ×16
-          - `ThemeEngine.SubTheme` ×8
+          - `ThemeEngine.SubTheme` ×9
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.FixedTheme` ×4
           - `ThemeEngine.ThemeSource` ×2
@@ -71898,9 +71915,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tokenGroupMatchesSearch`
           - `transformValues`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×51
-          - `apps` ×20
+          - `apps` ×21
           - `apps-core/chrome-theme`
           - `companions/panel`
           - `hints`
@@ -72222,6 +72239,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Tokens used by:
               - `apps/deploy/analytics/dashboard`
+              - `apps/website/pages/plugin-system`
               - `apps/website/pages/vision`
               - `apps/website/shell`
               - `primitives/css/ui-kit`
@@ -72302,8 +72320,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 579 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×129
+            - Tokens used by: 580 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×130
               - `conversations` ×94
               - `primitives` ×84
               - `debug` ×43
@@ -72343,27 +72361,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/picker`
               - `upstream`
               - `wish`
-            - Imported by:
+            - Imported by: 21 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×15
+              - `ui` ×2
               - `apps-core/chrome-theme`
-              - `apps/agent-manager/shell`
-              - `apps/browser/shell`
-              - `apps/chord/shell`
-              - `apps/deploy/shell`
-              - `apps/desktop/shell`
-              - `apps/file-explorer/shell`
-              - `apps/home/new-app`
-              - `apps/home/shell`
-              - `apps/mail/shell`
-              - `apps/pages/shell`
-              - `apps/prototypes/shell`
-              - `apps/sonata/shell`
-              - `apps/website/pages/foundations`
-              - `apps/website/shell`
               - `companions/panel`
               - `hints`
               - `media/player`
-              - `ui/theme-engine/theme-gallery`
-              - `ui/tokens/color-palette/customizer`
           - Plugins:
             - **`customizer`** — Customizer section for the color palette token group, with the palette dots in its header.
               - Web:
@@ -72463,8 +72467,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 375 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `apps` ×76
+            - Tokens used by: 376 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×77
               - `primitives` ×76
               - `conversations` ×50
               - `debug` ×29
@@ -72574,9 +72578,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Tokens used by: 163 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 164 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
-              - `apps` ×24
+              - `apps` ×25
               - `plugin-meta` ×23
               - `debug` ×20
               - `primitives` ×15

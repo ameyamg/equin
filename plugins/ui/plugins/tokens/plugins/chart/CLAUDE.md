@@ -15,6 +15,7 @@
 - Cross-plugin:
   - Tokens used by:
     - `apps/deploy/analytics/dashboard`
+    - `apps/website/pages/plugin-system`
     - `apps/website/pages/vision`
     - `apps/website/shell`
     - `primitives/css/ui-kit`

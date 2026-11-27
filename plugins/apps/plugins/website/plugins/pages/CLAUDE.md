@@ -2,7 +2,8 @@
 
 The site's inner pages — one plugin each: the apps gallery (`/about/apps`),
 the vision for applications (`/about/vision`), the technical foundations
-(`/about/foundations`), the story (`/about/story`), the getting-started
+(`/about/foundations`), the plugin system (`/about/plugin-system`), the
+story (`/about/story`), the getting-started
 guide (`/about/guide`), the download page (`/about/download`) and the tips of
 the day (`/about/tips`, read live from the site's box).
 
@@ -10,9 +11,10 @@ Each owns its `/about/<segment>` pane and puts its link in the shared site
 header. The written-later pages also own a `Section` render slot, so their
 content can be added as contributions without touching the page plugin.
 
-The apps gallery, Download, Foundations, Vision and Tips are written (Foundations
-and Vision are each one drawn scene — the iceberg, the zoom-out — rendered
-directly; Vision keeps its section slot, below the zoom); the rest are
+The apps gallery, Download, Foundations, Plugin system, Vision and Tips are
+written (Foundations, Plugin system and Vision are each one drawn scene — the
+iceberg, the city of bricks, the zoom-out — rendered directly; Vision keeps its
+section slot, below the zoom); the rest are
 placeholders today:
 the page's heading (the shell's `WebsiteHero`, the same way every page opens)
 and the shell's `WebsiteSoon` note under it. When a page's sections are written, remove its `WebsiteSoon`.
@@ -27,6 +29,7 @@ and the shell's `WebsiteSoon` note under it. When a page's sections are written,
   - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it…
   - **`foundations`** — The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop…
   - **`guide`** — The getting-started guide of the equin website: the /about/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the…
+  - **`plugin-system`** — The plugin system page of the equin website: the /about/plugin-system pane explaining how equin is put together as one scroll-driven isometric zoom out — a plugin as a glass brick, plugins landing…
   - **`privacy`** — The privacy page of the equin website and the consent prompt that links to it: the /about/privacy pane (this browser's choice, what a visit records, the two ways a return is recognised — a random…
   - **`story`** [4 sub-plugins] — The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its entry in the header's Learn menu, and the WebsiteStory.Section slot the story is written into.…
   - **`tips`** — The tips page of the equin website: the tips feed declared to the editor (SiteFeeds.Feed), the /about/tips pane showing the published tips newest first — title, text, then each screenshot and video…

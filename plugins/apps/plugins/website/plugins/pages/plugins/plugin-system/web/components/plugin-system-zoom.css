@@ -1,0 +1,335 @@
+/* The plugin system page, ported from the prototype (proto-1794379870-rcqzur) at its picked options
+   (block azure · swap orange · pick orange · glow soft).
+
+   The palette below is the scene's own: a city of glass bricks drawn as light added to a black ground,
+   with one orange for the piece that is removed, swapped or selected. It is one illustration's fixed
+   palette — the same in light and dark mode, because the picture does not change with the mode — so it
+   is declared once, here, and read by everything in the picture: the stylesheet below (the labels) and
+   the WebGL scene, which reads these four colours from the root at mount (`internal/scroll.ts`).
+   Nothing outside `.plugin-system` reads them. The page's own text (the cards, the chapter strip) reads
+   the site's theme tokens, which the page pins to their night values (`internal/theme.ts`). */
+.plugin-system {
+  --ps-ground: #07090e;
+  --ps-block: #63a5f8;
+  --ps-swap: #fb923c;
+  --ps-pick: #fb923c;
+  --ps-azure: #60a5fa;
+  --ps-label: #dff6ff;
+  --ps-white: #ffffff;
+
+  position: relative;
+}
+
+/* The page is night from its top edge: the ground also runs under the site header, which floats over it. */
+.plugin-system-page {
+  margin-top: calc(-1 * var(--ps-page-head, 0px));
+  padding-top: var(--ps-page-head, 0px);
+}
+
+/* ---- the heading: in the flow, the picture starting just under it ---- */
+.psys-hero {
+  position: relative;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* ---- the zoom: a pinned stage, cards scrolling over it ---- */
+/* Pulled up under the heading's band (its 36px foot and 36px more), so the picture starts where the
+   design starts it: 40px into the heading's own box. */
+.plugin-system .psys {
+  position: relative;
+  margin-top: -72px;
+}
+
+/* The pinned stage: one screen, behind the copy. Its top and bottom edges melt into the page, so the
+   heading's glow runs on into the picture with no edge where the picture starts. */
+.plugin-system .psys-stage {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  height: var(--screen, 100vh);
+  width: 100%;
+  overflow: hidden;
+  background: var(--ps-ground);
+  -webkit-mask-image: linear-gradient(
+    transparent,
+    #000 9%,
+    #000 91%,
+    transparent
+  );
+  mask-image: linear-gradient(transparent, #000 9%, #000 91%, transparent);
+}
+.plugin-system .psys-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---- labels: a dot on the thing, a short leader, its name ---- */
+.plugin-system .psys-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.plugin-system .psys-lbl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  font:
+    500 12px/1.25 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  color: var(--ps-label);
+  will-change: transform, opacity;
+}
+.plugin-system .psys-lbl i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ps-block);
+  box-shadow: 0 0 10px var(--ps-block);
+  flex: none;
+}
+.plugin-system .psys-lbl i + span {
+  position: relative;
+  padding-left: 26px;
+}
+.plugin-system .psys-lbl i + span::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 20px;
+  height: 1px;
+  background: color-mix(in srgb, var(--ps-block), transparent 40%);
+}
+.plugin-system .psys-lbl b {
+  font-weight: 600;
+  color: var(--ps-white);
+}
+.plugin-system .psys-lbl em {
+  font-style: normal;
+  color: color-mix(in srgb, var(--ps-block), var(--ps-white) 35%);
+  opacity: 0.75;
+  margin-left: 8px;
+}
+.plugin-system .psys-lbl.is-big {
+  font:
+    600 14px/1.2 var(--font-sans, "Inter"),
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.01em;
+}
+.plugin-system .psys-lbl.is-pick i {
+  background: var(--ps-swap);
+  box-shadow: 0 0 12px var(--ps-swap);
+}
+.plugin-system .psys-lbl.is-pick b {
+  color: var(--ps-swap);
+}
+.plugin-system .psys-lbl.is-pick i + span::before {
+  background: color-mix(in srgb, var(--ps-swap), transparent 40%);
+}
+.plugin-system .psys-lbl.is-left {
+  flex-direction: row-reverse;
+}
+.plugin-system .psys-lbl.is-left i + span {
+  padding-left: 0;
+  padding-right: 26px;
+}
+.plugin-system .psys-lbl.is-left i + span::before {
+  left: auto;
+  right: 0;
+}
+/* what is under the pointer */
+.plugin-system .psys-lbl.is-hover {
+  z-index: 3;
+}
+
+/* ---- the copy scrolls over the stage: pulled up by one screen ---- */
+.plugin-system .psys-track {
+  position: relative;
+  z-index: 10;
+  margin-top: calc(-1 * var(--screen, 100vh));
+  pointer-events: none;
+}
+.plugin-system .psys-step {
+  min-height: calc(var(--screen, 100vh) * 1.25);
+  display: flex;
+  align-items: center;
+  padding: 0 clamp(32px, 6vw, 120px);
+}
+.plugin-system .psys-step:first-child {
+  min-height: var(--screen, 100vh);
+}
+/* more scroll for the transition into the chapter */
+.plugin-system .psys-step.is-long {
+  min-height: calc(var(--screen, 100vh) * 3.2);
+}
+.plugin-system .psys-step:last-child {
+  min-height: calc(var(--screen, 100vh) * 1.6);
+}
+/* a chapter that plays a stretch of the picture: its card stays in place meanwhile */
+.plugin-system .psys-step.is-hold {
+  min-height: calc(var(--screen, 100vh) * 2.8);
+  align-items: flex-start;
+}
+.plugin-system .psys-step.is-hold .psys-card {
+  position: sticky;
+  top: calc(var(--screen, 100vh) * 0.5 - 70px);
+}
+/* copy: plain text on the page, no card */
+.plugin-system .psys-card {
+  pointer-events: auto;
+  width: min(420px, 100%);
+  text-shadow:
+    0 1px 18px color-mix(in srgb, var(--background) 90%, transparent),
+    0 0 2px color-mix(in srgb, var(--background) 80%, transparent);
+  opacity: 0.3;
+  transform: translateY(10px);
+  transition:
+    opacity 0.45s,
+    transform 0.45s;
+}
+.plugin-system .psys-step.is-on .psys-card {
+  opacity: 1;
+  transform: none;
+}
+.plugin-system .psys-card-title {
+  font-size: clamp(24px, 1.4vw + 16px, 34px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  color: var(--foreground);
+  text-wrap: balance;
+}
+.plugin-system .psys-card-body {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+/* narrow: the picture on top, the copy at the foot of the screen */
+@media (max-width: 760px) {
+  .plugin-system .psys-step {
+    align-items: flex-end;
+    padding-bottom: calc(var(--screen, 100vh) * 0.12);
+  }
+  .plugin-system .psys-step:last-child {
+    padding-bottom: calc(var(--screen, 100vh) * 0.55);
+  }
+  .plugin-system .psys-card {
+    width: 100%;
+  }
+  .plugin-system .psys-step.is-hold {
+    align-items: flex-end;
+  }
+  .plugin-system .psys-step.is-hold .psys-card {
+    top: auto;
+    bottom: calc(var(--screen, 100vh) * 0.12);
+  }
+}
+
+/* ---- the chapter strip, pinned under the site header while the zoom is read ---- */
+.plugin-system .psys-strip-pin {
+  position: sticky;
+  top: 0;
+  z-index: 59;
+  height: 0;
+}
+.plugin-system .psys-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: absolute;
+  top: var(--ps-head, 0px);
+  left: 0;
+  right: 0;
+  padding: 0 max(var(--space-2xl), calc((100% - var(--website-measure)) / 2));
+  height: 34px;
+  background: color-mix(in srgb, var(--background), transparent 55%);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
+}
+.plugin-system .psys-strip.is-live {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.plugin-system .psys-strip-seg {
+  display: flex;
+  gap: 4px;
+  flex: 0 1 320px;
+  min-width: 140px;
+}
+.plugin-system .psys-strip-seg button {
+  flex: 1;
+  height: 18px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  position: relative;
+}
+.plugin-system .psys-strip-seg button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+.plugin-system .psys-strip-seg button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  height: 2px;
+  border-radius: 2px;
+  width: calc(var(--fill, 0) * 100%);
+  background: linear-gradient(90deg, var(--primary), var(--chart-1));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 36%, transparent);
+}
+.plugin-system .psys-strip-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ps-azure);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 640px) {
+  .plugin-system .psys-strip {
+    gap: 10px;
+    padding-inline: 20px;
+  }
+  .plugin-system .psys-strip-seg {
+    flex-basis: 120px;
+    min-width: 100px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plugin-system .psys-strip {
+    transition: none;
+  }
+}

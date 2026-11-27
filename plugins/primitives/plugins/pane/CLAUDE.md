@@ -928,8 +928,8 @@ out of the way: **what it opens takes its column**.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 105 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×105
+  - Slot contributors: 106 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×106
   - Contributes: 136 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
@@ -1242,8 +1242,8 @@ out of the way: **what it opens takes its column**.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 221 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×78
+  - Imported by: 222 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×79
     - `conversations` ×33
     - `debug` ×29
     - `active-data` ×14

@@ -707,6 +707,7 @@ dropped and re-copied.
     - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`
+    - `apps/website/pages/plugin-system`
     - `apps/website/pages/privacy`
     - `apps/website/pages/tips`
     - `apps/website/pages/vision`

@@ -73,7 +73,9 @@ picture itself, the same in either mode. It declares its palette once, scoped to
 the scene, and documents why there; it is not a precedent for a component's
 colour. The Vision page's zoom (`pages/vision`) is the second such picture —
 a night sky whose drawings glow in their own blues — declared and documented
-the same way.
+the same way. The Plugin system page's city of glass bricks
+(`pages/plugin-system`) is the third: light added to a black ground, drawn in
+WebGL from a palette declared on the page's root.
 
 Light/dark is still global — per-scope dark hasn't landed — so the site follows
 the desktop's mode; the dark values are the design and the light ones a readable
@@ -109,7 +111,7 @@ everywhere a reader can see it; the old name survives only as an internal identi
   - **`landing`** [7 sub-plugins] — Landing-page bands of the public website: the hero, the live demo, the three layers of equin, the story link, and the contact block.
   - **`live-demo`** — The website's live demo runtime: equin itself, its real server code in a worker on the workspace demo's data (DemoScope around AppEmbed), kept for the whole visit by a Website.Resident in the site's…
   - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into…
-  - **`pages`** [12 sub-plugins] — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
+  - **`pages`** [13 sub-plugins] — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
   - **`promo-film`** [2 sub-plugins] — The equin showcase film (script: the Video page's Script v2): the real app recorded as one continuous session on the seeded promo-film composition (e2e/record.ts), ending on equin's desktop mode…
   - **`readme`** — The repo README's images: the animated hero (the logo drawing itself in, beside a living plugin network), the link pills (Watch the film, Try the demo, Install, Discord), the app shelf and the Try…
   - **`shell`** — App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark, the Learn menu over the Website.LearnEntry slot, the GitHub and Discord links)…

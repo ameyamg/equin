@@ -841,6 +841,12 @@
       "parent": null
     },
     {
+      "paneId": "website-plugin-system",
+      "segment": "plugin-system",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "website-privacy",
       "segment": "privacy",
       "appIndex": false,

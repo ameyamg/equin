@@ -197,6 +197,7 @@ Run the take by hand (any initialized cluster file from the store):
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`
     - `apps/website/pages/guide`
+    - `apps/website/pages/plugin-system`
     - `apps/website/pages/privacy`
     - `apps/website/pages/story`
     - `apps/website/pages/tips`

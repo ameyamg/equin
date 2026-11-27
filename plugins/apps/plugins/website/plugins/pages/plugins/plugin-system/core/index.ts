@@ -1,0 +1,1 @@
+export { pluginSystemPage } from "./page";
