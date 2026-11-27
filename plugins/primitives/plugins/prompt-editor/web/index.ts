@@ -2,6 +2,7 @@ import { PromptEditorSlots } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { PromptEditor } from "./components/prompt-editor";
+export { ActionLabel } from "./components/action-label";
 export { PromptEditorSlots, type PromptEditorActionProps } from "./slots";
 
 export default {

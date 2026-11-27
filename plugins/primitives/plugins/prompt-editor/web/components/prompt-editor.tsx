@@ -18,6 +18,7 @@ import {
   type WorkspaceKindState,
 } from "@plugins/conversations/plugins/workspace/core";
 import { PromptEditorSlots } from "../slots";
+import { ACTION_ROW_CONTAINER } from "./action-label";
 
 type FloatingActionItem = Parameters<
   NonNullable<
@@ -139,8 +140,10 @@ function ToolbarRow({
         align="center"
         gap="xs"
         // The density group's `padComposerActions`: `sm` sides and an `xs` foot
-        // by default, the text box's own inset.
-        className="p-composer-actions"
+        // by default, the text box's own inset. A named container, so a
+        // labelled action can drop its words when the row is narrow
+        // (`ActionLabel`).
+        className={cn("p-composer-actions", ACTION_ROW_CONTAINER)}
         onMouseDown={focusEditor}
       >
         {/* The editor's own "+": attach files, like a paste or a drop. */}

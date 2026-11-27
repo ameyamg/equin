@@ -2,6 +2,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { ActionLabel } from "@plugins/primitives/plugins/prompt-editor/web";
 
 import {
   isDraftEmpty,
@@ -446,7 +447,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       className={cn(STRONG, BUTTON_CLASS[mode])}
     >
       <Icon icon={icon} className="size-3.5" />
-      {label}
+      <ActionLabel>{label}</ActionLabel>
     </Button>
   );
 }

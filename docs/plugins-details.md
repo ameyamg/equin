@@ -23902,7 +23902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Hints.Hint` "push-and-exit.exit"
               - `Hints.Hint` "push-and-exit.go"
               - `Hints.Hint` "push-and-exit.push-and-exit"
-            - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
+            - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
               - `conversations/conversation-view/pending-turn` ×5
               - `conversations/conversation-view` ×3
               - `hints` ×3
@@ -23912,6 +23912,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/kept-state` ×2
+              - `primitives/prompt-editor` ×2
               - `shell/notifications` ×2
               - `conversations/conversation-view/code.useEditedFiles`
               - `conversations/conversation-view/drop-and-exit.droppedNotification`
@@ -23919,7 +23920,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.IdKinds`
               - `network/live/live-state.combineResources`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/prompt-editor.PromptEditorSlots`
               - `ui/icons.Icon`
           - Server:
             - Contributes:
@@ -61093,6 +61093,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor/paste-images.AttachFilesButton`
         - Exports (types): `PromptEditorActionProps`
         - Exports (values):
+          - `ActionLabel`
           - `PromptEditor`
           - `PromptEditorSlots`
       - Cross-plugin:
