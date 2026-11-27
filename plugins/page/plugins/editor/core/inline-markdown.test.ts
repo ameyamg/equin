@@ -775,6 +775,24 @@ describe("delimiters that touch — each was read back as literal text", () => {
   }
 });
 
+describe("an escape never spells a protected token", () => {
+  test("a literal `\\(` and a later `\\)` stay literal, across runs and hrefs", () => {
+    const runs: RichText = [
+      { text: "\\(a", marks: ["bold"] },
+      { text: " b " },
+      { text: "c\\)", link: "https://a.io/p(1)" },
+    ];
+    const md = ser(runs, TOKENS);
+    expect(md).toBe("**\\\\(a** b [c\\\\)](https://a.io/p(1\\))");
+    expect(par(md, TOKENS)).toEqual(runs);
+  });
+
+  test("a literal `[` before a page token is escaped, and the token still reads", () => {
+    const runs: RichText = [{ text: "[" }, { text: "[[page:p]]" }];
+    expect(par(ser(runs, TOKENS), TOKENS)).toEqual([{ text: "[[[page:p]]" }]);
+  });
+});
+
 describe("round trip — fuzzed over random runs", () => {
   /** A seeded stream, so a failure names a reproducible seed. */
   function random(seed: number): () => number {
@@ -815,6 +833,8 @@ describe("round trip — fuzzed over random runs", () => {
     "x_y",
     "2 * 3",
   ].map((p) => p.replace("\\n", "\n"));
+  // Halves of tokens, so a token can form inside one run's text or ACROSS runs.
+  const TOKEN_HALVES = ["\\(", "\\)", "[[page:", "]]"];
   const TOKEN_PIECES = ["\\(a_1*b\\)", "[[page:p_1*]]", "[[date:2026-08-03]]"];
   const COLORS: ColorToken[] = ["red", "blue"];
   const LINKS = ["https://a.io", "https://a.io/p(1)", "u\\v"];
@@ -837,10 +857,7 @@ describe("round trip — fuzzed over random runs", () => {
       let text = "";
       const len = 1 + Math.floor(next() * 4);
       for (let k = 0; k < len; k++) {
-        const piece = pick(PIECES);
-        // A backslash next to `(` would SPELL a `\\(…\\)` token across runs —
-        // a token-pattern question, not a delimiter one; covered without tokens.
-        text += withTokens ? piece.replaceAll("\\", "/") : piece;
+        text += withTokens && next() < 0.15 ? pick(TOKEN_HALVES) : pick(PIECES);
       }
       const marks = MARK_ORDER.filter(() => next() < 0.35);
       const run: TextRun = { text };
@@ -857,9 +874,43 @@ describe("round trip — fuzzed over random runs", () => {
    * coalesced, with boundary whitespace hoisted out of the delimiter marks (a
    * delimiter may never flank whitespace).
    */
-  function canonicalOf(runs: RichText): RichText {
-    const out: RichText = [];
+  function canonicalOf(runs: RichText, tokens: RegExp[]): RichText {
+    // A token inside a run's text is its own unmarked run (keeping a link).
+    const split: RichText = [];
     for (const run of coalesce(runs)) {
+      // The same leftmost-first tokenizer the module documents.
+      const sticky = tokens.map((t) => new RegExp(t.source, "y"));
+      const hits: [number, number][] = [];
+      for (let k = 0; k < run.text.length;) {
+        let end = -1;
+        for (const re of sticky) {
+          re.lastIndex = k;
+          const m = re.exec(run.text);
+          if (m && m[0].length > 0) {
+            end = k + m[0].length;
+            break;
+          }
+        }
+        if (end === -1) k += 1;
+        else {
+          hits.push([k, end]);
+          k = end;
+        }
+      }
+      let at = 0;
+      for (const [start, end] of hits) {
+        if (start > at) split.push({ ...run, text: run.text.slice(at, start) });
+        split.push({
+          text: run.text.slice(start, end),
+          ...(run.link ? { link: run.link } : {}),
+        });
+        at = end;
+      }
+      if (at < run.text.length)
+        split.push({ ...run, text: run.text.slice(at) });
+    }
+    const out: RichText = [];
+    for (const run of coalesce(split)) {
       const marks = run.marks ?? [];
       if (!marks.some((m) => DELIMITED.has(m))) {
         out.push(run);
@@ -893,7 +944,7 @@ describe("round trip — fuzzed over random runs", () => {
         const runs = genRuns(random(seed), withTokens);
         const md = ser(runs, tokens);
         const back = par(md, tokens);
-        const expected = canonicalOf(runs);
+        const expected = canonicalOf(runs, tokens);
         if (JSON.stringify(back) !== JSON.stringify(expected)) {
           throw new Error(
             `seed ${seed}, tokens ${withTokens}: ${JSON.stringify(runs)}\n  serialized ${JSON.stringify(md)}\n  parsed     ${JSON.stringify(back)}\n  expected   ${JSON.stringify(expected)}`,

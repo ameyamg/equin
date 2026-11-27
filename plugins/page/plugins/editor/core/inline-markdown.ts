@@ -459,26 +459,46 @@ const DELIMITED_MARKS = new Set<Mark>(
  * SAME length, so indices into the mask and into the original text share one
  * basis and no caller has to translate between them.
  *
- * Patterns are re-created flagless-plus-`g` from `.source` (mirroring
- * `runs-lexical.ts`'s token loop, the other consumer of these same
- * `deserializePattern`s), and a zero-length match advances by one rather than
- * spinning forever.
+ * ONE left-to-right tokenizer over every family: at each position the first
+ * pattern that matches there (in the given order) takes the token, and the scan
+ * resumes after it — so no match ever starts inside another token. Masking each
+ * family independently let one token's bytes open another (the `\(` inside
+ * `[[page:~\(]]` starting a LaTeX span that a link href's `\)` closed), which
+ * the serializer, seeing that token alone in its run, never wrote. A pattern is
+ * re-created sticky from `.source`; a zero-length match takes nothing.
  */
-function maskProtected(text: string, protectedSpans: RegExp[]): string {
+function maskProtected(
+  text: string,
+  protectedSpans: RegExp[],
+  spelled?: Uint8Array,
+): string {
   if (protectedSpans.length === 0 || text.length === 0) return text;
-  const chars = text.split("");
-  for (const pattern of protectedSpans) {
-    const re = new RegExp(pattern.source, "g");
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(text)) !== null) {
-      if (m[0].length === 0) {
-        re.lastIndex += 1;
-        continue;
+  const sticky = protectedSpans.map((p) => new RegExp(p.source, "y"));
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    // A token never STARTS at a character an escape spells: that character
+    // is literal text the serializer escaped (see `scanOf`).
+    let end = -1;
+    if (spelled?.[i] !== 1) {
+      for (const re of sticky) {
+        re.lastIndex = i;
+        const m = re.exec(text);
+        if (m && m[0].length > 0) {
+          end = i + m[0].length;
+          break;
+        }
       }
-      for (let i = m.index; i < m.index + m[0].length; i++) chars[i] = MASK;
+    }
+    if (end === -1) {
+      out += text[i]!;
+      i += 1;
+    } else {
+      out += MASK.repeat(end - i);
+      i = end;
     }
   }
-  return chars.join("");
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -1392,18 +1412,36 @@ function countNewlines(s: Scan, from: number, to: number): number {
  * characters an escape spells (so `\*` is never a delimiter, whatever it sits
  * next to). Escapes pair left to right, as the scan reads them: `\\*` is an
  * escaped backslash, then a live `*`.
+ *
+ * Protected spans are masked over the WHOLE string here, but the serializer
+ * found them run by run and escaped every other `\` and `[` — the characters
+ * a protect family's token opens with. So a match may not start at an escaped
+ * character: `\\(` is a literal backslash, then `(`, never the `\(` of a
+ * LaTeX token that some later `\)` (another run's, or a link href's escaped
+ * `)`) would close. The escapes this decides are read on the raw text first,
+ * since a token's own bytes are taken verbatim and the final pass skips them.
  */
 function scanOf(text: string, protectedSpans: RegExp[]): Scan {
-  const masked = maskProtected(text, protectedSpans);
-  const escaped = new Uint8Array(text.length);
-  const s: Scan = { text, masked, escaped };
-  for (let i = 0; i < text.length; i++) {
-    if (isEscapeAt(s, i, text.length)) {
-      escaped[i + 1] = 1;
+  const masked = maskProtected(
+    text,
+    protectedSpans,
+    escapeSpelled({ text, masked: text, escaped: new Uint8Array(0) }),
+  );
+  const s: Scan = { text, masked, escaped: new Uint8Array(0) };
+  s.escaped = escapeSpelled(s);
+  return s;
+}
+
+/** 1 at every character an escape spells, escapes paired left to right. */
+function escapeSpelled(s: Scan): Uint8Array {
+  const spelled = new Uint8Array(s.text.length);
+  for (let i = 0; i < s.text.length; i++) {
+    if (isEscapeAt(s, i, s.text.length)) {
+      spelled[i + 1] = 1;
       i += 1;
     }
   }
-  return s;
+  return spelled;
 }
 
 /** What a traced scan records beside its runs — see {@link InlineScan}. */
