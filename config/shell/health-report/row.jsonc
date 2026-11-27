@@ -1,4 +1,4 @@
-// @hash c39d07a5c872
+// @hash 0e104752d5e8
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -36,6 +36,8 @@
     "debug.sentinel.health-row:machine-watcher",
     // The machine's disk and file system, as the host monitor outside the app sees them.
     "infra.host.io-health:host-io",
+    // Whether the machine's data is safely copied somewhere: hollow while backup is not activated.
+    "backup:backup",
     // The socket is up and the server reaches its database, and yet a read can still fail.
     "reports.resource-errors:live-reads",
     // An app's own account: whether Mail's changes reach this server (absent until Mail is used).

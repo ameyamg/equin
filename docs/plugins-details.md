@@ -15898,7 +15898,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShowsAppsSideBySide`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 52 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×22
           - `apps-core` ×9
           - `debug` ×4
@@ -15906,6 +15906,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×3
           - `hints` ×2
           - `primitives` ×2
+          - `backup`
           - `build`
           - `companions/menu-bar/app-grid`
           - `config_v2/config-link`
@@ -16460,7 +16461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Shared:
         - Exports (values): `notionAuthConfig`
 
-- **`backup`** — Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
+- **`backup`** — Backup orchestrator UI: run backups, view history, the health report's Backup row (green after a good backup, attention after a failed or partial one, hollow while backup is not activated), and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
   - Web:
     - Slots:
       - `BackupRunDetail.Section`
@@ -16475,21 +16476,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Pane.Register` "backup"
       - `Pane.Register` "backup-run"
       - `DebugApp.Sidebar` "Backup"
-    - Uses: 21 symbols — full list in [`plugins/backup/REFERENCE.md`](../plugins/backup/REFERENCE.md)
+      - `HealthReport.Row` "Backup"
+    - Uses: 26 symbols — full list in [`plugins/backup/REFERENCE.md`](../plugins/backup/REFERENCE.md)
       - `primitives/pane` ×5
+      - `network/live` ×2
       - `primitives/css/spacing` ×2
       - `runs` ×2
+      - `apps-core/tabs.useAppLinkProps`
       - `apps/debug/shell.DebugApp`
       - `config_v2/config-link.ConfigGearButton`
       - `config_v2.ConfigV2`
+      - `fields/date/format.useDateFormatter`
       - `infra/endpoints.useEndpointMutation`
-      - `network/live.rowOrStale`
       - `primitives/css/rail.useRailGuard`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.Button`
       - `primitives/detail-sections.defineDetailSections`
+      - `primitives/icon-button.IconButton`
       - `primitives/loading.Loading`
+      - `shell/health-report.HealthReport`
       - `ui/icons.Icon`
     - Exports (values):
       - `backupPane`
@@ -16500,15 +16506,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConfigV2.Register` "config"
       - `taskCategory` "backup"
       - `report-kind` "backup-incomplete"
+      - `resource.declare` "backup.health"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.getConfig`
+      - `config_v2.watchConfig`
       - `database.db`
       - `infra/endpoints.implement`
       - `infra/entities.defaultNow`
       - `infra/entities.defineEntity`
       - `infra/jobs/supervised-job.defineSupervisedJob`
       - `infra/paths.backupsDir`
+      - `network/live.serveValue`
       - `primitives/log-channels.Log`
       - `reports.ReportKind`
       - `reports/engine.recordReport`
@@ -16521,6 +16530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `BackupSource`
       - `BackupTarget`
     - Register: `defineSupervisedJob('backup.run.supervised')`
+    - Resources: `backup.health` (push, notified)
     - Routes: `POST /api/backup/run`
   - Core:
     - Uses:
@@ -16532,10 +16542,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/text/config.enumTextField`
       - `fields/text/config.textField`
       - `infra/entities.entityRef`
+      - `network/live.liveValue`
       - `packages/list-bound.wholeList`
       - `primitives/pane.defineRoute`
     - Exports (types):
       - `BackupArchive`
+      - `BackupHealth`
       - `BackupManifest`
       - `BackupRunStatus`
       - `BackupSourceFailed`
@@ -16549,6 +16561,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `BACKUP_CATEGORY_ID`
       - `BACKUP_RUN_KIND`
       - `BACKUP_RUN_STATUSES`
+      - `backupHealth`
+      - `BackupHealthSchema`
       - `BackupManifestSchema`
       - `backupRoute`
       - `backupRunFields`
@@ -32099,13 +32113,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `formatterFor`
               - `prefsOf`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/fields/plugins/date/plugins/format/REFERENCE.md`](../plugins/fields/plugins/date/plugins/format/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/fields/plugins/date/plugins/format/REFERENCE.md`](../plugins/fields/plugins/date/plugins/format/REFERENCE.md)
               - `apps` ×19
               - `debug` ×8
               - `conversations` ×7
               - `infra` ×6
               - `primitives` ×3
               - `tasks` ×3
+              - `backup`
               - `build`
               - `code-explorer/commit-detail`
               - `database/query-deadline`
@@ -58635,7 +58650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 154 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 155 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×49
           - `primitives` ×26
           - `conversations` ×20
@@ -58651,6 +58666,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints` ×2
           - `screenshot` ×2
           - `ui` ×2
+          - `backup`
           - `build`
           - `fullscreen`
           - `map/google`
@@ -65465,6 +65481,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors:
           - `HealthReport.Row` ← `apps.deploy.box-link.site-row`
           - `HealthReport.Row` ← `apps.mail.cache`
+          - `HealthReport.Row` ← `backup`
           - `HealthReport.Row` ← `build`
           - `HealthReport.Row` ← `conversations.runtime-sdk`
           - `HealthReport.Row` ← `database.query-deadline`
@@ -65535,6 +65552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/box-link/site-row`
           - `apps/mail/cache`
+          - `backup`
           - `build`
           - `conversations/runtime-sdk`
           - `database/query-deadline`

@@ -11,6 +11,7 @@ export default {
     BackupTarget({
       id: "google-drive",
       name: "Google Drive",
+      enabledBy: googleDriveBackupConfig,
       run: runGoogleDriveTarget,
     }),
   ],

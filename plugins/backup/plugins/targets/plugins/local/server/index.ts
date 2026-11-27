@@ -11,6 +11,7 @@ export default {
     BackupTarget({
       id: "local",
       name: "Local",
+      enabledBy: localBackupConfig,
       run: runLocalTarget,
     }),
   ],

@@ -104,7 +104,7 @@ row with a rising count and a new source starting to fail mints its own.
 
 ## Plugin reference
 
-- Description: Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
+- Description: Backup orchestrator UI: run backups, view history, the health report's Backup row (green after a good backup, attention after a failed or partial one, hollow while backup is not activated), and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
 - Web:
   - Slots:
     - `BackupRunDetail.Section`
@@ -119,21 +119,26 @@ row with a rising count and a new source starting to fail mints its own.
     - `Pane.Register` "backup"
     - `Pane.Register` "backup-run"
     - `DebugApp.Sidebar` "Backup"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `HealthReport.Row` "Backup"
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
+    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `runs` ×2
+    - `apps-core/tabs.useAppLinkProps`
     - `apps/debug/shell.DebugApp`
     - `config_v2/config-link.ConfigGearButton`
     - `config_v2.ConfigV2`
+    - `fields/date/format.useDateFormatter`
     - `infra/endpoints.useEndpointMutation`
-    - `network/live.rowOrStale`
     - `primitives/css/rail.useRailGuard`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
+    - `shell/health-report.HealthReport`
     - `ui/icons.Icon`
   - Exports (values):
     - `backupPane`
@@ -144,15 +149,18 @@ row with a rising count and a new source starting to fail mints its own.
     - `ConfigV2.Register` "config"
     - `taskCategory` "backup"
     - `report-kind` "backup-incomplete"
+    - `resource.declare` "backup.health"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `config_v2.watchConfig`
     - `database.db`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/paths.backupsDir`
+    - `network/live.serveValue`
     - `primitives/log-channels.Log`
     - `reports.ReportKind`
     - `reports/engine.recordReport`
@@ -165,6 +173,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `BackupSource`
     - `BackupTarget`
   - Register: `defineSupervisedJob('backup.run.supervised')`
+  - Resources: `backup.health` (push, notified)
   - Routes: `POST /api/backup/run`
 - Core:
   - Uses:
@@ -176,10 +185,12 @@ row with a rising count and a new source starting to fail mints its own.
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `infra/entities.entityRef`
+    - `network/live.liveValue`
     - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `BackupArchive`
+    - `BackupHealth`
     - `BackupManifest`
     - `BackupRunStatus`
     - `BackupSourceFailed`
@@ -193,6 +204,8 @@ row with a rising count and a new source starting to fail mints its own.
     - `BACKUP_CATEGORY_ID`
     - `BACKUP_RUN_KIND`
     - `BACKUP_RUN_STATUSES`
+    - `backupHealth`
+    - `BackupHealthSchema`
     - `BackupManifestSchema`
     - `backupRoute`
     - `backupRunFields`

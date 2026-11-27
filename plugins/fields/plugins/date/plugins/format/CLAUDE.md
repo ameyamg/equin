@@ -53,13 +53,14 @@ browser, month first, day first).
     - `formatterFor`
     - `prefsOf`
 - Cross-plugin:
-  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×19
     - `debug` ×8
     - `conversations` ×7
     - `infra` ×6
     - `primitives` ×3
     - `tasks` ×3
+    - `backup`
     - `build`
     - `code-explorer/commit-detail`
     - `database/query-deadline`

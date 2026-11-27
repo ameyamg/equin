@@ -1,4 +1,4 @@
-// @hash c39d07a5c872
+// @hash 0e104752d5e8
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,7 @@
   "items": [
     "apps.deploy.box-link.site-row:sites",
     "apps.mail.cache:mail",
+    "backup:backup",
     "build:build-out-of-memory",
     "conversations.runtime-sdk:claude-code",
     "database.query-deadline:database",

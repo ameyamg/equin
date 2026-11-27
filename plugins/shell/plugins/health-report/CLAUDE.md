@@ -208,6 +208,7 @@ probes, is mounted per page.
   - Slot contributors:
     - `HealthReport.Row` ← `apps.deploy.box-link.site-row`
     - `HealthReport.Row` ← `apps.mail.cache`
+    - `HealthReport.Row` ← `backup`
     - `HealthReport.Row` ← `build`
     - `HealthReport.Row` ← `conversations.runtime-sdk`
     - `HealthReport.Row` ← `database.query-deadline`
@@ -278,6 +279,7 @@ probes, is mounted per page.
   - Imported by:
     - `apps/deploy/box-link/site-row`
     - `apps/mail/cache`
+    - `backup`
     - `build`
     - `conversations/runtime-sdk`
     - `database/query-deadline`

@@ -9,6 +9,7 @@ import { backupRunJob } from "./internal/backup-job";
 import { handleRun } from "./internal/handle-run";
 import { backupIncompleteKind } from "./internal/report-kind";
 import { reconcileBackups } from "./internal/reconcile-backups";
+import { backupHealthServed } from "./internal/health-value";
 
 export { BackupSource, BackupTarget } from "./internal/contribution";
 export { backupIncompleteKind } from "./internal/report-kind";
@@ -29,6 +30,7 @@ export default {
     // it here (rather than in the child alone) is what makes the drain able to
     // resolve it.
     backupIncompleteKind,
+    ...backupHealthServed.declare,
   ],
   onReady: async () => {
     // BACKUPS_DIR is host-global; only the main runtime owns backup lifecycle.
