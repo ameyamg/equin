@@ -73,15 +73,25 @@ import { DecisionCardSlots } from "../slots";
  * its own — the row's frame is its box (the list's `frame: "fold"`), so the
  * row is its heading; `null` for a card that stands on its own (the inbox's
  * detail).
+ *
+ * `onAnswered(via)`: the user is done with this one — they picked an option
+ * (`"pick"`; never an unpick) or pressed Enter in the note (`"note"`;
+ * Shift+Enter is a new line, ⌘↵ stays the Submit bar's). The surface moves on
+ * to the next decision. `autoFocusNote`: the note takes focus when the card
+ * mounts (a surface that moved on to it from the previous decision's note).
  */
 export function DecisionCard({
   decision,
   seenBefore,
   draft,
   under,
+  onAnswered,
+  autoFocusNote = false,
 }: {
   decision: DecisionRow;
   under: "question" | "outcome" | null;
+  onAnswered?: (via: AnsweredVia) => void;
+  autoFocusNote?: boolean;
   /** The decision's drafted answer (`useDecisionDrafts().part(id)`); absent: read-only. */
   draft?: KeptPart<DecisionDraft>;
   /**
@@ -178,6 +188,7 @@ export function DecisionCard({
           <Options
             options={decision.options}
             draft={draft !== undefined && isAnswerable(decision) ? draft : null}
+            onPicked={onAnswered && (() => onAnswered("pick"))}
           />
         ) : null}
         <Thread key={decision.id} decision={decision} seenBefore={seenBefore} />
@@ -192,12 +203,20 @@ export function DecisionCard({
           </DecisionCardSlots.AboveAnswer.Render>
         ) : null}
         {draft !== undefined && isAnswerable(decision) ? (
-          <Answer decision={decision} draft={draft} />
+          <Answer
+            decision={decision}
+            draft={draft}
+            onAnswered={onAnswered}
+            autoFocusNote={autoFocusNote}
+          />
         ) : null}
       </Stack>
     );
   return under === null ? <Card>{body}</Card> : body;
 }
+
+/** How the user finished with a decision (`DecisionCard.onAnswered`). */
+export type AnsweredVia = "pick" | "note";
 
 /** The decision this one comes from, by its label once read. */
 function FromLabel({ decisionId }: { decisionId: string }): ReactElement {
@@ -258,14 +277,16 @@ function Outcome({
 /**
  * The options, one sentence each; the recommended one says so, quietly. With
  * a draft each is a pick (a second press unpicks it), the chosen one marked
- * "Your pick".
+ * "Your pick". `onPicked` runs after a pick (never an unpick).
  */
 function Options({
   options,
   draft,
+  onPicked,
 }: {
   options: readonly DecisionOption[];
   draft: KeptPart<DecisionDraft> | null;
+  onPicked?: () => void;
 }): ReactElement {
   return (
     <Stack gap="xs">
@@ -302,9 +323,10 @@ function Options({
                 {o.key}
               </Badge>
             }
-            onClick={() =>
-              draft.set((d) => ({ ...d, pick: picked ? null : o.key }))
-            }
+            onClick={() => {
+              draft.set((d) => ({ ...d, pick: picked ? null : o.key }));
+              if (!picked) onPicked?.();
+            }}
           >
             <Stack direction="row" gap="sm" align="start">
               {/* An option is read whole, never ellipsized: a column Stack
@@ -332,9 +354,14 @@ function Options({
 function Answer({
   decision,
   draft,
+  onAnswered,
+  autoFocusNote,
 }: {
   decision: DecisionRow;
   draft: KeptPart<DecisionDraft>;
+  /** Enter in the note: done with this decision (`DecisionCard.onAnswered`). */
+  onAnswered: ((via: AnsweredVia) => void) | undefined;
+  autoFocusNote: boolean;
 }): ReactElement {
   const agent = useLive(decisionAgent, { taskId: decision.taskId });
   // Said once known; a failed read says so instead.
@@ -377,6 +404,15 @@ function Answer({
             keep={keptField(draft, "note")}
             minRows={1}
             maxHeight="16rem"
+            // Enter moves on to the next decision; ⌘↵ is left to the
+            // Submit bar (`bare-enter`), Shift+Enter is a new line.
+            {...(onAnswered === undefined
+              ? {}
+              : {
+                  onSubmit: () => onAnswered("note"),
+                  submitMode: "bare-enter" as const,
+                })}
+            autoFocus={autoFocusNote}
             namespace={`decision-note-${decision.id}`}
             ariaLabel="Your note"
             placeholder={

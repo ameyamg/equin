@@ -8,6 +8,7 @@ import {
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { HostedToolbarParts } from "@plugins/primitives/plugins/data-view/core";
+import type { ListDetailControls } from "@plugins/primitives/plugins/data-view/plugins/list/core";
 import {
   CollapsibleChevron,
   FoldMotion,
@@ -34,7 +35,7 @@ import { decisionsList, type DecisionRow } from "../../core";
 import { useDecisionDrafts } from "../internal/drafts";
 import { useMarkDecisionSeen } from "../internal/use-mark-seen";
 import { decisionDraftField, decisionPillField } from "../internal/row-fields";
-import { DecisionCard } from "./decision-card";
+import { DecisionCard, type AnsweredVia } from "./decision-card";
 import { NewMark } from "./decision-state";
 import { SubmitBar } from "./submit-bar";
 
@@ -280,9 +281,14 @@ const CLOSED_PLACE = { pill: "lead" } as const;
 function ShownDecision({
   decision,
   under,
+  onAnswered,
+  autoFocusNote = false,
 }: {
   decision: DecisionRow;
   under: "question" | "outcome";
+  /** Answered (a pick, Enter in the note): open the next decision. */
+  onAnswered?: (via: AnsweredVia) => void;
+  autoFocusNote?: boolean;
 }): ReactElement {
   // What was new when it opened stays marked while it is shown.
   const [seenBefore] = useState(decision.seenAt);
@@ -294,24 +300,14 @@ function ShownDecision({
       seenBefore={seenBefore}
       draft={draft}
       under={under}
+      onAnswered={onAnswered}
+      autoFocusNote={autoFocusNote}
     />
   );
 }
 
 // An open row prints its question, a closed row its outcome (the overrides
 // above). `fold`: an open row and its card are one block, the row its heading.
-const OPEN_LIST_OPTIONS = {
-  list: {
-    detail: (r: DecisionRow) => (
-      <ShownDecision key={r.id} decision={r} under="question" />
-    ),
-    detailOnActivate: true,
-    frame: "fold",
-    // One decision open at a time: opening one folds the one read before.
-    detailExclusive: true,
-    lines: 1,
-  },
-} as const;
 const CLOSED_LIST_OPTIONS = {
   list: {
     detail: (r: DecisionRow) => (
@@ -336,6 +332,35 @@ function OpenDecisions({ taskId }: { taskId: TaskId }): ReactElement {
     () => openSource.scoped({ where: { taskId, tab: { ne: "closed" } } }),
     [taskId],
   );
+  // The decision moved on to from the previous one's note (Enter): its note
+  // takes focus as it opens, so answering runs on from the keyboard.
+  const [movedTo, setMovedTo] = useState<string | null>(null);
+  const viewOptions = useMemo(
+    () =>
+      ({
+        list: {
+          detail: (r: DecisionRow, controls: ListDetailControls) => (
+            <ShownDecision
+              key={r.id}
+              decision={r}
+              under="question"
+              autoFocusNote={r.id === movedTo}
+              // Answered: on to the next decision of the panel.
+              onAnswered={(via) => {
+                const next = controls.openNext();
+                setMovedTo(via === "note" ? next : null);
+              }}
+            />
+          ),
+          detailOnActivate: true,
+          frame: "fold",
+          // One decision open at a time: opening one folds the one read before.
+          detailExclusive: true,
+          lines: 1,
+        },
+      }) as const,
+    [movedTo],
+  );
   return (
     <DataView<DecisionRow>
       source={source}
@@ -344,7 +369,7 @@ function OpenDecisions({ taskId }: { taskId: TaskId }): ReactElement {
       recipe="inbox"
       place={OPEN_PLACE}
       views={["list"]}
-      viewOptions={OPEN_LIST_OPTIONS}
+      viewOptions={viewOptions}
       toolbar={HOSTED}
       density="compact"
       emptyState={<>Nothing open.</>}

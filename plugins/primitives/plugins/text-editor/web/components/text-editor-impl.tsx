@@ -60,7 +60,9 @@ export type TextEditorProps = TextEditorText & TextEditorOptions;
 
 export interface TextEditorOptions {
   onSubmit?: () => void;
-  submitMode?: "enter" | "cmd-enter" | "none";
+  /** Which Enter submits (`EnterKeyPlugin`): `"bare-enter"` submits on a
+   *  bare Enter and leaves ⌘/Ctrl+Enter to the page. */
+  submitMode?: "enter" | "bare-enter" | "cmd-enter" | "none";
   placeholder?: string;
   /** The textbox's accessible name, where no visible label names it. */
   ariaLabel?: string;

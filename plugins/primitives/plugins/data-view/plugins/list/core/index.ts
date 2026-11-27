@@ -1,4 +1,5 @@
 export type {
+  ListDetailControls,
   ListStep,
   ListStepper,
   ListStepResult,

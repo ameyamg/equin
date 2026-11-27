@@ -20,7 +20,9 @@ an agent opened (`tasks/decisions`). Design:
   state dot (an `other` decision's dot names its own state label) and says
   its drafted answer on line 2 ("Your answer: A + note", "Your question",
   "Got it"). j / k step to the next / previous decision as drawn (the
-  list's `stepKeys` option), opening it beside the list.
+  list's `stepKeys` option, through `decisionsStepper`), opening it beside
+  the list; answering the open one (a pick — a click or 1–9 — or Enter in
+  its note) steps the same way.
 - **Answering**: the `SubmitBar` (`decisions/web`) sits sticky at the foot
   of the list — one Submit (⌘↵) for every drafted answer.
 - **`decisionDetailPane`** (`decision/:decisionId`): the decision beside the
@@ -58,7 +60,7 @@ an agent opened (`tasks/decisions`). Design:
     - `sources` "Closed" → `DecisionsSource`
     - `IdKinds.Presenter` "dec"
     - `InlineChip.Tag` "dec" → `GenericIdChip`
-  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/decisions` ×8
     - `primitives/pane` ×7
     - `primitives/data-view` ×6
@@ -67,6 +69,7 @@ an agent opened (`tasks/decisions`). Design:
     - `active-data/id-chip` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/data-view/list` ×2
     - `primitives/row-actions` ×2
     - `conversations/conversation-view.conversationPane`
     - `primitives/app-shell.opensPane`

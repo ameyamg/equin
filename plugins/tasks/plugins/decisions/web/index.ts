@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { IdKinds } from "@plugins/ids/web";
 import { decisionExchangeIdKind, decisionIdKind } from "../core";
 
-export { DecisionCard } from "./components/decision-card";
+export { DecisionCard, type AnsweredVia } from "./components/decision-card";
 export { DecisionCardSlots } from "./slots";
 import { DecisionCardSlots } from "./slots";
 export { NewMark } from "./components/decision-state";

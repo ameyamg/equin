@@ -3,6 +3,7 @@ import {
   useCallback,
   useMemo,
   useRef,
+  useState,
   type CSSProperties,
   type ReactNode,
   type RefCallback,
@@ -10,6 +11,7 @@ import {
 } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
   Inset,
@@ -123,9 +125,9 @@ import {
 } from "@plugins/primitives/plugins/link-gesture/core";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ViewSlots } from "@plugins/primitives/plugins/data-view/core";
-import type { ListViewOptions } from "../../core";
+import type { ListDetailControls, ListViewOptions } from "../../core";
 import { slotWidthVar, useSlotWidths, type SlotRef } from "./use-slot-widths";
-import { useStepKeys } from "./use-step-keys";
+import { stepOrder, useStepKeys } from "./use-step-keys";
 
 /**
  * Wraps one list row with its sortable drag wiring: the whole row is the drag
@@ -263,6 +265,9 @@ interface ListRowConfig {
   detail: ListViewOptions<unknown>["detail"];
   /** Activating the row toggles its detail (`ListViewOptions.detailOnActivate`). */
   detailOnActivate: boolean;
+  /** What each row's detail is handed: `openNext` from the row's key
+   *  (`ListDetailControls`). Stable identity. */
+  openNextDetail: (key: string) => string | null;
   /** Opens or closes one row's detail — closing every other open one first
    *  under `ListViewOptions.detailExclusive`. Stable identity. */
   toggleDetail: (key: string, open: boolean) => void;
@@ -550,6 +555,38 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // j / k step the selection through the rows as drawn (`stepKeys`),
   // revealing the row stepped to under the list's root.
   const listRoot = useRef<HTMLElement | null>(null);
+  // A detail's "next" (`ListDetailControls.openNext`): close this row's
+  // detail, open the next drawn row's (exclusive: every other one closed in
+  // the same write), and reveal it — a windowed section through its
+  // `revealKey`, a mounted row once the fold has laid it out.
+  const [detailRevealKey, setDetailRevealKey] = useState<string | null>(null);
+  const openNextDetail = useEventCallback((key: string): string | null => {
+    const order = stepOrder(sections, props.collapsedSections);
+    const at = order.findIndex((r) => r.key === key);
+    const next = at === -1 ? undefined : order[at + 1];
+    if (next === undefined) return null;
+    const changes = [
+      { id: key, expanded: false },
+      { id: next.key, expanded: true },
+    ];
+    if (detailExclusive) {
+      for (const [id, isOpen] of Object.entries(props.expanded ?? {})) {
+        if (isOpen && id !== key && id !== next.key)
+          changes.push({ id, expanded: false });
+      }
+    }
+    setExpanded(changes);
+    setDetailRevealKey(next.key);
+    requestAnimationFrame(() => {
+      revealElement(
+        listRoot.current?.querySelector(
+          `[data-row-key="${CSS.escape(next.key)}"]`,
+        ),
+        { block: "nearest", scope: "nearest" },
+      );
+    });
+    return next.key;
+  });
   const stepRevealKey = useStepKeys({
     root: listRoot,
     enabled: options.stepKeys !== undefined && options.stepKeys !== false,
@@ -677,6 +714,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       labelClassName,
       detail,
       detailOnActivate,
+      openNextDetail,
       toggleDetail,
       // The section frame is the section's box, drawn around its rows.
       frame: frame === "section" ? undefined : frame,
@@ -716,6 +754,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     labelClassName,
     detail,
     detailOnActivate,
+    openNextDetail,
     toggleDetail,
     frame,
     rowActivation,
@@ -973,7 +1012,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                   keepMounted={activeId ? [activeId] : undefined}
                   raisedKey={activeId ?? undefined}
                   // A j / k step onto a row the window has not mounted.
-                  revealKey={stepRevealKey}
+                  revealKey={stepRevealKey ?? detailRevealKey}
                 >
                   {(entry) => framedEntry(entry, group, entries[0]!.key)}
                 </VirtualRows>
@@ -1924,7 +1963,7 @@ function listRowNode(
         ghostAtRest={config.frame === "fold"}
         open={open}
         row={withPrimary}
-        detail={detail ? detail(row) : null}
+        detail={detail ? detail(row, detailControls(config, key)) : null}
       />
     );
   if (!detail) return withPrimary;
@@ -1941,11 +1980,19 @@ function listRowNode(
       </Sticky>
       <FoldMotion open={open}>
         <Inset x="sm" b="sm">
-          {detail(row)}
+          {detail(row, detailControls(config, key))}
         </Inset>
       </FoldMotion>
     </Stack>
   );
+}
+
+/** What a row's detail is handed: its own "next", bound to its key. */
+function detailControls(
+  config: ListRowConfig,
+  key: string,
+): ListDetailControls {
+  return { openNext: () => config.openNextDetail(key) };
 }
 
 /** Where an open row pins: under its section's header, else the toolbar. */

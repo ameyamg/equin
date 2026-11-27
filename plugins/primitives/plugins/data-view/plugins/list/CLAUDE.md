@@ -264,8 +264,12 @@ conditional hook.
   (the Queue: the status dot is `renderLeading`, the item drawn `dot={false}`).
 - `disclosureVariant?` — the disclosure look this list pins (see "Attached
   rows").
-- `detail?(row)` — the row's detail, drawn under it while open (the view's
-  expand map); every row then leads with the tree's disclosure. **An open
+- `detail?(row, controls)` — the row's detail, drawn under it while open (the view's
+  expand map); every row then leads with the tree's disclosure.
+  `controls.openNext()` (`ListDetailControls`) closes it and opens the next
+  drawn row's detail (exclusive: every other one closed in the same write),
+  revealing it; it returns the key opened, `null` on the last row. The
+  decisions panel moves on once a decision is answered. **An open
   row stays pinned** while its detail scrolls under it — below its section's
   sticky header (the section body's `--dv-section-offset`,
   `DATA_VIEW_SECTION_OFFSET_VAR`, published by `GroupedSections`), else below
@@ -360,6 +364,7 @@ conditional hook.
     - `primitives/virtual-rows.VirtualRows`
     - `ui/icons.Icon`
   - Exports (types):
+    - `ListDetailControls`
     - `ListStep`
     - `ListStepper`
     - `ListStepResult`
@@ -388,11 +393,14 @@ conditional hook.
     - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: `apps/mail/threads`
+  - Imported by:
+    - `apps/mail/threads`
+    - `tasks/decisions/inbox`
 - Exemptions:
   - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/use-slot-widths.ts` (debt)
 - Core:
   - Exports (types):
+    - `ListDetailControls`
     - `ListStep`
     - `ListStepper`
     - `ListStepResult`

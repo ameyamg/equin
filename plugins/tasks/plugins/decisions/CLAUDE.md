@@ -135,6 +135,15 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
   decision (`decisions_attachments`, cascade) and hands the agent the note
   with each attachment ref as its disk path. The record keeps the note as
   written.
+- **Answering moves on** — `DecisionCard`'s `onAnswered(via)` fires on a
+  pick (`"pick"`, never an unpick) and on Enter in the note (`"note"`: the
+  editor's `bare-enter` mode — Shift+Enter is a new line, ⌘↵ still reaches
+  the SubmitBar). The panel opens the next row's card (the list detail's
+  `openNext`); the inbox steps its list (`decisionsStepper`, as `j`). In
+  the panel, moved on from the note, the next card's note takes focus
+  (`autoFocusNote`); from a pick it does not. The inbox never focuses the
+  next note: its keys (1–9, j / k) are the surface's, and a focused note
+  would take the digits.
 - **One Submit** — `SubmitBar` (web), sticky at the foot of a list, ⌘↵ in
   its `region` (the panel whose drafts it sends, by focus only — shortcuts'
   regions: with two bars on one surface the one whose panel holds focus
@@ -239,6 +248,7 @@ one). Every refusal is a discriminated `{ ok: false, reason, message }`.
     - `primitives/text-editor.TextEditor`
     - `shell/notifications.useToast`
   - Exports (types):
+    - `AnsweredVia`
     - `DecisionDraft`
     - `DecisionDrafts`
     - `DecisionPresentation`

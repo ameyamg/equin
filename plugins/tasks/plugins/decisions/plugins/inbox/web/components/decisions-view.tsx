@@ -22,6 +22,7 @@ import {
 } from "@plugins/tasks/plugins/decisions/web";
 import { DecisionsSources, type DecisionsHostProps } from "../slots";
 import { AgentConversationAction } from "./agent-link";
+import { decisionsStepper } from "../internal/stepper";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 // Its views are authored in `config/tasks/decisions/inbox/tasks.decisions.jsonc`.
@@ -101,7 +102,8 @@ function sourceComponent(tab: DecisionTab) {
       place: PLACE,
       selectedRowId: hostProps.selectedId,
       rowActivation: (r) => hostProps.linkTo(r.id),
-      // j / k read the next / previous decision, as the rows are drawn.
+      // j / k read the next / previous decision, as the rows are drawn; the
+      // open decision's pane steps the same way once it is answered.
       viewOptions: STEP_KEYS,
       headerActions: agentHeaderAction,
       emptyState: <>{EMPTY[tab]}</>,
@@ -109,7 +111,7 @@ function sourceComponent(tab: DecisionTab) {
   };
 }
 
-const STEP_KEYS = { list: { stepKeys: true } } as const;
+const STEP_KEYS = { list: { stepKeys: decisionsStepper } } as const;
 
 /**
  * A group header's Open conversation, when its rows all belong to one agent

@@ -21,6 +21,16 @@ export interface ListStepper {
  */
 export type ListStepResult = "stepped" | "loading" | "end";
 
+/** What a row's `detail` is handed (`ListViewOptions.detail`). */
+export interface ListDetailControls {
+  /**
+   * Close this row's detail and open the next drawn row's, revealing it.
+   * Returns the key of the row opened, or `null` when this row is the last
+   * drawn one (nothing changes then).
+   */
+  openNext: () => string | null;
+}
+
 /** A stepping list's step, as `useListStepper` hands it out. */
 export interface ListStep {
   step: (delta: 1 | -1) => ListStepResult;
@@ -100,8 +110,13 @@ export interface ListViewOptions<TRow> {
    * the view's expand map (per surface, view instance and row; per device),
    * like a tree's — never domain data. The default `Row` chrome only:
    * combining it with `rowChrome: "tree"` throws.
+   *
+   * `controls` lets the detail move on: `openNext()` closes this detail and
+   * opens the next row's, as drawn (a collapsed section's rows skipped),
+   * revealing it — a list read one opened row at a time (a task's decisions,
+   * moving on once one is answered).
    */
-  detail?: (row: TRow) => ReactNode;
+  detail?: (row: TRow, controls: ListDetailControls) => ReactNode;
   /**
    * The whole row is its detail's disclosure: activating the row (a click,
    * Enter) opens or closes `detail(row)`, the row carries `aria-expanded`,

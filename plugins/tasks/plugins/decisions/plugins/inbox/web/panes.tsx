@@ -27,9 +27,11 @@ import {
   useMarkDecisionSeen,
 } from "@plugins/tasks/plugins/decisions/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { useListStepper } from "@plugins/primitives/plugins/data-view/plugins/list/web";
 import { decisionDetailRoute, decisionsRoute } from "../core";
 import { AgentLink } from "./components/agent-link";
 import { DecisionsView } from "./components/decisions-view";
+import { decisionsStepper } from "./internal/stepper";
 
 // Panes are declared first so their types are known before the component
 // bodies reference them (the bodies are hoisted function declarations).
@@ -92,6 +94,14 @@ function DecisionsBody(): ReactElement {
 function DecisionDetailBody(): ReactElement {
   const { decisionId } = decisionDetailPane.useParams();
   const decision = useLive(decisionsList, { id: decisionId });
+  // Answered here (a pick, Enter in the note): on to the next decision of
+  // the list, as j steps. The pane is remounted per decision and its keys
+  // (1–9, j / k) are the surface's, so focus is not carried into the next
+  // note — a focused note would take the digits.
+  const stepper = useListStepper(decisionsStepper);
+  const onAnswered = () => {
+    stepper?.step(1);
+  };
   return (
     <PaneChrome pane={decisionDetailPane}>
       {decision.status === "loading" ? (
@@ -104,7 +114,11 @@ function DecisionDetailBody(): ReactElement {
           refetch={decision.refetch}
         />
       ) : decision.found ? (
-        <DecisionDetail key={decisionId} decision={decision.row} />
+        <DecisionDetail
+          key={decisionId}
+          decision={decision.row}
+          onAnswered={onAnswered}
+        />
       ) : (
         // The guard said it exists; it can still go under a mounted pane (its task deleted).
         <Text tone="muted">This decision no longer exists.</Text>
@@ -117,7 +131,14 @@ function DecisionDetailBody(): ReactElement {
  * One decision in full, under the agent it belongs to (a link to its
  * conversation); opening it marks it seen.
  */
-function DecisionDetail({ decision }: { decision: DecisionRow }): ReactElement {
+function DecisionDetail({
+  decision,
+  onAnswered,
+}: {
+  decision: DecisionRow;
+  /** Answered (a pick, Enter in the note): on to the next decision. */
+  onAnswered: () => void;
+}): ReactElement {
   // What was new when it opened stays marked while it is shown, though opening it marks it seen.
   const [seenBefore] = useState(decision.seenAt);
   useMarkDecisionSeen(decision);
@@ -132,8 +153,11 @@ function DecisionDetail({ decision }: { decision: DecisionRow }): ReactElement {
       label: `Pick option ${o.key}`,
       group: "Decisions",
       when: () => answerable,
-      handler: () =>
-        draft.set((d) => ({ ...d, pick: d.pick === o.key ? null : o.key })),
+      handler: () => {
+        const unpick = draft.value.pick === o.key;
+        draft.set((d) => ({ ...d, pick: unpick ? null : o.key }));
+        if (!unpick) onAnswered();
+      },
     })),
   );
   return (
@@ -148,6 +172,7 @@ function DecisionDetail({ decision }: { decision: DecisionRow }): ReactElement {
         seenBefore={seenBefore}
         draft={draft}
         under={null}
+        onAnswered={onAnswered}
       />
     </Stack>
   );

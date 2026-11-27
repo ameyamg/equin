@@ -5,6 +5,7 @@ import { LIST_SLOTS, ListView } from "./components/list-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export type {
+  ListDetailControls,
   ListStep,
   ListStepper,
   ListStepResult,

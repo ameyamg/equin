@@ -56503,6 +56503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/virtual-rows.VirtualRows`
               - `ui/icons.Icon`
             - Exports (types):
+              - `ListDetailControls`
               - `ListStep`
               - `ListStepper`
               - `ListStepResult`
@@ -56531,11 +56532,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: `apps/mail/threads`
+            - Imported by:
+              - `apps/mail/threads`
+              - `tasks/decisions/inbox`
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/use-slot-widths.ts` (debt)
           - Core:
             - Exports (types):
+              - `ListDetailControls`
               - `ListStep`
               - `ListStepper`
               - `ListStepResult`
@@ -66808,6 +66812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor.TextEditor`
           - `shell/notifications.useToast`
         - Exports (types):
+          - `AnsweredVia`
           - `DecisionDraft`
           - `DecisionDrafts`
           - `DecisionPresentation`
@@ -67082,7 +67087,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sources` "Closed" → `DecisionsSource`
               - `IdKinds.Presenter` "dec"
               - `InlineChip.Tag` "dec" → `GenericIdChip`
-            - Uses: 47 symbols — full list in [`plugins/tasks/plugins/decisions/plugins/inbox/REFERENCE.md`](../plugins/tasks/plugins/decisions/plugins/inbox/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/tasks/plugins/decisions/plugins/inbox/REFERENCE.md`](../plugins/tasks/plugins/decisions/plugins/inbox/REFERENCE.md)
               - `tasks/decisions` ×8
               - `primitives/pane` ×7
               - `primitives/data-view` ×6
@@ -67091,6 +67096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data/id-chip` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
+              - `primitives/data-view/list` ×2
               - `primitives/row-actions` ×2
               - `conversations/conversation-view.conversationPane`
               - `primitives/app-shell.opensPane`

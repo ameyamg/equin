@@ -9,14 +9,16 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
  * newline there). Without one (`onSubmit` absent, or `submitMode: "none"`)
  * the key is left to the page: the editor does not take it, so a surface
  * shortcut on ⌘↵ (a Submit bar sending what the field drafts) fires from
- * inside the field instead of a line being inserted.
+ * inside the field instead of a line being inserted. `"bare-enter"`: a bare
+ * Enter submits and ⌘/Ctrl+Enter is left to the page as above — a field
+ * whose Enter moves on (a decision's note) inside a surface whose ⌘↵ sends.
  */
 export function EnterKeyPlugin({
   onSubmit,
   submitMode,
 }: {
   onSubmit: (() => void) | null;
-  submitMode: "enter" | "cmd-enter" | "none";
+  submitMode: "enter" | "bare-enter" | "cmd-enter" | "none";
 }) {
   const [editor] = useLexicalComposerContext();
 
@@ -27,11 +29,17 @@ export function EnterKeyPlugin({
         if (!event) return false;
         if (event.isComposing) return false;
         const modSubmit = event.metaKey || event.ctrlKey;
-        if (onSubmit === null || submitMode === "none")
+        if (
+          onSubmit === null ||
+          submitMode === "none" ||
+          (submitMode === "bare-enter" && modSubmit)
+        )
           // Handled (no paragraph) but not prevented: it reaches the page.
           return modSubmit;
         const bareSubmit =
-          submitMode === "enter" && !event.shiftKey && !event.altKey;
+          (submitMode === "enter" || submitMode === "bare-enter") &&
+          !event.shiftKey &&
+          !event.altKey;
         if (!modSubmit && !bareSubmit) return false;
         event.preventDefault();
         onSubmit();
