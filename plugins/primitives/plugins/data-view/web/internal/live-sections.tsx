@@ -1,4 +1,5 @@
 import { useEffect, useMemo, type ReactNode } from "react";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import {
   and,
   canonicalizeFilter,
@@ -83,17 +84,18 @@ export function serverSections(
     grouping: FieldGrouping;
     column: LiveGroupColumn;
     now: number;
+    format: DateFormatter;
     direction: "asc" | "desc";
   },
 ): ServerSection[] {
-  const { field, grouping, column, now, direction } = ctx;
+  const { field, grouping, column, now, format, direction } = ctx;
   const isNone = (value: unknown) =>
     value === null ||
     filterDomains[column.domain].isEmpty(value as string | number | boolean);
   const values = groups
     .filter((g) => !isNone(g.value))
     .map((g) => g.value as FieldValue);
-  const bucketOf = grouping.plan({ now, values, field });
+  const bucketOf = grouping.plan({ now, format, values, field });
   let noneCount = 0;
   const sections: (ServerSection & { seq: number })[] = [];
   const seen = new Set<string>();

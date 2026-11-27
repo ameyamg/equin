@@ -31883,9 +31883,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/data-view.DataViewSlots`
           - Core:
             - Uses:
-              - `fields/date/format.createDateFormatter`
-              - `fields/date/format.DateFormatter`
-              - `fields/date/format.DEFAULT_DATE_FORMAT_PREFS`
               - `primitives/date-picker.addDays`
               - `primitives/date-picker.addMonths`
               - `primitives/date-picker.isSameDay`
@@ -31959,9 +31956,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NumericOptions`
               - `TimeOptions`
             - Exports (values):
-              - `createDateFormatter`
               - `dateFormatConfig`
-              - `DEFAULT_DATE_FORMAT_PREFS`
               - `formatterFor`
               - `prefsOf`
           - Cross-plugin:
@@ -31970,12 +31965,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×8
               - `conversations` ×7
               - `infra` ×6
+              - `primitives` ×3
               - `tasks` ×3
-              - `fields` ×2
-              - `primitives` ×2
               - `build`
               - `code-explorer/commit-detail`
               - `database/query-deadline`
+              - `fields/date/filter`
               - `integrations/google-maps/usage`
               - `page/inline-date`
               - `review`
@@ -31989,6 +31984,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/date/format` (0 debt)
               - `packages/wall-clock` (0 debt)
               - `primitives/metrics` (0 debt)
+          - Test helpers:
+            - Core: `@plugins/fields/plugins/date/plugins/format/core/testing`
+              - `createDateFormatter` — A formatter bound to one set of prefs.
+              - `DEFAULT_DATE_FORMAT_PREFS` — The defaults, for a formatter no setting reached (tests, a pure tool).
         - **`inline`** — Date field type: data-view inline cell editor (native date input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "date" → `DateEditor`
@@ -55707,7 +55706,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 151 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 152 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -55737,6 +55736,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/search` ×2
           - `primitives/shortcuts` ×2
           - `primitives/sortable-list` ×2
+          - `fields/date/format.useDateFormatter`
           - `fields.Fields`
           - `ids.IdKinds`
           - `infra/endpoints.useAssetSrc`

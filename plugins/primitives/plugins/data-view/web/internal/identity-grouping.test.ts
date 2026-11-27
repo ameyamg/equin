@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import type { FieldDef, FieldValue } from "../../core";
 import { IDENTITY_GROUPING } from "./identity-grouping";
+
+/** The default date settings — no grouping under test writes a date. */
+const FORMAT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 /** The section keys a partition would render, in ascending ordinal order. */
 function sectionKeys(
@@ -9,6 +16,7 @@ function sectionKeys(
 ): string[] {
   const bucket = IDENTITY_GROUPING.plan({
     now: 0,
+    format: FORMAT,
     values,
     field: { id: "f", label: "F", ...field } as FieldDef<unknown>,
   });

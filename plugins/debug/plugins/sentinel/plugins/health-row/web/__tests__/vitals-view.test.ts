@@ -12,7 +12,7 @@ import type {
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import { toneOf, vitalsView } from "../internal/vitals-view";
 
 const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import { buildMenu } from "./date-options";
 
 const fmt = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);

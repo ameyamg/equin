@@ -11,24 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
-import type * as FormatCore from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 
-// The date formatter reads its prefs from config_v2, which has no
-// registration here: format with the defaults.
-vi.mock(
-  "@plugins/fields/plugins/date/plugins/format/web",
-  async (importOriginal) => {
-    const core = await vi.importActual<typeof FormatCore>(
-      "@plugins/fields/plugins/date/plugins/format/core",
-    );
-    const fmt = core.createDateFormatter(core.DEFAULT_DATE_FORMAT_PREFS);
-    return {
-      ...(await importOriginal<object>()),
-      useDateFormatter: () => fmt,
-    };
-  },
-);
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {

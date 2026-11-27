@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -36,6 +40,7 @@ function stubOpts<TRow = unknown>(
 ): PartitionOptions<TRow> {
   return {
     now,
+    format: createDateFormatter(DEFAULT_DATE_FORMAT_PREFS),
     order,
     resolveGrouping: (typeId, groupingId) =>
       groupings[`${typeId}:${groupingId}`] ??

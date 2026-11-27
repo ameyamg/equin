@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import {
   useDeferredLoadComplete,
   type Contribution,
@@ -829,6 +830,8 @@ function DataViewBodyInner<TRow>(
   // it per view would give two views of the same surface two different memo keys
   // for the same day.
   const now = useGroupingClock();
+  // The user's date formatter, for the bucket labels a date grouping writes.
+  const format = useDateFormatter();
   const collapsedSections = viewModel.collapsedSectionsFor(activeViewId);
   // A fixed-order source reads in its collection's default order whatever
   // sort a view was saved with.
@@ -1127,10 +1130,20 @@ function DataViewBodyInner<TRow>(
         ? partitionIntoSections(loadedRows, fields, tailGroupBy, rowKey, {
             resolveGrouping,
             now,
+            format,
             order: groupOrder,
           })
         : null,
-    [tailGroupBy, loadedRows, fields, rowKey, resolveGrouping, now, groupOrder],
+    [
+      tailGroupBy,
+      loadedRows,
+      fields,
+      rowKey,
+      resolveGrouping,
+      now,
+      format,
+      groupOrder,
+    ],
   );
   //  - in a collapsed section;
   const tailCollapsed =

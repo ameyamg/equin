@@ -22,6 +22,8 @@ import {
   type ViewState,
 } from "../../core";
 import { useGroupingRegistry } from "../grouping-slot";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useFlatRows } from "./use-flat-rows";
 import { foldSections, makeFoldKeep } from "./fold-sections";
@@ -105,6 +107,8 @@ export interface PartitionOptions<TRow = unknown> {
   resolveGrouping: (typeId: string, groupingId: string) => FieldGrouping;
   /** Local midnight of the current day (see `useGroupingClock`). */
   now: number;
+  /** The user's date formatter (`useDateFormatter`) — `GroupingPlanContext.format`. */
+  format: DateFormatter;
   /**
    * Section reading direction, taken from the view's own sort on the grouped
    * field. `GroupBucket.order` is always a plain ascending ordinal; this decides
@@ -213,6 +217,7 @@ export function partitionIntoSections<TRow>(
           .map((option) => option.value);
   const bucketOf = grouping.plan({
     now: opts.now,
+    format: opts.format,
     values: [...values.filter((v) => v != null), ...alwaysValues],
     field: field as FieldDef<unknown>,
   });
@@ -760,6 +765,7 @@ export function useDataViewSections<TRow>(
     useRowFilter(fold?.keep ?? null, fields, resolveOperatorSet),
   );
   const resolveGrouping = useGroupingRegistry().resolve;
+  const format = useDateFormatter();
   // A stored rule carries its `groupingId` (`readGroupBy` defaults it), but a
   // view handed a hand-built state may omit it — fill the identity grouping.
   // `state` is stable per view (`stateFor` is a ViewGetter), so this memo holds.
@@ -794,7 +800,14 @@ export function useDataViewSections<TRow>(
       fields,
       groupBy,
       partitionKey,
-      { resolveGrouping, now, order: groupOrder, rowsComplete, sectioning },
+      {
+        resolveGrouping,
+        now,
+        format,
+        order: groupOrder,
+        rowsComplete,
+        sectioning,
+      },
     );
     // Order each section's entries by rank (within-section manual order) BEFORE
     // aggregating, so the representative defaults to the first rank-ordered member.
@@ -839,6 +852,7 @@ export function useDataViewSections<TRow>(
     attach,
     resolveGrouping,
     now,
+    format,
     groupOrder,
     rowsComplete,
     sectioning,

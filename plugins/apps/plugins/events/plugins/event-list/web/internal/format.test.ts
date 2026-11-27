@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createDateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
+import { createDateFormatter } from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import { formatEventWhen, formatPlace, urlHost } from "./format";
 
 const GB = createDateFormatter({

@@ -245,3 +245,23 @@ declareNoLayoutEngine();
 // (the metrics board, 2026-11-17). A test that seeds storage does it inside
 // the test, or in its own `beforeEach` (which runs after this one).
 beforeEach(resetBrowserStorage);
+
+// A component that writes a date reads the user's Date order / Clock / Numeric
+// dates through `useDateFormatter()`, a config_v2 read — and a jsdom suite
+// renders with no config registration and no server, where that read throws
+// (loudly, as it must in the app). Every suite gets the formatter of the
+// DEFAULT settings instead, so a component that writes a date renders as a
+// fresh install would. A suite testing another setting hands its own formatter
+// to the pure function under test (`createDateFormatter(prefs)`).
+vi.mock(
+  "@plugins/fields/plugins/date/plugins/format/web",
+  async (importOriginal) => {
+    const { createDateFormatter, DEFAULT_DATE_FORMAT_PREFS } =
+      await import("@plugins/fields/plugins/date/plugins/format/core/testing");
+    const defaults = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
+    return {
+      ...(await importOriginal<object>()),
+      useDateFormatter: () => defaults,
+    };
+  },
+);

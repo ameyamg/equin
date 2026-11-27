@@ -4,7 +4,7 @@ import { ioHealthVerdict, MONITOR_STALE_MS } from "./io-health-verdict";
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 
 const AT = 1_793_700_000_000;
 const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);

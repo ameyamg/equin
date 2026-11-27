@@ -10,7 +10,7 @@ import {
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 
 /** Pinned "now": 2026-01-15T12:00 local (noon → unambiguous start-of-day). */
 const NOW = new Date("2026-01-15T12:00:00").getTime();

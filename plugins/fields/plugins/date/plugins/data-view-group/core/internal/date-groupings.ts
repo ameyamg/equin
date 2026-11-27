@@ -48,11 +48,7 @@ import {
   startOfWeek,
   toISODay,
 } from "@plugins/primitives/plugins/date-picker/core";
-import {
-  createDateFormatter,
-  DEFAULT_DATE_FORMAT_PREFS,
-  type DateFormatter,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 
 /**
  * Weeks start on Monday. **The one line to change** for a Sunday-first week —
@@ -186,7 +182,8 @@ function planSmart(ctx: GroupingPlanContext): Bucketer {
 }
 
 /** Day: one section per calendar day, "Today"/"Tomorrow"/"Yesterday" within ±1. */
-function planDay(ctx: GroupingPlanContext, fmt: DateFormatter): Bucketer {
+function planDay(ctx: GroupingPlanContext): Bucketer {
+  const fmt = ctx.format;
   const today = startOfDay(new Date(ctx.now));
   return (value) => {
     const day = toDay(value);
@@ -200,7 +197,8 @@ function planDay(ctx: GroupingPlanContext, fmt: DateFormatter): Bucketer {
 }
 
 /** Week: one section per `WEEK_STARTS_ON`-aligned week, named by its first day. */
-function planWeek(ctx: GroupingPlanContext, fmt: DateFormatter): Bucketer {
+function planWeek(ctx: GroupingPlanContext): Bucketer {
+  const fmt = ctx.format;
   const today = startOfDay(new Date(ctx.now));
   return (value) => {
     const day = toDay(value);
@@ -215,7 +213,8 @@ function planWeek(ctx: GroupingPlanContext, fmt: DateFormatter): Bucketer {
 }
 
 /** Month: one section per calendar month, e.g. "May 2026". */
-function planMonth(_ctx: GroupingPlanContext, fmt: DateFormatter): Bucketer {
+function planMonth(ctx: GroupingPlanContext): Bucketer {
+  const fmt = ctx.format;
   return (value) => {
     const day = toDay(value);
     if (day === null) return null;
@@ -245,44 +244,19 @@ function planYear(_ctx: GroupingPlanContext): Bucketer {
 }
 
 /**
- * The date type's five groupings, in menu order, their labels written by
- * `fmt` — a parameter so a test pins the spelling.
- *
- * The shipped set writes with the DEFAULT prefs (the browser's date order and
- * clock), not the user's settings: a grouping's `plan` is handed no formatter
- * (`GroupingPlanContext` carries `now` only), and data-view cannot read one
- * without every DataView suite registering the date-format config.
+ * The contributed grouping set for the `date` field type, in menu order. A
+ * label that writes a date ("Wed, May 20", "Week of …", "May 2026") writes it
+ * with `ctx.format` — the user's Clock / Date order / Numeric dates settings,
+ * read by the data-view host and handed in like `now`.
  */
-export function buildDateGroupings(fmt: DateFormatter): FieldGrouping[] {
+export const dateGroupings: FieldGrouping[] = [
   // Every one is `monotone`: each bucket is one contiguous span of time and
   // its ordinal grows with it (a fixed granularity's is the span's start;
   // Smart's ladder is ordered past → future, each rung a span the rung before
   // it ends at), so a read paged by the date column fills them in turn.
-  return [
-    { id: "smart", label: "Smart", monotone: true, plan: planSmart },
-    {
-      id: "day",
-      label: "Day",
-      monotone: true,
-      plan: (ctx) => planDay(ctx, fmt),
-    },
-    {
-      id: "week",
-      label: "Week",
-      monotone: true,
-      plan: (ctx) => planWeek(ctx, fmt),
-    },
-    {
-      id: "month",
-      label: "Month",
-      monotone: true,
-      plan: (ctx) => planMonth(ctx, fmt),
-    },
-    { id: "year", label: "Year", monotone: true, plan: planYear },
-  ];
-}
-
-/** The contributed grouping set for the `date` field type. */
-export const dateGroupings: FieldGrouping[] = buildDateGroupings(
-  createDateFormatter(DEFAULT_DATE_FORMAT_PREFS),
-);
+  { id: "smart", label: "Smart", monotone: true, plan: planSmart },
+  { id: "day", label: "Day", monotone: true, plan: planDay },
+  { id: "week", label: "Week", monotone: true, plan: planWeek },
+  { id: "month", label: "Month", monotone: true, plan: planMonth },
+  { id: "year", label: "Year", monotone: true, plan: planYear },
+];

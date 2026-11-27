@@ -15,7 +15,7 @@ import {
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 
 const refetch = () => Promise.resolve();
 const none = { here: 0, elsewhere: [], byAccount: {} };

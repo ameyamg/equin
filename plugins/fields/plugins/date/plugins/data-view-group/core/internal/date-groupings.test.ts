@@ -7,8 +7,8 @@ import type {
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
-import { buildDateGroupings } from "./date-groupings";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
+import { dateGroupings } from "./date-groupings";
 
 /**
  * Pinned "now": Wednesday 2026-05-13, local noon.
@@ -33,9 +33,11 @@ function at(year: number, month1: number, day: number, hour = 12, minute = 0) {
 }
 
 /** Month first pinned, so the labels under test hold on any host locale. */
-const GROUPINGS = buildDateGroupings(
-  createDateFormatter({ ...DEFAULT_DATE_FORMAT_PREFS, dateOrder: "mdy" }),
-);
+const FMT = createDateFormatter({
+  ...DEFAULT_DATE_FORMAT_PREFS,
+  dateOrder: "mdy",
+});
+const GROUPINGS = dateGroupings;
 
 function grouping(id: string) {
   const found = GROUPINGS.find((g) => g.id === id);
@@ -43,10 +45,11 @@ function grouping(id: string) {
   return found;
 }
 
-/** A plan context with the pinned clock; the date groupings read only `now`. */
-function ctx(now = NOW): GroupingPlanContext {
+/** A plan context with the pinned clock and formatter. */
+function ctx(now = NOW, format = FMT): GroupingPlanContext {
   return {
     now,
+    format,
     values: [],
     field: { id: "startsAt", label: "When", type: "date" },
   };
@@ -383,5 +386,20 @@ describe("every grouping", () => {
     expect(bucket("smart", value, nextYear).key).toBe("older");
     expect(bucket("month", value, nextYear)).toEqual(bucket("month", value));
     expect(bucket("year", value, nextYear)).toEqual(bucket("year", value));
+  });
+});
+
+describe("labels follow the formatter the host hands in", () => {
+  it("writes Day / Week / Month labels in the user's date order", () => {
+    const dmy = createDateFormatter({
+      ...DEFAULT_DATE_FORMAT_PREFS,
+      dateOrder: "dmy",
+    });
+    const value = at(2026, 5, 20);
+    const label = (id: string, format = FMT) =>
+      grouping(id).plan(ctx(NOW, format))(value)?.label;
+    expect(label("day")).not.toBe(label("day", dmy));
+    expect(label("week")).not.toBe(label("week", dmy));
+    expect(label("day", dmy)).toMatch(/20 May/);
   });
 });

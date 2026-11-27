@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type {
   FieldDef,
@@ -7,6 +11,9 @@ import type {
   GroupingPlanContext,
 } from "@plugins/primitives/plugins/data-view/core";
 import { enumGroupings } from "./enum-groupings";
+
+/** The default date settings — no grouping under test writes a date. */
+const FORMAT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 const OPTIONS = [
   { value: "todo", label: "To do" },
@@ -27,6 +34,7 @@ function bucketAll(
 ): GroupBucket[] {
   const ctx: GroupingPlanContext = {
     now: NOW,
+    format: FORMAT,
     values,
     field: {
       id: "status",
@@ -157,6 +165,7 @@ describe("enumGroupings", () => {
     } as unknown as FieldDef<unknown>;
     const bucket = enumGroupings[0]!.plan({
       now: NOW,
+      format: FORMAT,
       values: ["todo", "doing", "done"],
       field,
     });

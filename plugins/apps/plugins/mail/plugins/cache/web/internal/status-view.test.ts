@@ -4,7 +4,7 @@ import { mailHealth } from "./status-view";
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 
 const fmt = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 

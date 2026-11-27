@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import type {
   FieldDef,
   FieldValue,
@@ -7,7 +11,11 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import { boolGroupings } from "./bool-groupings";
 
+/** The default date settings — no grouping under test writes a date. */
+const FORMAT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
+
 const CTX: GroupingPlanContext = {
+  format: FORMAT,
   now: new Date("2026-08-26T00:00:00").getTime(),
   values: [true, false],
   field: { id: "done", label: "Done", type: "bool" } as FieldDef<unknown>,

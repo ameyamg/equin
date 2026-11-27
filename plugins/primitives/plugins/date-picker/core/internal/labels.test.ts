@@ -10,7 +10,7 @@ import {
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 
 // Month first pinned, so the expected spellings hold on any host locale.
 const MDY = createDateFormatter({

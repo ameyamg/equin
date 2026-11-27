@@ -1,4 +1,5 @@
 import type { FieldDef, FieldValue } from "./types";
+import type { DateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ColorTokenRef } from "@plugins/ui/plugins/tokens/plugins/color-ref/core";
 
@@ -68,6 +69,12 @@ export interface GroupingPlanContext {
    * so a raw `Date.now()` would change the memo key on every render.
    */
   readonly now: number;
+  /**
+   * The user's date formatter (Clock / Date order / Numeric dates), for a
+   * bucket label that writes a date ("Wed, May 20", "Week of …"). Injected like
+   * `now`: the host reads it (`useDateFormatter`) and a grouping stays pure.
+   */
+  readonly format: DateFormatter;
   /** Every non-null value in the rows being partitioned (duplicates included). */
   readonly values: readonly FieldValue[];
   /** The field being grouped — `options`, `label`, per-field settings. */

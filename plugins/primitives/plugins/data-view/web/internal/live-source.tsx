@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { useDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
 import {
   and,
@@ -633,6 +634,7 @@ function useSectionedReads<TRow>(args: {
   collapsedSections: ReadonlySet<string>;
 }): SectionedSourceView<TRow> | null {
   const { source, lowering, now, collapsedSections } = args;
+  const format = useDateFormatter();
   const resetKey = lowering?.resetKey ?? null;
   // What the groups read is OF — the column and the whole `where`, search
   // included — and the query (minus search) it belongs to. A report under
@@ -719,9 +721,10 @@ function useSectionedReads<TRow>(args: {
       grouping: lowering.grouped.grouping,
       column: lowering.grouped.column,
       now,
+      format,
       direction: lowering.grouped.direction,
     });
-  }, [lowering, shown, now]);
+  }, [lowering, shown, now, format]);
 
   // Each declared section's query (stable per section while the query is).
   const queries = useMemo(() => {

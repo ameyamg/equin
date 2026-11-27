@@ -8,7 +8,7 @@ import type { MachineUsage } from "../../core";
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import { machineUsageView } from "../internal/machine-usage-view";
 
 const FMT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);

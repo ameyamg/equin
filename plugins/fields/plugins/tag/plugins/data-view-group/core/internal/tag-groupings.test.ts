@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import {
+  createDateFormatter,
+  DEFAULT_DATE_FORMAT_PREFS,
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import type {
   FieldDef,
   FieldOption,
@@ -6,6 +10,9 @@ import type {
   GroupBucket,
 } from "@plugins/primitives/plugins/data-view/core";
 import { tagGroupings } from "./tag-groupings";
+
+/** The default date settings — no grouping under test writes a date. */
+const FORMAT = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);
 
 const [tree] = tagGroupings;
 
@@ -17,7 +24,7 @@ function plan(options: FieldOption[]): (v: FieldValue) => GroupBucket | null {
     options,
     value: () => null,
   };
-  return tree!.plan({ now: 0, values: [], field });
+  return tree!.plan({ now: 0, format: FORMAT, values: [], field });
 }
 
 // app ▸ website ▸ homepage, app ▸ chord; infra (a sibling root), in tree order.

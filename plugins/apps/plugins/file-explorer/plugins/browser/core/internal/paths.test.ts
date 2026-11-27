@@ -8,7 +8,7 @@ import {
   pathChain,
 } from "./paths";
 import { formatCount, formatModified, formatSize } from "./format";
-import { createDateFormatter } from "@plugins/fields/plugins/date/plugins/format/core";
+import { createDateFormatter } from "@plugins/fields/plugins/date/plugins/format/core/testing";
 
 const US = createDateFormatter({
   clock: "h12",

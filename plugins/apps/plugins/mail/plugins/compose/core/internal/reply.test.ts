@@ -16,7 +16,7 @@ import {
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 
 const ME = "me@example.com";
 const fmt = createDateFormatter(DEFAULT_DATE_FORMAT_PREFS);

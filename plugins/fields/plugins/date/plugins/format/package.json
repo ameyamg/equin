@@ -2,5 +2,5 @@
   "name": "@equin/plugin-fields-date-format",
   "version": "0.0.1",
   "private": true,
-  "description": "How the app writes a date or a time: the Clock, Date order and Numeric dates settings (Settings → Config), and the one DateFormatter every surface formats with — useDateFormatter() in the browser, serverDateFormatter() on the server, createDateFormatter(prefs) for a pure function handed one. Its lint rule (date-format/no-raw-date-format) refuses toLocaleTimeString / toLocaleDateString / Date#toLocaleString / Intl.DateTimeFormat anywhere else."
+  "description": "How the app writes a date or a time: the Clock, Date order and Numeric dates settings (Settings → Config), and the one DateFormatter every surface formats with — useDateFormatter() in the browser, serverDateFormatter() on the server, a DateFormatter handed to a pure function (createDateFormatter(prefs) from core/testing in a test). Its lint rule (date-format/no-raw-date-format) refuses toLocaleTimeString / toLocaleDateString / Date#toLocaleString / Intl.DateTimeFormat anywhere else."
 }

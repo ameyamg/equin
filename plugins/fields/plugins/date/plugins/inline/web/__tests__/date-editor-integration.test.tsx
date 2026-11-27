@@ -1,22 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { cleanup, render, screen, fireEvent } from "@testing-library/react";
-import type * as FormatCore from "@plugins/fields/plugins/date/plugins/format/core";
 
-// The date formatter reads its prefs from config_v2, which has no
-// registration here: format with the defaults.
-vi.mock(
-  "@plugins/fields/plugins/date/plugins/format/web",
-  async (importOriginal) => {
-    const core = await vi.importActual<typeof FormatCore>(
-      "@plugins/fields/plugins/date/plugins/format/core",
-    );
-    const fmt = core.createDateFormatter(core.DEFAULT_DATE_FORMAT_PREFS);
-    return {
-      ...(await importOriginal<object>()),
-      useDateFormatter: () => fmt,
-    };
-  },
-);
 import {
   dayLabel,
   monthTitle,
@@ -24,7 +8,7 @@ import {
 import {
   createDateFormatter,
   DEFAULT_DATE_FORMAT_PREFS,
-} from "@plugins/fields/plugins/date/plugins/format/core";
+} from "@plugins/fields/plugins/date/plugins/format/core/testing";
 import { DateEditor } from "../components/date-editor";
 
 /** What the component's `useDateFormatter()` resolves to under the defaults. */

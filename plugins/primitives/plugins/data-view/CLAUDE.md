@@ -670,6 +670,7 @@ interface FieldGrouping {
 
 interface GroupingPlanContext {
   now: number;
+  format: DateFormatter; // the user's date settings, for a label that writes a date
   values: readonly FieldValue[];
   field: FieldDef<unknown>;
 }
@@ -694,7 +695,8 @@ interface GroupByRule {
 - **`plan` is two-phase** — whole-set work once per render, then per row.
 - **`now` is injected, never read** (the partition is memoized). The host reads
   `useGroupingClock()` — local midnight, re-armed by one timer at the next midnight
-  (not polling: the change instant is known).
+  (not polling: the change instant is known). `format` is injected the same
+  way: each host reads `useDateFormatter()`.
 - **`order` is a plain ascending ordinal**, read from whichever end the view's sort
   on the grouped field points (`DataViewRenderProps.groupOrder`, derived from
   `activeState.sort` — a live source zeroes `state.sort`).
@@ -2633,7 +2635,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 151 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 152 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×24
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
@@ -2663,6 +2665,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `primitives/search` ×2
     - `primitives/shortcuts` ×2
     - `primitives/sortable-list` ×2
+    - `fields/date/format.useDateFormatter`
     - `fields.Fields`
     - `ids.IdKinds`
     - `infra/endpoints.useAssetSrc`

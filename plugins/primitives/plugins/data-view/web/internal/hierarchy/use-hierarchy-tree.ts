@@ -19,6 +19,7 @@ import {
 } from "../../../core";
 import { useResolveOperatorSet } from "../../filter-slot";
 import { useGroupingRegistry } from "../../grouping-slot";
+import { useDateFormatter } from "@plugins/fields/plugins/date/plugins/format/web";
 import { bodyRowMatcher, useRowFilter } from "../use-row-filter";
 import { makeSortComparator } from "../sort-rows";
 import { partitionIntoSections } from "../use-data-view-sections";
@@ -151,6 +152,7 @@ export function useHierarchyTree(args: {
   // keeps its identity until the view's group-by changes.
   const groupBy = props.state.groupBy;
   const resolveGrouping = useGroupingRegistry().resolve;
+  const format = useDateFormatter();
   const { now, groupOrder, sectioning, rowsComplete } = props;
   const grouped = useMemo(() => {
     const field = groupBy
@@ -194,6 +196,7 @@ export function useHierarchyTree(args: {
       {
         resolveGrouping,
         now,
+        format,
         order: groupOrder,
         flat: true,
         sectioning: projectedSectioning,
@@ -213,6 +216,7 @@ export function useHierarchyTree(args: {
     groupBy,
     resolveGrouping,
     now,
+    format,
     groupOrder,
     sectioning,
     rowsComplete,
