@@ -43,6 +43,7 @@ import { ComposeButton } from "@plugins/apps/plugins/mail/plugins/compose/web";
 import { mailAccountStatus } from "@plugins/apps/plugins/mail/plugins/cache/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { avatarColor } from "@plugins/apps/plugins/mail/plugins/shell/core";
+import { AppShellBrand } from "@plugins/primitives/plugins/app-shell/web";
 
 const copyIcon = symbol("content-copy");
 const expandIcon = symbol("expand-more");
@@ -115,20 +116,25 @@ export function MailSidebar({ mailboxes }: { mailboxes: MailboxesState }) {
       gap="none"
       className={`${SIDEBAR_WIDTH} ${OVERLAY_START} h-full text-sidebar-foreground`}
     >
-      {/* The view's name; in the rail, the bar's empty corner. */}
-      <Line className="h-12 gap-smd pr-lg pl-xl rail:invisible">
+      {/* The app's brand (the launcher, every app's top-left), then the
+          view's name; in the rail, the brand alone, on the column the
+          rail's rows draw their glyphs in. */}
+      <Line className="h-12 gap-smd pr-lg pl-smd rail:px-xsm">
+        <span className={rigidClass()}>
+          <AppShellBrand form="icon" />
+        </span>
         <span
           aria-hidden
-          className="size-2.25 rounded-full"
+          className="size-2.25 rounded-full rail:hidden"
           style={{
             background: active?.instance.color ?? "var(--primary-text)",
           }}
         />
-        <Text variant="heading" className="truncate">
+        <Text variant="heading" className="truncate rail:hidden">
           {active?.instance.name ?? ""}
         </Text>
         {dirtyFor(activeViewId) ? (
-          <span title="Edited" aria-label="Edited">
+          <span title="Edited" aria-label="Edited" className="rail:hidden">
             <StatusDot colorClass="bg-primary" />
           </span>
         ) : null}

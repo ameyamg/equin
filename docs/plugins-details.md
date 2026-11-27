@@ -7794,7 +7794,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
               - `thread-actions` "triage" → `RowTriage`
-            - Uses: 55 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses: 56 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `primitives/data-view` ×9
               - `network/live/live-state` ×5
               - `primitives/css/ui-kit` ×5
@@ -7808,6 +7808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/reader.ThreadReader`
               - `fields/date/format.useDateFormatter`
               - `network/live/optimistic-mutation.writeRows`
+              - `primitives/app-shell.AppShellBrand`
               - `primitives/collapsible.useCollapsible`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
@@ -53227,8 +53228,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-palette --sidebar-accent`
           - `ui/tokens/sidebar-palette --sidebar-foreground`
           - `ui/tokens/sidebar-palette --sidebar-icon`
-        - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
-          - `apps` ×24
+        - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+          - `apps` ×25
           - `tasks` ×4
           - `apps-core` ×2
           - `conversations` ×2
