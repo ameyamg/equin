@@ -692,9 +692,12 @@ export const compositionsConfig = defineConfig({
               // them, so naming the shell alone shipped an empty app. Not
               // Appearance nor Accounts nor any other pane (the user's
               // decision, 2026-11-10, reaffirmed 2026-11-23): a pane Settings
-              // gains later stays out of the demo until named here.
+              // gains later stays out of the demo until named here. Its Isle
+              // building (the gear mill) is not a pane: named so Settings
+              // stands on the demo's island like every app in it.
               "apps.settings.shell",
               "apps.settings.config",
+              "apps.settings.isle-building",
               // Places, the map of saved places: the map draws through Google
               // Maps (`map.google`, selected below) with the owner's browser key
               // the page hands the host (`google-maps/page-config`); searching,

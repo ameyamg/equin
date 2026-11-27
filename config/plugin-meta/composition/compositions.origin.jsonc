@@ -1,4 +1,4 @@
-// @hash 6d67d58b1eb2
+// @hash ff30403c10d4
 {
   "manifests": [
     {
@@ -253,6 +253,7 @@
         "!apps.isle.dev.**",
         "apps.settings.shell",
         "apps.settings.config",
+        "apps.settings.isle-building",
         "apps.places.**",
         "!companions.menu-bar.**",
         "companions.menu-bar.app-window",
