@@ -7794,7 +7794,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "mail-thread"
               - `Pane.Register` "mail-threads"
               - `thread-actions` "triage" → `RowTriage`
-            - Uses: 56 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
+            - Uses: 58 symbols — full list in [`plugins/apps/plugins/mail/plugins/threads/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/threads/REFERENCE.md)
               - `primitives/data-view` ×9
               - `network/live/live-state` ×5
               - `primitives/css/ui-kit` ×5
@@ -7803,6 +7803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints` ×2
               - `network/live` ×2
               - `primitives/css/spacing` ×2
+              - `primitives/data-view/list` ×2
               - `tag-tree/picker` ×2
               - `apps/mail/provider.MailProviderConnect`
               - `apps/mail/reader.ThreadReader`
@@ -56464,13 +56465,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/icons-view.tsx` (debt)
           - Core:
             - Exports (types): `IconsViewOptions`
-        - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
+        - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions. j / k step the rows (`stepKeys`); with a stepper (`defineListStepper`) the step is published to the rest of the surface (`useListStepper`) — a reader pane's Done opening the next item.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 93 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+            - Uses: 97 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
               - `primitives/data-view` ×50
               - `primitives/rank-reorder` ×9
               - `primitives/multi-select` ×5
+              - `primitives/shortcuts` ×5
               - `primitives/tree` ×3
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
@@ -56493,10 +56495,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
-              - `primitives/shortcuts.useSurfaceShortcuts`
               - `primitives/virtual-rows.VirtualRows`
               - `ui/icons.Icon`
-            - Exports (types): `ListViewOptions`
+            - Exports (types):
+              - `ListStep`
+              - `ListStepper`
+              - `ListStepResult`
+              - `ListViewOptions`
+            - Exports (values):
+              - `defineListStepper`
+              - `useListStepper`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
@@ -56518,10 +56526,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
+            - Imported by: `apps/mail/threads`
           - Exemptions:
             - Exempts itself from: `react-compiler:no-silent-skips` — `web/components/use-slot-widths.ts` (debt)
           - Core:
-            - Exports (types): `ListViewOptions`
+            - Exports (types):
+              - `ListStep`
+              - `ListStepper`
+              - `ListStepResult`
+              - `ListViewOptions`
         - **`map`** — Map view child for the data-view primitive: every row with a location as a pin on a full-bleed map, clustered, with clicking a pin activating its row.
           - Web:
             - Contributes: `DataViewSlots.View` "Map" → `MapDataView`
@@ -61212,7 +61225,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-sdk`
           - `infra/claude-cli/availability`
           - `integrations/google-maps`
-    - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler. Owns the page's focused surface, and surface signals keyed by it (defineSurfaceSignal: a surface publishes a value, global chrome reads the focused surface's — only when both render in the same plugin scope).
+    - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler. Owns the page's focused surface, and surface signals keyed by it (defineSurfaceSignal: a surface publishes a value, global chrome reads the focused surface's, another part of the same surface its own — only when both render in the same plugin scope).
       - Web:
         - Slots: `Shortcuts.Shortcut`
         - Slot contributors:
@@ -61238,6 +61251,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Shortcuts`
           - `targetClaimsKey`
           - `useFocusedSurfaceSignal`
+          - `useOwnSurfaceSignal`
           - `usePageShortcuts`
           - `usePlayPauseShortcut`
           - `useSurfaceShortcuts`

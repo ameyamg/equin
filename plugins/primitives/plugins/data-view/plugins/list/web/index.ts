@@ -4,11 +4,17 @@ import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { LIST_SLOTS, ListView } from "./components/list-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-export type { ListViewOptions } from "../core";
+export type {
+  ListStep,
+  ListStepper,
+  ListStepResult,
+  ListViewOptions,
+} from "../core";
+export { defineListStepper, useListStepper } from "./components/list-stepper";
 
 export default {
   description:
-    "List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.",
+    "List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions. j / k step the rows (`stepKeys`); with a stepper (`defineListStepper`) the step is published to the rest of the surface (`useListStepper`) — a reader pane's Done opening the next item.",
   contributions: [
     DataViewSlots.View({
       type: "list",

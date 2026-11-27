@@ -11,6 +11,7 @@ import { setFocusedSurfaceId } from "../internal/focused-surface";
 import {
   defineSurfaceSignal,
   useFocusedSurfaceSignal,
+  useOwnSurfaceSignal,
   useSurfaceSignal,
 } from "../internal/surface-signal";
 
@@ -99,5 +100,25 @@ describe("surface signals", () => {
       </Page>,
     );
     expect(screen.getByTestId("chrome").textContent).toBe("task-b");
+  });
+
+  it("a part of a surface reads its own surface's value, focused or not", () => {
+    function ReadOwn({ testId }: { testId: string }) {
+      const value = useOwnSurfaceSignal(signal);
+      return <span data-testid={testId}>{value ?? "none"}</span>;
+    }
+    render(
+      <Page>
+        <Publish surface="tab-a" value="a" />
+        <Publish surface="tab-b" value="b" />
+        <SurfaceIdContext.Provider value="tab-a">
+          <ReadOwn testId="in-a" />
+        </SurfaceIdContext.Provider>
+        <ReadOwn testId="outside" />
+      </Page>,
+    );
+    act(() => setFocusedSurfaceId("tab-b"));
+    expect(screen.getByTestId("in-a").textContent).toBe("a");
+    expect(screen.getByTestId("outside").textContent).toBe("none");
   });
 });

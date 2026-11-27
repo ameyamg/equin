@@ -40,6 +40,7 @@ import { mailThreadPane } from "../panes";
 import { ThreadItemActions } from "../slots";
 import { MailBulkActions } from "./thread-triage";
 import { useMailActions } from "../internal/actions";
+import { mailThreadsStepper } from "../internal/stepper";
 import { MailSidebar } from "./mail-sidebar";
 import { MAIL_MEASURE, mailToolbar } from "./mail-toolbar";
 import {
@@ -158,8 +159,9 @@ export function MailScreen(): ReactNode {
         leadAlign: "start" as const,
         // Each day is one card, as in the prototype.
         frame: "section" as const,
-        // j / k open the next / previous thread (marked read as it opens).
-        stepKeys: true,
+        // j / k open the next / previous thread (marked read as it opens);
+        // the open thread's Done steps through the same stepper.
+        stepKeys: mailThreadsStepper,
       },
     }),
     [rowCtx],

@@ -552,7 +552,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const listRoot = useRef<HTMLElement | null>(null);
   const stepRevealKey = useStepKeys({
     root: listRoot,
-    enabled: options.stepKeys === true,
+    enabled: options.stepKeys !== undefined && options.stepKeys !== false,
+    stepper: typeof options.stepKeys === "object" ? options.stepKeys : null,
     sections,
     collapsedSections: props.collapsedSections,
     selectedRowId: props.selectedRowId,

@@ -1,4 +1,5 @@
 import { useState, type RefObject } from "react";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   visibleSections,
   type DataViewRenderProps,
@@ -11,6 +12,12 @@ import {
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import type {
+  ListStep,
+  ListStepResult,
+  ListStepper,
+} from "@plugins/primitives/plugins/data-view/plugins/list/core";
+import { usePublishListStep } from "./list-stepper";
 
 /**
  * The rows a reader steps through, in the order drawn: a collapsed section's
@@ -99,6 +106,11 @@ export function stepTarget<T extends { key: string }>(
  * step grows that section's read ({@link stepPlan}); past a flat paged
  * read's, revealing its tail row is what pages it (the body loads the next
  * page while the tail is on screen).
+ *
+ * With a `stepper`, the same step is published to the list's surface
+ * (`useListStepper`), over the rows of the latest render — except that a
+ * selected row not drawn here steps nowhere (`end`): the caller opened it
+ * from elsewhere, so this list has no "next" of it.
  */
 export function useStepKeys({
   enabled,
@@ -107,8 +119,10 @@ export function useStepKeys({
   collapsedSections,
   selectedRowId,
   rowActivation,
+  stepper = null,
 }: {
   enabled: boolean;
+  stepper?: ListStepper | null;
   root: RefObject<HTMLElement | null>;
   sections: readonly DataViewSection<unknown>[];
   collapsedSections: ReadonlySet<string> | undefined;
@@ -120,27 +134,40 @@ export function useStepKeys({
       "data-view list: `stepKeys` needs a row activation — the step runs the row's",
     );
   const [revealKey, setRevealKey] = useState<string | null>(null);
-  const step = (delta: 1 | -1) => {
+  const step = (delta: 1 | -1): ListStepResult => {
     const plan = stepPlan(
       stepOrder(sections, collapsedSections),
       selectedRowId,
       delta,
     );
-    if (plan === null) return;
+    if (plan === null) return "end";
     if (plan.kind === "grow") {
       if (!plan.paging.growing) plan.paging.loadMore();
-      return;
+      return "loading";
     }
     const { target } = plan;
     const act = rowActivation?.(target.row);
-    if (act === undefined) return;
+    if (act === undefined) return "end";
     runActivation(act, PLAIN_GESTURE);
     setRevealKey(target.key);
     revealElement(
       root.current?.querySelector(`[data-row-key="${CSS.escape(target.key)}"]`),
       { block: "nearest", scope: "nearest" },
     );
+    return "stepped";
   };
+  // The published step: one identity for the list's life, calling the step
+  // of the latest render (its rows, its selection).
+  const publishedStep = useEventCallback((delta: 1 | -1): ListStepResult => {
+    const drawn =
+      selectedRowId !== undefined &&
+      stepOrder(sections, collapsedSections).some(
+        (r) => r.key === selectedRowId,
+      );
+    return drawn ? step(delta) : "end";
+  });
+  const [published] = useState<ListStep>(() => ({ step: publishedStep }));
+  usePublishListStep(enabled ? stepper : null, published);
   useSurfaceShortcuts(
     enabled
       ? [

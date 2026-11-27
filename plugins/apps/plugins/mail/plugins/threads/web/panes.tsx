@@ -8,6 +8,8 @@ import {
 import { PLAIN_GESTURE } from "@plugins/primitives/plugins/link-gesture/core";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { ThreadActions, useMailActions } from "./internal/actions";
+import { useListStepper } from "@plugins/primitives/plugins/data-view/plugins/list/web";
+import { mailThreadsStepper } from "./internal/stepper";
 import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
@@ -89,12 +91,26 @@ function MailThreadPaneView() {
     if (row.unread)
       run([row.id], { kind: "read", unread: false }, { toast: false });
   }, [row, run]);
-  // Done, Delete and the rest move the thread away: back to the list.
-  const leave = close === null ? undefined : () => close(PLAIN_GESTURE);
+  // Done, Delete and the rest move the thread away: on to the next thread of
+  // the list (the one below, else the one above, as j / k step), or back to
+  // the list when there is none. The step runs first, over the rows the list
+  // drew with this thread still in them.
+  const stepper = useListStepper(mailThreadsStepper);
+  const leave =
+    close === null
+      ? undefined
+      : () => {
+          if (stepper !== null) {
+            const down = stepper.step(1);
+            if (down === "stepped") return;
+            if (down === "end" && stepper.step(-1) === "stepped") return;
+          }
+          close(PLAIN_GESTURE);
+        };
   const act = (op: MailThreadOp) => {
     if (row === null) return;
-    run([row.id], op);
     leave?.();
+    run([row.id], op);
   };
   // e: the primary action (Done in the inbox); #: delete — on the open thread.
   useSurfaceShortcuts([

@@ -118,3 +118,33 @@ export function useFocusedSurfaceSignal<T>(signal: SurfaceSignal<T>): T | null {
   }, [signal, scope]);
   return useSyncExternalStore(subscribe, getSnapshot, () => null);
 }
+
+/**
+ * This surface's own entry of `signal` (the surface this renders in, focused
+ * or not), or `null` — also outside a surface, or when the entry was
+ * published from another scope. For a part of a surface reaching a value
+ * another part of the SAME surface publishes (a reader pane and the list
+ * beside it). Re-renders on a publish.
+ */
+export function useOwnSurfaceSignal<T>(signal: SurfaceSignal<T>): T | null {
+  const surfaceId = useSurfaceTabId();
+  const scope = usePluginScopeId();
+  const subscribe = useCallback(
+    (cb: () => void) => {
+      const { listeners } = stateOf(signal);
+      listeners.add(cb);
+      return () => {
+        listeners.delete(cb);
+      };
+    },
+    [signal],
+  );
+  const getSnapshot = useCallback((): T | null => {
+    const entry =
+      surfaceId === undefined
+        ? undefined
+        : stateOf(signal).bySurface.get(surfaceId);
+    return entry !== undefined && entry.scope === scope ? entry.value : null;
+  }, [signal, surfaceId, scope]);
+  return useSyncExternalStore(subscribe, getSnapshot, () => null);
+}

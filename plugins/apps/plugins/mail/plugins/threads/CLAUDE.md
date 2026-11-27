@@ -61,7 +61,9 @@ overlay start), as the prototype's `.pane` does.
 - **Where**: each row's hover cluster (`ThreadItemActions` "triage": Label,
   Delete — not in the trash — and the primary action), the reader's bar
   (`panes.tsx`: the same plus Mark as read / unread; Done, Delete and the
-  rest close the reader), and the selection bar (DataView checkbox selection
+  rest open the next thread of the list — the one below, else above, through
+  the list's stepper (`mailThreadsStepper`, the same step as j / k) — and
+  close the reader only when there is none, or the thread is not in the list), and the selection bar (DataView checkbox selection
   in the list view, `bar: "bottom"`: Done, Label, Mark as read, Delete or
   Restore).
 - **Opening marks read**: the thread pane marks its thread read once per
@@ -110,7 +112,7 @@ overlay start), as the prototype's `.pane` does.
     - `Pane.Register` "mail-thread"
     - `Pane.Register` "mail-threads"
     - `thread-actions` "triage" → `RowTriage`
-  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×9
     - `network/live/live-state` ×5
     - `primitives/css/ui-kit` ×5
@@ -119,6 +121,7 @@ overlay start), as the prototype's `.pane` does.
     - `infra/endpoints` ×2
     - `network/live` ×2
     - `primitives/css/spacing` ×2
+    - `primitives/data-view/list` ×2
     - `tag-tree/picker` ×2
     - `apps/mail/provider.MailProviderConnect`
     - `apps/mail/reader.ThreadReader`

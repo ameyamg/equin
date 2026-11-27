@@ -1,6 +1,31 @@
 import type { ReactNode } from "react";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
+declare const listStepperBrand: unique symbol;
+
+/**
+ * A named channel a stepping list publishes its step through, to the other
+ * parts of its surface; make one at module scope with `defineListStepper`
+ * (list/web) and hand it to `stepKeys`.
+ */
+export interface ListStepper {
+  readonly name: string;
+  readonly [listStepperBrand]: true;
+}
+
+/**
+ * What a stepping list's published step did: `stepped` — it ran the row
+ * activation of the row `delta` away from the selected one; `loading` — that
+ * row is not loaded yet, its section's read is growing; `end` — no row there
+ * (the selected one is at that end, or not drawn at all).
+ */
+export type ListStepResult = "stepped" | "loading" | "end";
+
+/** A stepping list's step, as `useListStepper` hands it out. */
+export interface ListStep {
+  step: (delta: 1 | -1) => ListStepResult;
+}
+
 /**
  * Per-view options for the list view, threaded through
  * `DataViewProps.viewOptions.list` and surfaced as the opaque
@@ -100,8 +125,13 @@ export interface ListViewOptions<TRow> {
    * text fields. Needs a row activation and a `selectedRowId` to step from
    * (none selected: j takes the first row). For a list read one item at a
    * time (an inbox).
+   *
+   * A {@link ListStepper} in place of `true`: the same keys, and the step
+   * published to the rest of the list's surface through that stepper
+   * (`useListStepper`, list/web) — a reader pane's Done stepping on to the
+   * next item as `j` would.
    */
-  stepKeys?: boolean;
+  stepKeys?: boolean | ListStepper;
   /**
    * The box each entry is drawn in. Absent: rows sit flush in the list's band.
    * `"card"`: each entry — the row and, while open, its detail — is ONE raised

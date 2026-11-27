@@ -90,7 +90,7 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
 
 ## Plugin reference
 
-- Description: Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler. Owns the page's focused surface, and surface signals keyed by it (defineSurfaceSignal: a surface publishes a value, global chrome reads the focused surface's — only when both render in the same plugin scope).
+- Description: Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler. Owns the page's focused surface, and surface signals keyed by it (defineSurfaceSignal: a surface publishes a value, global chrome reads the focused surface's, another part of the same surface its own — only when both render in the same plugin scope).
 - Load-bearing: yes
 - Web:
   - Slots: `Shortcuts.Shortcut`
@@ -117,6 +117,7 @@ has no other reactive read. Design: `research/2026-11-05-global-ambient-signals-
     - `Shortcuts`
     - `targetClaimsKey`
     - `useFocusedSurfaceSignal`
+    - `useOwnSurfaceSignal`
     - `usePageShortcuts`
     - `usePlayPauseShortcut`
     - `useSurfaceShortcuts`

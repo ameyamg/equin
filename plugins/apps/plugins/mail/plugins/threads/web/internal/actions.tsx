@@ -147,14 +147,18 @@ export function ThreadActions({
   row: MailActionRow;
   /** Where they are drawn: a row's hover cluster, or the reader's bar. */
   place?: "row" | "reader";
-  /** After an action that moves the thread away (the reader closes on it). */
+  /**
+   * Run as an action moves the thread away, before the op is drawn (the
+   * reader opens the next thread of the list, else closes).
+   */
   onLeave?: () => void;
 }): ReactNode {
   const { run } = useMailActions();
   const primary = primaryMailAction(row.mailboxes);
   const leave = (op: MailThreadOp) => {
-    run([row.id], op);
+    // Leave first: the reader steps on over the list as it was drawn.
     onLeave?.();
+    run([row.id], op);
   };
   return (
     <Line className="gap-2xs">
