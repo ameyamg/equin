@@ -18,6 +18,7 @@ import {
   TokenBoundaryPlugin,
   TokenPastePlugin,
 } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
+import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { TextEditorSlots } from "../slots";
 import {
   getNodeExtensions,
@@ -131,35 +132,41 @@ export function TextEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <EditorShell
-        placeholder={placeholder}
-        ariaLabel={ariaLabel}
-        disabled={!!disabled}
-        autoFocus={!!autoFocus}
-        className={className}
-        minRows={minRows}
-        maxHeight={maxHeight}
-        bottomSlot={bottomSlot}
-      />
-      <ValueSyncPlugin
-        value={value}
-        onChange={onChange}
-        extensions={extensions}
-      />
-      {initialSelection && (
-        <InitialSelectionPlugin
-          selection={initialSelection}
+      {/* One gallery per editor: every image token drawn in it (Lexical
+          portals decorators inside this tree) joins it, so the viewer opened
+          from one pasted image steps through all of them with ← / →. Without
+          it each thumbnail is a gallery of one. */}
+      <ImageGallery>
+        <EditorShell
+          placeholder={placeholder}
+          ariaLabel={ariaLabel}
+          disabled={!!disabled}
+          autoFocus={!!autoFocus}
+          className={className}
+          minRows={minRows}
+          maxHeight={maxHeight}
+          bottomSlot={bottomSlot}
+        />
+        <ValueSyncPlugin
+          value={value}
+          onChange={onChange}
           extensions={extensions}
         />
-      )}
-      <PluginSlot onError={onError} extensions={extensions} />
-      <DecoratorNavPlugin />
-      <DecoratorBlockPlugin />
-      <TokenPastePlugin extensions={extensions} />
-      <TokenBoundaryPlugin extensions={extensions} />
-      <EnterKeyPlugin onSubmit={onSubmit ?? null} submitMode={submitMode} />
-      {insertRef && <InsertPlugin insertRef={insertRef} />}
-      <HistoryPlugin />
+        {initialSelection && (
+          <InitialSelectionPlugin
+            selection={initialSelection}
+            extensions={extensions}
+          />
+        )}
+        <PluginSlot onError={onError} extensions={extensions} />
+        <DecoratorNavPlugin />
+        <DecoratorBlockPlugin />
+        <TokenPastePlugin extensions={extensions} />
+        <TokenBoundaryPlugin extensions={extensions} />
+        <EnterKeyPlugin onSubmit={onSubmit ?? null} submitMode={submitMode} />
+        {insertRef && <InsertPlugin insertRef={insertRef} />}
+        <HistoryPlugin />
+      </ImageGallery>
     </LexicalComposer>
   );
 }

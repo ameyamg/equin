@@ -8,8 +8,10 @@ import { ImageViewer } from "./image-viewer";
  * it, in the order they appear on the page, and leaves when it unmounts.
  * Renders the viewer while one of them is open.
  *
- * Wrap the content whose images belong together — a conversation transcript —
- * and nothing else: a composer's not-yet-sent attachments stay out. Two
+ * Wrap the content whose images belong together — a conversation transcript,
+ * a text editor's pasted images (the text-editor primitive wraps itself) — and
+ * nothing else: a composer's not-yet-sent attachments stay out of the
+ * transcript's gallery (the nearest gallery wins). Two
  * galleries never share state, so two panes on one conversation step
  * independently.
  */

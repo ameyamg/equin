@@ -60199,10 +60199,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow` ×2
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `conversations` ×7
+              - `primitives` ×5
               - `apps` ×4
-              - `primitives` ×4
               - `page` ×3
               - `fields` ×2
               - `debug/browser-recordings`
@@ -62149,6 +62149,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/yield.yieldClass`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
+          - `primitives/overlay/image-viewer.ImageGallery`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
           - `primitives/text-editor/token-extension/node.TokenBoundaryPlugin`

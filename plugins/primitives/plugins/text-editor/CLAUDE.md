@@ -9,6 +9,10 @@ The editor manages two-way markdown-to-Lexical sync, submit behavior
 rendered inside the LexicalComposer boundary below the text area (so
 slot components can call `useLexicalComposerContext()`).
 
+Every editor is one image gallery (`overlay/image-viewer`'s `<ImageGallery>`):
+the images its tokens draw (pasted images) open one viewer that steps through
+all of them with ← / →.
+
 Feature-specific behaviors live in sub-plugins that contribute via the
 Plugin slot.
 
@@ -112,6 +116,7 @@ start matching across lines.
     - `primitives/css/yield.yieldClass`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
+    - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
     - `primitives/text-editor/token-extension/node.TokenBoundaryPlugin`

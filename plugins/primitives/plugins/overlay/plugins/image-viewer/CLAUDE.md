@@ -216,10 +216,10 @@ handler, the `?` sheet and the button tooltips all read.
     - `ui/tokens/shadow` ×2
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×7
+    - `primitives` ×5
     - `apps` ×4
-    - `primitives` ×4
     - `page` ×3
     - `fields` ×2
     - `debug/browser-recordings`
