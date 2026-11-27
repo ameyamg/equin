@@ -682,8 +682,8 @@ serves them.
     - `tasks.v3:groups` (push)
     - `tasks.v3:rows` (keyed, point)
 - Core:
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/git/commit-trailers` ×4
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/git/commit-trailers` ×5
     - `conversations/model-provider` ×3
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
@@ -733,7 +733,6 @@ serves them.
     - `TrackFilingGrant`
     - `TrailerCommit`
   - Exports (values):
-    - `ATTEMPT_TRAILER_KEY`
     - `attemptConversationIds`
     - `attemptDeliveries`
     - `attemptDeliveriesEntityRef`
@@ -807,7 +806,6 @@ serves them.
     - `taskWindow`
     - `TrackFilingGrantSchema`
     - `TRAILER_LOG_FORMAT`
-    - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
   - Imported by: 135 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×52

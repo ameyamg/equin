@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
-  ATTEMPT_TRAILER_KEY,
-  UNATTRIBUTED_TRAILER_KEY,
-} from "@plugins/tasks/plugins/tasks-core/core";
-import { PUSH_TRAILER } from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
+  ATTEMPT_TRAILER,
+  PUSH_TRAILER,
+  UNATTRIBUTED_TRAILER,
+} from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 
 const PUSH_TRAILER_KEY = PUSH_TRAILER.key;
+const ATTEMPT_TRAILER_KEY = ATTEMPT_TRAILER.key;
+const UNATTRIBUTED_TRAILER_KEY = UNATTRIBUTED_TRAILER.key;
 import { resolvePushAttribution, trailerAmendCommand } from "./attribution";
 
 const ATT = "att-1793320131-b1fur3";

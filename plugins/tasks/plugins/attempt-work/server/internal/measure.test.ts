@@ -16,10 +16,10 @@ import { join } from "node:path";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import {
+  ATTEMPT_TRAILER,
   CONVERSATION_TRAILER,
   PUSH_TRAILER,
 } from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
-import { ATTEMPT_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   GitError,
   WorktreeGoneError,
@@ -84,7 +84,7 @@ async function commit(
       [
         trailers.conv && `${CONVERSATION_TRAILER.key}: ${trailers.conv}`,
         `${PUSH_TRAILER.key}: ${trailers.push}`,
-        trailers.attempt && `${ATTEMPT_TRAILER_KEY}: ${trailers.attempt}`,
+        trailers.attempt && `${ATTEMPT_TRAILER.key}: ${trailers.attempt}`,
       ]
         .filter(Boolean)
         .join("\n"),

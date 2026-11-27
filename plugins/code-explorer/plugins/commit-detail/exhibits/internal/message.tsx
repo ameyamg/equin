@@ -1,7 +1,7 @@
 import type { CommitDetail } from "@plugins/code-explorer/plugins/code-api/core";
 import { CO_AUTHORED_BY_TRAILER_KEY } from "@plugins/primitives/plugins/commit-list/core";
-import { ATTEMPT_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
 import {
+  ATTEMPT_TRAILER,
   CONVERSATION_TRAILER,
   PUSH_TRAILER,
 } from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
@@ -22,7 +22,7 @@ const COMMIT: CommitDetail = {
       value: "Claude Opus 5.5 <noreply@anthropic.com>",
     },
     { key: CONVERSATION_TRAILER.key, value: "conv-1794814344-u7g2wo" },
-    { key: ATTEMPT_TRAILER_KEY, value: "att-1794814300-kvade4" },
+    { key: ATTEMPT_TRAILER.key, value: "att-1794814300-kvade4" },
     { key: PUSH_TRAILER.key, value: "2507afe6-0c1d-4f7e-9a51-1d2e3f4a5b6c" },
   ],
   body: [

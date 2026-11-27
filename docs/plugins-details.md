@@ -35205,9 +35205,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordPagePrincipal`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
-          - `infra` ×18
-          - `framework` ×13
+        - Imported by: 72 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+          - `infra` ×19
+          - `framework` ×12
           - `apps` ×10
           - `conversations` ×4
           - `database` ×4
@@ -35217,14 +35217,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup` ×2
           - `installer` ×2
           - `page` ×2
-          - `reports` ×2
-          - `stats` ×2
           - `upstream` ×2
           - `auth`
           - `debug/sentinel/machine-usage`
           - `network/live/resource-protocol`
+          - `reports/main-thread-stall`
           - `screenshot`
-          - `tasks/tasks-core`
           - `wish/github-issue`
       - Exemptions:
         - Exempts itself from:
@@ -40385,6 +40383,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Server: `@plugins/infra/plugins/git/plugins/checkout-watch/server/testing`
               - `fakeCheckoutWatch` — A checkout watch over fake directories, for testing what a reader's request hears: one linked worktree at `/wt` (git dir `/main/.git/worktrees/wt`, on `refs/heads/wt-branch` tracking `refs/remotes/origin/wt-branch`, nothing ignored), driven by the real hub — so `refs`, `onChange` and `onResync` are judged exactly as `acquireCheckoutWatch` judges them.
+        - **`commit-trailers`** — The trailers equin stamps on commits, as data (conversation, push, attempt, unattributed): each one's key (what every new commit is stamped with — Equin-Conversation, Equin-Push) and every key it was written under before (the legacy keys in history, LEGACY_IDS), so a reader accepts all of them forever. trailerPlaceholder builds the `%(trailers:key=…,key=…)` git log placeholder over every key; trailerArg spells a `--trailer` for the current one; isTrailerKey matches a parsed key.
+          - Core:
+            - Uses: `framework/product-name.LEGACY_IDS`
+            - Exports (types): `TrailerKeys`
+            - Exports (values):
+              - `ATTEMPT_TRAILER`
+              - `CONVERSATION_TRAILER`
+              - `firstTrailerValue`
+              - `isTrailerKey`
+              - `PUSH_TRAILER`
+              - `trailerArg`
+              - `trailerPlaceholder`
+              - `UNATTRIBUTED_TRAILER`
+          - Cross-plugin:
+            - Imported by:
+              - `code-explorer/commit-detail`
+              - `conversations/commit-conversation`
+              - `framework/cli/git-artifacts`
+              - `framework/cli/push`
+              - `primitives/commit-list`
+              - `reports/engine`
+              - `stats/commits`
+              - `stats/scoreboard`
+              - `tasks/tasks-core`
+              - `upstream`
         - **`fsmonitor`** — The one owner of git's builtin fsmonitor daemons for checkouts: startCheckoutFsmonitor (core.fsmonitor in the checkout's own config.worktree — the main worktree's in its own file, included for its git dir only, since git worktree add copies config.worktree — then the daemon, in a process group of its own so a backend restart does not stop it), ensureCheckoutFsmonitor (the same, plus renewing the index's fsmonitor token when the running daemon did not issue it — a stale token makes every read a full scan, since no read of ours writes the index), stopCheckoutFsmonitor, and reconcileCheckoutFsmonitors (converge every checkout on on / off as its caller says, and signal daemons whose checkout is gone). A git read in a live checkout then costs what changed, not the checkout's ~25k files, however cold the machine's file cache is.
           - Server:
             - Uses:
@@ -53985,7 +54008,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tryRunGit`
           - `WorktreeGoneError`
       - Core:
-        - Uses: `packages/list-bound.wholeList`
+        - Uses:
+          - `infra/git/commit-trailers.isTrailerKey`
+          - `infra/git/commit-trailers.TrailerKeys`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `CommitRow`
           - `CommitTrailer`
@@ -70545,7 +70571,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks.v3:groups` (push)
           - `tasks.v3:rows` (keyed, point)
       - Core:
-        - Uses: 35 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 39 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `infra/git/commit-trailers` ×5
           - `conversations/model-provider` ×3
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
@@ -70559,7 +70586,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
           - `fields/string-list/config.stringListField`
-          - `framework/product-name.LEGACY_IDS`
           - `infra/entities.entityRef`
           - `infra/entity-extensions.defineExtensionShape`
           - `network/live/query-resource.compositeKey`
@@ -70596,7 +70622,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TrackFilingGrant`
           - `TrailerCommit`
         - Exports (values):
-          - `ATTEMPT_TRAILER_KEY`
           - `attemptConversationIds`
           - `attemptDeliveries`
           - `attemptDeliveriesEntityRef`
@@ -70613,7 +70638,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `buildTaskPrompt`
           - `CONVERSATION_LAUNCH_CAUSE_OPTIONS`
           - `CONVERSATION_LAUNCH_CAUSES`
-          - `CONVERSATION_TRAILER_KEY`
           - `conversationAttachmentLinks`
           - `conversationAttachmentLinksEntityRef`
           - `ConversationKindSchema`
@@ -70635,7 +70659,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isBlockedStatus`
           - `isSettled`
           - `parseTrailerLog`
-          - `PUSH_TRAILER_KEY`
           - `pushesEntityRef`
           - `pushRows`
           - `PushSchema`
@@ -70672,18 +70695,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskWindow`
           - `TrackFilingGrantSchema`
           - `TRAILER_LOG_FORMAT`
-          - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 137 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×53
+        - Imported by: 135 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×52
           - `tasks` ×48
           - `debug` ×6
           - `active-data` ×5
           - `apps` ×3
-          - `code-explorer` ×3
           - `infra` ×3
           - `page` ×3
           - `review` ×3
+          - `code-explorer` ×2
           - `primitives` ×2
           - `stats` ×2
           - `backup/sources/transcripts`

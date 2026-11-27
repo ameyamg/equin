@@ -1,6 +1,8 @@
 export {
+  ATTEMPT_TRAILER,
   CONVERSATION_TRAILER,
   PUSH_TRAILER,
+  UNATTRIBUTED_TRAILER,
   firstTrailerValue,
   isTrailerKey,
   trailerArg,

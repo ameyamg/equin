@@ -1,4 +1,5 @@
 import {
+  ATTEMPT_TRAILER,
   CONVERSATION_TRAILER,
   PUSH_TRAILER,
   firstTrailerValue,
@@ -35,22 +36,6 @@ import { attemptIdKind } from "@plugins/tasks/plugins/task-ids/core";
  */
 
 /**
- * Stamped by `./equin push` beside the push trailer when the branch is an
- * attempt's (`claude-web/<attemptId>`): the attempt the push is credited to,
- * derived from the checkout itself rather than delivered by an env var — so a
- * session equin did not launch (no `EQUIN_CONVERSATION_ID`, e.g. while
- * recovering a broken main) still lands attributed. The conversation trailer,
- * when present, stays the authority.
- */
-export const ATTEMPT_TRAILER_KEY = "Equin-Attempt";
-/**
- * Stamped by `./equin push --unattributed "<reason>"`: a push that names no
- * conversation and no attempt ON PURPOSE, with the reason. The ledger writes no
- * row for it (there is no attempt to hang one on); git history keeps why.
- */
-export const UNATTRIBUTED_TRAILER_KEY = "Equin-Unattributed";
-
-/**
  * The attempt a branch belongs to — the value of the attempt trailer push
  * stamps from it — or null for a branch that is no attempt's (`main`, a
  * hand-made one). One definition, read by the push CLI that writes the trailer
@@ -74,7 +59,7 @@ export const TRAILER_LOG_FORMAT =
   "%H%x00%cI%x00" +
   `${trailerPlaceholder(CONVERSATION_TRAILER, { separator: "%x1f" })}%x00` +
   `${trailerPlaceholder(PUSH_TRAILER, { separator: "%x1f" })}%x00` +
-  `%(trailers:key=${ATTEMPT_TRAILER_KEY},valueonly,separator=%x1f)%x00` +
+  `${trailerPlaceholder(ATTEMPT_TRAILER, { separator: "%x1f" })}%x00` +
   "%s%x00";
 
 /**

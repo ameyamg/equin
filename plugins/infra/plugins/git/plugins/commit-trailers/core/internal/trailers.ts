@@ -34,6 +34,22 @@ export const PUSH_TRAILER = defineTrailer("Equin-Push", [
 ]);
 
 /**
+ * Stamped by `./equin push` beside the push trailer when the branch is an
+ * attempt's (`claude-web/<attemptId>`): the attempt the push is credited to,
+ * derived from the checkout itself (tasks-core's `attemptOfBranch`) — so a
+ * session equin did not launch still lands attributed. The conversation
+ * trailer, when present, stays the authority.
+ */
+export const ATTEMPT_TRAILER = defineTrailer("Equin-Attempt", []);
+
+/**
+ * Stamped by `./equin push --unattributed "<reason>"`: a push that names no
+ * conversation and no attempt ON PURPOSE, with the reason. The ledger writes
+ * no row for it; git history keeps why.
+ */
+export const UNATTRIBUTED_TRAILER = defineTrailer("Equin-Unattributed", []);
+
+/**
  * The `git log --format=` placeholder printing a trailer's values under any
  * of its keys, in message order: `%(trailers:key=A,key=B,valueonly…)` (git
  * shows a trailer matching any `key=` given).

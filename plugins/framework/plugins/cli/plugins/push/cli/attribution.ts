@@ -1,12 +1,10 @@
 import {
+  ATTEMPT_TRAILER,
   PUSH_TRAILER,
+  UNATTRIBUTED_TRAILER,
   trailerArg,
 } from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
-import {
-  ATTEMPT_TRAILER_KEY,
-  UNATTRIBUTED_TRAILER_KEY,
-  attemptOfBranch,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import { attemptOfBranch } from "@plugins/tasks/plugins/tasks-core/core";
 import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 
 /**
@@ -39,7 +37,7 @@ export function resolvePushAttribution(input: {
 }): PushAttribution {
   const trailers = [trailerArg(PUSH_TRAILER, input.pushId)];
   const attemptId = attemptOfBranch(input.branch);
-  if (attemptId) trailers.push(`${ATTEMPT_TRAILER_KEY}=${attemptId}`);
+  if (attemptId) trailers.push(trailerArg(ATTEMPT_TRAILER, attemptId));
 
   if (input.unattributed === undefined) return { ok: true, trailers };
 
@@ -67,7 +65,7 @@ export function resolvePushAttribution(input: {
         '--unattributed needs a one-line reason, e.g. --unattributed "recovery: main\'s server would not boot".',
     };
   }
-  trailers.push(`${UNATTRIBUTED_TRAILER_KEY}=${reason}`);
+  trailers.push(trailerArg(UNATTRIBUTED_TRAILER, reason));
   return { ok: true, trailers };
 }
 

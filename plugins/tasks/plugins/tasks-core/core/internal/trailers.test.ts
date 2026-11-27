@@ -6,11 +6,11 @@
  */
 import { describe, test, expect } from "bun:test";
 import {
+  ATTEMPT_TRAILER,
   CONVERSATION_TRAILER,
   PUSH_TRAILER,
 } from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 import {
-  ATTEMPT_TRAILER_KEY,
   TRAILER_LOG_FORMAT,
   attemptOfBranch,
   parseTrailerLog,
@@ -28,7 +28,7 @@ test("the format fragment names every trailer key it reads, old and new", () => 
     ...PUSH_TRAILER.readKeys,
   ])
     expect(TRAILER_LOG_FORMAT).toContain(`key=${key}`);
-  expect(TRAILER_LOG_FORMAT).toContain(`key=${ATTEMPT_TRAILER_KEY}`);
+  expect(TRAILER_LOG_FORMAT).toContain(`key=${ATTEMPT_TRAILER.key}`);
 });
 
 test("a trailer carried twice (old and new key) reads its first value and shifts no field", () => {

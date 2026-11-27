@@ -1,6 +1,7 @@
 # commit-trailers
 
-The commit trailers that were renamed, as data. Each `TrailerKeys` has the
+The trailers equin stamps on commits, as data — every key in one place. Each
+`TrailerKeys` has the
 `key` every new commit is stamped with and the `readKeys` it may be found
 under — the current key, then the ones history was written with:
 
@@ -8,6 +9,11 @@ under — the current key, then the ones history was written with:
 |---|---|---|
 | `CONVERSATION_TRAILER` | `Equin-Conversation` | `LEGACY_IDS.conversationTrailer` |
 | `PUSH_TRAILER` | `Equin-Push` | `LEGACY_IDS.pushTrailer` |
+| `ATTEMPT_TRAILER` | `Equin-Attempt` | — |
+| `UNATTRIBUTED_TRAILER` | `Equin-Unattributed` | — |
+
+What each one means for the pushes ledger, and `attemptOfBranch`, are
+`tasks-core`'s (`core/internal/trailers.ts`).
 
 History is never rewritten, so every reader accepts every key, forever:
 
@@ -25,17 +31,19 @@ conversation keys itself.
 
 ## Plugin reference
 
-- Description: The commit trailers that were renamed, as data: each one's key (what every new commit is stamped with — Equin-Conversation, Equin-Push) and every key it was written under before (the legacy keys in history, LEGACY_IDS), so a reader accepts all of them forever. trailerPlaceholder builds the `%(trailers:key=…,key=…)` git log placeholder over every key; trailerArg spells a `--trailer` for the current one; isTrailerKey matches a parsed key.
+- Description: The trailers equin stamps on commits, as data (conversation, push, attempt, unattributed): each one's key (what every new commit is stamped with — Equin-Conversation, Equin-Push) and every key it was written under before (the legacy keys in history, LEGACY_IDS), so a reader accepts all of them forever. trailerPlaceholder builds the `%(trailers:key=…,key=…)` git log placeholder over every key; trailerArg spells a `--trailer` for the current one; isTrailerKey matches a parsed key.
 - Core:
   - Uses: `framework/product-name.LEGACY_IDS`
   - Exports (types): `TrailerKeys`
   - Exports (values):
+    - `ATTEMPT_TRAILER`
     - `CONVERSATION_TRAILER`
     - `firstTrailerValue`
     - `isTrailerKey`
     - `PUSH_TRAILER`
     - `trailerArg`
     - `trailerPlaceholder`
+    - `UNATTRIBUTED_TRAILER`
 - Cross-plugin:
   - Imported by:
     - `code-explorer/commit-detail`

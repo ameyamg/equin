@@ -3,13 +3,11 @@ import {
   envName,
   readEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
+import { attemptOfBranch } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  ATTEMPT_TRAILER_KEY,
-  UNATTRIBUTED_TRAILER_KEY,
-  attemptOfBranch,
-} from "@plugins/tasks/plugins/tasks-core/core";
-import {
+  ATTEMPT_TRAILER,
   CONVERSATION_TRAILER,
+  UNATTRIBUTED_TRAILER,
   trailerPlaceholder,
 } from "@plugins/infra/plugins/git/plugins/commit-trailers/core";
 
@@ -68,7 +66,7 @@ async function commitsAheadOfMain(): Promise<OwnCommit[]> {
     "--not",
     "main",
     "--glob=refs/remotes/*/main",
-    `--format=%H%x00${trailerPlaceholder(CONVERSATION_TRAILER, { separator: "%x2C" })}%x00%(trailers:key=${ATTEMPT_TRAILER_KEY},valueonly,separator=%x2C)%(trailers:key=${UNATTRIBUTED_TRAILER_KEY},valueonly,separator=%x2C)`,
+    `--format=%H%x00${trailerPlaceholder(CONVERSATION_TRAILER, { separator: "%x2C" })}%x00${trailerPlaceholder(ATTEMPT_TRAILER, { separator: "%x2C" })}${trailerPlaceholder(UNATTRIBUTED_TRAILER, { separator: "%x2C" })}`,
   ]);
   if (exitCode !== 0 || !stdout) return [];
   return stdout.split("\n").map((line) => {
@@ -92,7 +90,7 @@ async function hasStrayBodyTrailer(sha: string): Promise<boolean> {
 
 const check: Check = {
   id: "conversation-trailer",
-  description: `every commit ahead of every known main (local, and each <remote>/main) is attributable: with ${envName("CONVERSATION_ID")} set it carries that conversation's ${TRAILER} trailer; without it the branch is an attempt's (push credits it with ${ATTEMPT_TRAILER_KEY}) or each commit names its conversation, attempt or ${UNATTRIBUTED_TRAILER_KEY} reason`,
+  description: `every commit ahead of every known main (local, and each <remote>/main) is attributable: with ${envName("CONVERSATION_ID")} set it carries that conversation's ${TRAILER} trailer; without it the branch is an attempt's (push credits it with ${ATTEMPT_TRAILER.key}) or each commit names its conversation, attempt or ${UNATTRIBUTED_TRAILER.key} reason`,
   // Not a pure function of the working tree: reads EQUIN_CONVERSATION_ID
   // env and the trailers of this branch's own commits. Never cache.
   cacheSignature: () => null,
