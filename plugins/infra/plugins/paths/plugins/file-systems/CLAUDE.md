@@ -198,6 +198,7 @@ file viewer all name a file system and read through here.
     - `archiveReasonMessage`
     - `BROWSABLE_FILE_SYSTEMS`
     - `browserDirPeek`
+    - `browserFileAdd`
     - `browserFileBytes`
     - `browserFileCreate`
     - `browserFileDelete`
@@ -213,6 +214,7 @@ file viewer all name a file system and read through here.
     - `checkoutFileText`
     - `compareFileNames`
     - `computerDirPeek`
+    - `computerFileAdd`
     - `computerFileBytes`
     - `computerFileCompletions`
     - `computerFileCompress`
@@ -235,6 +237,7 @@ file viewer all name a file system and read through here.
     - `computerVolume`
     - `contentTypeOf`
     - `dirPeekOf`
+    - `FILE_ADD_MAX_BYTES`
     - `FILE_BYTES_MAX`
     - `FILE_COMPLETE_LIMIT`
     - `FILE_COMPRESS_MAX_PATHS`

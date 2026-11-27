@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ClipboardEvent,
   type DragEvent,
   type MouseEvent,
   type ReactNode,
@@ -74,6 +75,7 @@ import {
   type EntryActionHost,
 } from "../internal/entry-action-host";
 import { setFileClipboard, useFileClipboard } from "../internal/file-clipboard";
+import { pastedFileName } from "../internal/pasted-file-name";
 import { useViewportAtMost } from "../internal/use-viewport-at-most";
 import { entryRowAt, FileTree } from "./file-tree";
 import { SplitPreview } from "./file-preview";
@@ -480,12 +482,19 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
   const clipboard = useFileClipboard();
   const pasteable =
     clipboard !== null && clipboard.fs === system.fs ? clipboard : null;
-  const toClipboard = (paths: readonly string[], mode: "copy" | "cut") =>
-    setFileClipboard({
-      fs: system.fs,
-      paths: paths.map((p) => absolutePath(p, home)),
-      mode,
+  const toClipboard = (paths: readonly string[], mode: "copy" | "cut") => {
+    const absolute = paths.map((p) => absolutePath(p, home));
+    setFileClipboard({ fs: system.fs, paths: absolute, mode });
+    // The system clipboard holds the paths too (the Finder's own copy puts
+    // the names there): what it held before — an image copied earlier — is
+    // no longer what ⌘V pastes, so a paste here puts down these entries.
+    void navigator.clipboard.writeText(absolute.join("\n")).catch((err) => {
+      // No flaw: a page not focused (or a browser refusing clipboard writes)
+      // keeps its old system clipboard; the file clipboard is set regardless.
+      if (err instanceof DOMException && err.name === "NotAllowedError") return;
+      throw err;
     });
+  };
   // The folder is the system's own when it is listed so, or sits in a folder
   // listed so (a folder never opened has no listing of its own; an archive is
   // a file row, so a folder of a folder on disk is on disk itself).
@@ -504,6 +513,47 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
       setFileClipboard(null);
       forgetRemoved(moved.map((p) => displayPath(p, home)));
     });
+  };
+
+  // Files on the system clipboard (an image copied anywhere, a screenshot)
+  // pasted here: each a new file of this folder, its name open for editing.
+  const addPasted = (folder: string, files: readonly File[]) => {
+    if (edits === null) return;
+    void Promise.all(
+      files.map((file) => edits.add(folder, pastedFileName(file), file)),
+    ).then((added) => {
+      const paths = added.filter((p): p is string => p !== null);
+      if (paths.length === 0) return;
+      selectAll(paths);
+      if (paths.length !== 1) return;
+      // One file: named first, and shown beside the listing (as a new text file).
+      setEditLabel({ id: paths[0]! });
+      runActivation(fileAt(paths[0]!), PLAIN_GESTURE);
+    });
+  };
+
+  // ⌘V, while the listing has the focus (a text field — a name being edited
+  // — keeps its own paste): files on the system clipboard are added as new
+  // files; otherwise the file clipboard's entries are pasted. A clipboard
+  // event rather than a shortcut: only the paste carries the system
+  // clipboard's files, and copying entries here replaces what it held.
+  const onPaste = (e: ClipboardEvent<HTMLElement>) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (target?.closest("input, textarea, [contenteditable]") != null) return;
+    if (target?.closest("[data-tree-row]") == null) return;
+    if (!writable(dir)) return;
+    const files = Array.from(e.clipboardData.items)
+      .filter((item) => item.kind === "file")
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
+    if (files.length > 0) {
+      e.preventDefault();
+      addPasted(dir, files);
+      return;
+    }
+    if (pasteable === null) return;
+    e.preventDefault();
+    paste(dir);
   };
 
   const onDisk = (path: string) => isOnDisk(listings, folderOf(path));
@@ -558,8 +608,8 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
     ],
   );
 
-  // ⌘C / ⌘X on the selected rows, ⌘V into this folder — while the listing
-  // has the focus (a text field keeps its own).
+  // ⌘C / ⌘X on the selected rows — while the listing has the focus (a text
+  // field keeps its own). ⌘V is the listing's paste event (`onPaste`).
   const selectedPaths = [...selection.selected];
   const inListing = (e: KeyboardEvent) =>
     e.target instanceof Element && e.target.closest("[data-tree-row]") !== null;
@@ -585,14 +635,6 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
         selectedPaths.length > 0 &&
         selectedPaths.every(onDisk),
       handler: () => toClipboard(selectedPaths, "cut"),
-    },
-    {
-      id: "file-explorer.paste",
-      keys: "mod+v",
-      label: "Paste into this folder",
-      when: (e: KeyboardEvent) =>
-        inListing(e) && pasteable !== null && writable(dir),
-      handler: () => paste(dir),
     },
   ]);
 
@@ -720,6 +762,7 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
             ref={treeRef}
             {...background.props}
             onContextMenu={onContextMenu}
+            onPaste={onPaste}
             className={cn(
               "h-full rail-x-sm",
               background.over && cn(DROP_TARGET_RING, "ring-inset"),

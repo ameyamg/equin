@@ -1,6 +1,8 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import {
+  FILE_ADD_MAX_BYTES,
+  computerFileAdd,
   computerFileCompress,
   computerFileCopy,
   computerFileCreate,
@@ -28,7 +30,7 @@ import { resolveHostPath } from "../../server/internal/path";
 // host-fs's routes: every one reads or changes the host filesystem, so each
 // endpoint is declared `needsMachine` and served here — a host without the
 // computer (the in-browser demo) answers it unavailable without a request.
-// The writes (open, extract, move, copy, compress, and the edits: create, rename, delete,
+// The writes (open, extract, move, copy, compress, and the edits: create, add, rename, delete,
 // trash, write) are file-systems' `computer` endpoints; the
 // reads a surface makes (stat, complete, …) are live values (`./reads.ts`,
 // `./complete.ts`); `raw` (file-systems' `computerFileRaw`, `./file-system.ts`) stays a route because a byte URL is an asset.
@@ -77,6 +79,24 @@ export const handleCompress = implementMachine(
 
 export const handleCreate = implementMachine(computerFileCreate, ({ body }) =>
   createHostEntry(resolveHostPath(body.dir), body.name, body.kind),
+);
+
+export const handleAdd = implementMachine(
+  computerFileAdd,
+  async ({ body, query }) => {
+    if (body.size > FILE_ADD_MAX_BYTES) {
+      throw new HttpError(
+        413,
+        `a file added is at most ${FILE_ADD_MAX_BYTES} bytes (got ${body.size})`,
+      );
+    }
+    return createHostEntry(
+      resolveHostPath(query.dir),
+      query.name,
+      "file",
+      new Uint8Array(await body.arrayBuffer()),
+    );
+  },
 );
 
 export const handleRename = implementMachine(computerFileRename, ({ body }) =>

@@ -10,7 +10,9 @@ import {
 import {
   computerFileCompress,
   computerFileCopy,
+  FILE_ADD_MAX_BYTES,
   isValidEntryName,
+  type FileCreateResult,
   type FileRemoveResult,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { useFileEdits } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
@@ -36,6 +38,11 @@ export interface EntryEdits {
   rename: (path: string, name: string) => Promise<string | null>;
   /** A new empty file or folder in `dir`, named untitled: its path. */
   create: (dir: string, kind: "file" | "dir") => Promise<string | null>;
+  /**
+   * A new file in `dir` holding `bytes` (a pasted image), named `name` or its
+   * next free spelling: its path.
+   */
+  add: (dir: string, name: string, bytes: Blob) => Promise<string | null>;
   /**
    * Remove `paths` (asking first for a deletion for good): the paths removed.
    * `trash` only where the system has a Trash.
@@ -78,7 +85,7 @@ export function useEntryEdits(system: ExplorerSystem): EntryEdits | null {
   const { home } = system;
   const abs = useCallback((path: string) => absolutePath(path, home), [home]);
   const shown = useCallback((path: string) => displayPath(path, home), [home]);
-  const { rename, create, delete: del, trash } = edits;
+  const { rename, create, add, delete: del, trash } = edits;
   const copyInto = useEndpointMutation(computerFileCopy);
   const compressAt = useEndpointMutation(computerFileCompress);
 
@@ -129,14 +136,9 @@ export function useEntryEdits(system: ExplorerSystem): EntryEdits | null {
     [rename, abs, shown, toast],
   );
 
-  const createEntry = useCallback(
-    async (dir: string, kind: "file" | "dir"): Promise<string | null> => {
-      if (create.kind === "unavailable") return null;
-      const result = await sent(
-        create.mutateAsync({
-          body: { dir: abs(dir), name: UNTITLED[kind], kind },
-        }),
-      );
+  /** What a create (or an add) answered, a refusal said: the new entry's path. */
+  const created = useCallback(
+    (dir: string, result: FileCreateResult | null): string | null => {
       if (result === null) return null;
       switch (result.kind) {
         case "created":
@@ -158,11 +160,48 @@ export function useEntryEdits(system: ExplorerSystem): EntryEdits | null {
           return null;
         case "invalid-name":
           throw new Error(
-            `file-explorer: the untitled name “${result.name}” was refused`,
+            `file-explorer: the name “${result.name}” of a new entry was refused`,
           );
       }
     },
-    [create, abs, shown, toast],
+    [shown, toast],
+  );
+
+  const createEntry = useCallback(
+    async (dir: string, kind: "file" | "dir"): Promise<string | null> => {
+      if (create.kind === "unavailable") return null;
+      const result = await sent(
+        create.mutateAsync({
+          body: { dir: abs(dir), name: UNTITLED[kind], kind },
+        }),
+      );
+      return created(dir, result);
+    },
+    [create, abs, created],
+  );
+
+  const addEntry = useCallback(
+    async (dir: string, name: string, bytes: Blob): Promise<string | null> => {
+      if (add.kind === "unavailable") return null;
+      if (bytes.size > FILE_ADD_MAX_BYTES) {
+        refused(
+          toast,
+          `“${name}” is too large to paste here`,
+          `A pasted file can hold at most ${Math.round(FILE_ADD_MAX_BYTES / 1024 / 1024)} MB.`,
+        );
+        return null;
+      }
+      if (!isValidEntryName(name)) {
+        throw new Error(
+          `file-explorer: a pasted file's name “${name}” is no entry name`,
+        );
+      }
+      const result = await sent(
+        add.mutateAsync({ body: bytes, query: { dir: abs(dir), name } }),
+      );
+      return created(dir, result);
+    },
+    [add, abs, created, toast],
   );
 
   const removeEntries = useCallback(
@@ -317,6 +356,7 @@ export function useEntryEdits(system: ExplorerSystem): EntryEdits | null {
   return {
     rename: renameEntry,
     create: createEntry,
+    add: addEntry,
     remove: removeEntries,
     copy: copyEntries,
     compress: compressEntries,

@@ -17,7 +17,9 @@ import { useFetchEndpoint } from "./fetch-endpoint";
 // Never distributive (`[T] extends [U]`): a discriminated-union body is ONE
 // body (`{ body: A | B }`), not a union of requests a variable of the union
 // cannot be assigned to.
-type MutationVariables<TParams, TBody> = [TParams] extends [
+// A query (a binary body's metadata: `uploadAttachment`'s filename) rides
+// along as fetchEndpoint's does: required where the endpoint declares one.
+type MutationVariables<TParams, TBody, TQuery = void> = ([TParams] extends [
   Record<string, never>,
 ]
   ? [TBody] extends [void]
@@ -25,7 +27,8 @@ type MutationVariables<TParams, TBody> = [TParams] extends [
     : { params?: TParams; body: TBody }
   : [TBody] extends [void]
     ? { params: TParams; body?: never }
-    : { params: TParams; body: TBody };
+    : { params: TParams; body: TBody }) &
+  ([TQuery] extends [void] ? { query?: never } : { query: TQuery });
 
 type MutationOptions<TResponse> = {
   onSuccess?: (data: TResponse extends void ? void : TResponse) => void;
@@ -34,10 +37,15 @@ type MutationOptions<TResponse> = {
   meta?: { suppressError?: boolean };
 };
 
-type EndpointMutation<TParams, TBody, TResponse> = UseMutationResult<
+type EndpointMutation<
+  TParams,
+  TBody,
+  TResponse,
+  TQuery = void,
+> = UseMutationResult<
   TResponse extends void ? void : TResponse,
   EndpointError,
-  MutationVariables<TParams, TBody>
+  MutationVariables<TParams, TBody, TQuery>
 >;
 
 /**
@@ -46,9 +54,14 @@ type EndpointMutation<TParams, TBody, TResponse> = UseMutationResult<
  * else the mutation — so a call site cannot reach `mutate` without narrowing.
  * A subtree's transport is fixed, so the arm is stable across renders.
  */
-export type MachineEndpointMutation<TParams, TBody, TResponse> =
+export type MachineEndpointMutation<TParams, TBody, TResponse, TQuery = void> =
   | MachineUnavailable
-  | ({ kind: "available" } & EndpointMutation<TParams, TBody, TResponse>);
+  | ({ kind: "available" } & EndpointMutation<
+      TParams,
+      TBody,
+      TResponse,
+      TQuery
+    >);
 
 /**
  * TanStack Query useMutation wrapper for POST/PUT/PATCH/DELETE endpoints —
@@ -71,7 +84,7 @@ export function useEndpointMutation<
   endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery> &
     WriteEndpoint,
   opts?: MutationOptions<TResponse>,
-): MachineEndpointMutation<TParams, TBody, TResponse>;
+): MachineEndpointMutation<TParams, TBody, TResponse, TQuery>;
 export function useEndpointMutation<
   Route extends string,
   TParams,
@@ -82,7 +95,7 @@ export function useEndpointMutation<
   endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery> &
     WriteEndpoint,
   opts?: MutationOptions<TResponse>,
-): EndpointMutation<TParams, TBody, TResponse>;
+): EndpointMutation<TParams, TBody, TResponse, TQuery>;
 export function useEndpointMutation<
   Route extends string,
   TParams,
@@ -97,8 +110,8 @@ export function useEndpointMutation<
     WriteEndpoint,
   opts?: MutationOptions<TResponse>,
 ):
-  | EndpointMutation<TParams, TBody, TResponse>
-  | MachineEndpointMutation<TParams, TBody, TResponse> {
+  | EndpointMutation<TParams, TBody, TResponse, TQuery>
+  | MachineEndpointMutation<TParams, TBody, TResponse, TQuery> {
   const transport = useTransport();
   const fetchEndpoint = useFetchEndpoint();
   const suppressError =
@@ -107,13 +120,17 @@ export function useEndpointMutation<
   const mutation = useMutation<
     TResponse extends void ? void : TResponse,
     EndpointError,
-    MutationVariables<TParams, TBody>
+    MutationVariables<TParams, TBody, TQuery>
   >({
     meta: { suppressError },
     mutationFn: async (variables) => {
       const params = (variables.params ?? {}) as TParams;
       const body = "body" in variables ? variables.body : undefined;
-      const fetchOpts = body !== undefined ? { body } : {};
+      const query = "query" in variables ? variables.query : undefined;
+      const fetchOpts = {
+        ...(body !== undefined ? { body } : {}),
+        ...(query !== undefined ? { query } : {}),
+      };
       if (endpoint.needsMachine === undefined) {
         return fetchEndpoint(
           endpoint,

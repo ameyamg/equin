@@ -1,9 +1,11 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
+  browserFileAdd,
   browserFileCreate,
   browserFileDelete,
   browserFileRename,
   browserFileWrite,
+  computerFileAdd,
   computerFileCreate,
   computerFileDelete,
   computerFileRename,
@@ -13,7 +15,7 @@ import {
 } from "../../core";
 
 /**
- * The edits of `fs` (create, rename, delete, save text; and move to the Trash
+ * The edits of `fs` (create, add a file holding bytes, rename, delete, save text; and move to the Trash
  * where the system has one) — one mutation shape per edit whichever system:
  * `unavailable` where this host cannot run it (the computer's disk in the
  * in-browser demo). Every system's mutations are declared every render
@@ -25,6 +27,7 @@ import {
 export function useFileEdits(fs: BrowsableFileSystem) {
   const computer = {
     create: useEndpointMutation(computerFileCreate),
+    add: useEndpointMutation(computerFileAdd),
     rename: useEndpointMutation(computerFileRename),
     delete: useEndpointMutation(computerFileDelete),
     write: useEndpointMutation(computerFileWrite),
@@ -32,6 +35,7 @@ export function useFileEdits(fs: BrowsableFileSystem) {
   };
   const browser = {
     create: useEndpointMutation(browserFileCreate),
+    add: useEndpointMutation(browserFileAdd),
     rename: useEndpointMutation(browserFileRename),
     delete: useEndpointMutation(browserFileDelete),
     write: useEndpointMutation(browserFileWrite),
@@ -42,6 +46,7 @@ export function useFileEdits(fs: BrowsableFileSystem) {
     case "browser":
       return {
         create: { kind: "available" as const, ...browser.create },
+        add: { kind: "available" as const, ...browser.add },
         rename: { kind: "available" as const, ...browser.rename },
         delete: { kind: "available" as const, ...browser.delete },
         write: { kind: "available" as const, ...browser.write },

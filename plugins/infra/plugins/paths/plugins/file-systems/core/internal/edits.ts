@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { FILE_TEXT_MAX_BYTES } from "./reads";
 
 // The edits a file browser makes to a browsable file system — create an
@@ -84,6 +84,40 @@ export const computerFileCreate = defineEndpoint({
 export const browserFileCreate = defineEndpoint({
   route: "POST /api/files/browser/create",
   body: CreateBodySchema,
+  response: FileCreateResultSchema,
+});
+
+// ── add (a new file holding given bytes) ─────────────────────────────────────
+
+/** The most bytes one added file may hold (a pasted image, a dropped file). */
+export const FILE_ADD_MAX_BYTES = 100 * 1024 * 1024;
+
+const AddQuerySchema = z.object({
+  /** The folder to add the file to. */
+  dir: z.string(),
+  /** The name wanted; a taken one gets a number (`Pasted image 2.png`). */
+  name: z.string(),
+});
+
+/**
+ * Add a new file holding the body's bytes to a folder of the computer's disk
+ * (a pasted image): as {@link computerFileCreate} — a taken name is never
+ * overwritten, the next free spelling is used and answered. A body over
+ * {@link FILE_ADD_MAX_BYTES} is a 413.
+ */
+export const computerFileAdd = defineEndpoint({
+  route: "POST /api/files/computer/add",
+  body: blob(),
+  query: AddQuerySchema,
+  response: FileCreateResultSchema,
+  needsMachine: COMPUTER,
+});
+
+/** {@link computerFileAdd} in the browser's storage (never under `~/.equin/`). */
+export const browserFileAdd = defineEndpoint({
+  route: "POST /api/files/browser/add",
+  body: blob(),
+  query: AddQuerySchema,
   response: FileCreateResultSchema,
 });
 

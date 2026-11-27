@@ -2,7 +2,10 @@ import { serveValue, sliceRange } from "@plugins/network/plugins/live/server";
 import type { LiveKeyRange } from "@plugins/network/plugins/live/core";
 import { createRefcountHub } from "@plugins/packages/plugins/refcount-hub/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { contentDisposition } from "@plugins/infra/plugins/endpoints/core";
+import {
+  contentDisposition,
+  HttpError,
+} from "@plugins/infra/plugins/endpoints/core";
 import {
   originOf,
   type WriteOrigin,
@@ -34,7 +37,9 @@ import {
   browserDirPeek,
   browserFileBytes,
   browserFileListing,
+  browserFileAdd,
   browserFileCreate,
+  FILE_ADD_MAX_BYTES,
   browserFileDelete,
   browserFileMove,
   browserFileRename,
@@ -800,12 +805,16 @@ function childOf(dir: Editable & { kind: "ok" }, name: string): RelPath | null {
   return at?.kind === "mount" && !at.mount.app ? child : null;
 }
 
-/** An empty file or folder in a folder of the home (as the computer's create). */
+/**
+ * An empty file or folder in a folder of the home (as the computer's create)
+ * — or, given `data`, a file holding it (as the computer's add).
+ */
 export async function createBrowserEntry(
   dirRaw: string,
   name: string,
   kind: "file" | "dir",
   writer: WriteOrigin,
+  data?: FileData,
 ): Promise<FileCreateResult> {
   if (!isValidEntryName(name)) return { kind: "invalid-name", name };
   const dir = editable(dirRaw, { root: true });
@@ -823,7 +832,7 @@ export async function createBrowserEntry(
     (await dir.store.stat(wanted)).kind === "missing"
       ? wanted
       : await freeName(dir.store, dir.path, name, kind === "file");
-  if (kind === "file") await dir.store.write(path, "", { writer });
+  if (kind === "file") await dir.store.write(path, data ?? "", { writer });
   else await dir.store.mkdir(path, { writer });
   return { kind: "created", path: spellIn(homeMount(), path) };
 }
@@ -918,6 +927,26 @@ export const handleBrowserFileCreate = implement(
   browserFileCreate,
   ({ body, req }) =>
     createBrowserEntry(body.dir, body.name, body.kind, originOf(req)),
+);
+
+/** `POST /api/files/browser/add`. */
+export const handleBrowserFileAdd = implement(
+  browserFileAdd,
+  ({ body, query, req }) => {
+    if (body.size > FILE_ADD_MAX_BYTES) {
+      throw new HttpError(
+        413,
+        `a file added is at most ${FILE_ADD_MAX_BYTES} bytes (got ${body.size})`,
+      );
+    }
+    return createBrowserEntry(
+      query.dir,
+      query.name,
+      "file",
+      originOf(req),
+      body,
+    );
+  },
 );
 
 /** `POST /api/files/browser/rename`. */

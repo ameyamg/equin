@@ -39,13 +39,15 @@ async function inArchive(path: UserPath): Promise<boolean> {
 
 /**
  * Create an empty file or folder named `name` (or its next free spelling) in
- * `dir`. Exclusive: a name taken between the free-name probe and the create
- * is never overwritten — the create fails, and the next spelling is tried.
+ * `dir` — or, given `bytes`, a file holding them (a pasted image). Exclusive:
+ * a name taken between the free-name probe and the create is never
+ * overwritten — the create fails, and the next spelling is tried.
  */
 export async function createHostEntry(
   dir: UserPath,
   name: string,
   kind: "file" | "dir",
+  bytes?: Uint8Array,
 ): Promise<FileCreateResult> {
   if (!isValidEntryName(name)) return { kind: "invalid-name", name };
   if (await inArchive(dir)) return { kind: "archive", path: dir };
@@ -60,8 +62,9 @@ export async function createHostEntry(
   for (let attempt = 0; attempt < 5; attempt++) {
     const path = await freePath(dir, name, kind === "file");
     try {
-      if (kind === "file") await writeFile(path, "", { flag: "wx" });
-      else await mkdir(path);
+      if (kind === "file") {
+        await writeFile(path, bytes ?? "", { flag: "wx" });
+      } else await mkdir(path);
       return { kind: "created", path };
     } catch (err) {
       if ((err as NodeJS.ErrnoException | undefined)?.code === "EEXIST") {

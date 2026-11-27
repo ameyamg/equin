@@ -55,6 +55,19 @@ describe("createHostEntry", () => {
     expect(readFileSync(join(dir, "untitled.txt"), "utf8")).toBe("");
   });
 
+  test("creates a file holding the given bytes, never over a taken name", async () => {
+    const dir = caseDir();
+    writeFileSync(join(dir, "Pasted image.png"), "old");
+    const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    expect(
+      await createHostEntry(dir, "Pasted image.png", "file", bytes),
+    ).toEqual({ kind: "created", path: join(dir, "Pasted image 2.png") });
+    expect([...readFileSync(join(dir, "Pasted image 2.png"))]).toEqual([
+      ...bytes,
+    ]);
+    expect(readFileSync(join(dir, "Pasted image.png"), "utf8")).toBe("old");
+  });
+
   test("creates a folder, numbered past a taken name", async () => {
     const dir = caseDir();
     mkdirSync(join(dir, "untitled folder"));

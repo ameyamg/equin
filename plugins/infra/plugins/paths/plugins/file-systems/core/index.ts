@@ -128,16 +128,19 @@ export type {
 } from "./internal/drag";
 export { fileSystemsServed } from "./internal/systems";
 export {
+  FILE_ADD_MAX_BYTES,
   FILE_DELETE_MAX_PATHS,
   FileCreateResultSchema,
   FileRemoveOutcomeSchema,
   FileRemoveResultSchema,
   FileRenameResultSchema,
   FileWriteResultSchema,
+  browserFileAdd,
   browserFileCreate,
   browserFileDelete,
   browserFileRename,
   browserFileWrite,
+  computerFileAdd,
   computerFileCreate,
   computerFileDelete,
   computerFileRename,
