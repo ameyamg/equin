@@ -16,10 +16,11 @@ export function attachmentDiskRef(diskPath: string): string {
   return `@${diskPath} `;
 }
 
-// An attachment's bytes live at `<attachments dir>/<id><ext>` (infra/attachments'
-// `diskPathFor`), the id a UUID and the dir named `attachments` (its data dir,
-// and the legacy `apps/attachments` it moved from).
-const DISK_PATH = String.raw`\S*\/attachments\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(\.[A-Za-z0-9]+)?`;
+// An attachment's bytes live at `<attachments dir>/<id><ext>` — a non-main
+// checkout's at `<attachments dir>/checkouts/<namespace>/<id><ext>`
+// (infra/attachments' `diskPathFor`) — the id a UUID and the dir named
+// `attachments` (its data dir, and the legacy `apps/attachments` it moved from).
+const DISK_PATH = String.raw`\S*\/attachments\/(?:checkouts\/[a-z0-9.-]+\/)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(\.[A-Za-z0-9]+)?`;
 const DISK_REF_RE = new RegExp(`@(${DISK_PATH}) ?`, "g");
 const DISK_PATH_RE = new RegExp(`^${DISK_PATH}$`);
 

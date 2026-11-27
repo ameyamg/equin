@@ -29,6 +29,11 @@ describe("attachmentRefsOf", () => {
     );
   });
 
+  test("a worktree's file (under checkouts/<namespace>/) reads back the same", () => {
+    const sent = attachmentDiskRef(`${DIR}/checkouts/equin.att-1/${ID}.png`);
+    expect(attachmentRefsOf(sent)).toBe(`![](/api/attachments/${ID})`);
+  });
+
   test("a path outside the attachments dir is left alone", () => {
     const text = `@/repo/plugins/${ID}.png and @research/x.md`;
     expect(attachmentRefsOf(text)).toBe(text);

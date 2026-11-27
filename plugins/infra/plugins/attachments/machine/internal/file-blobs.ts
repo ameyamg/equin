@@ -4,17 +4,18 @@ import {
   pipeBounded,
   type AttachmentBlobsImpl,
 } from "@plugins/infra/plugins/attachments/server";
-import { diskPathFor, ensureAttachmentsRoot } from "./paths";
+import { diskPathFor, ensureAttachmentsRoot, ownsKey } from "./paths";
 
 /**
  * The desktop's attachment bytes: one UUID-named file per attachment under the
  * host-global `state/attachments` data dir, the row's key being the file's
- * absolute path.
+ * absolute path. Each checkout writes into its own place in that dir and
+ * deletes only the files there (`./paths`): a worktree's forked database
+ * holds main's keys, and those files are main's to remove.
  */
 export const fileBlobs: AttachmentBlobsImpl = {
   async write(id, filename, bytes, maxBytes) {
-    await ensureAttachmentsRoot();
-    const diskPath = diskPathFor(id, filename);
+    const diskPath = await diskPathFor(id, filename);
     // Streamed into a sibling temp file, renamed into place once whole: a
     // refused or cut upload leaves nothing under the attachment's name, and
     // two writes of one id (an idempotent import racing itself) each land
@@ -50,6 +51,10 @@ export const fileBlobs: AttachmentBlobsImpl = {
     return Bun.file(diskPath);
   },
   async delete(diskPath) {
+    // Another checkout's file — a row this database forked from main, or an
+    // older layout's: dropping the row is this checkout's to do, the bytes
+    // stay with their owner.
+    if (!ownsKey(diskPath)) return;
     // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort disk cleanup after the DB row is already deleted; the awaited result is discarded, so undefined only prevents an unhandled rejection, never feeds a decision
     await unlink(diskPath).catch(() => undefined);
   },

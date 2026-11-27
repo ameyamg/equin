@@ -14,8 +14,10 @@ const log = Log.channel("attachments");
 // Reclaims attachment rows that no registered link table references, past a
 // TTL grace period. Runs hourly via the jobs cron primitive. The schedule is
 // main-only by default (not `perWorktree`), so a single sweep runs on the main
-// runtime — attachments live on the shared ~/.equin filesystem, so
-// running this per-worktree would race N sweeps over the same global dir.
+// runtime. Run in a worktree it would still be safe — the blob store deletes
+// only files its own checkout wrote (`attachments#machine`), never main's that
+// the forked database's rows point at — but it would reclaim little: a
+// worktree's uploads are few and die with it.
 export const orphanSweepJob = defineJob({
   name: "attachments.orphan-sweep",
   description:

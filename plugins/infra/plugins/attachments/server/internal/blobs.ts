@@ -24,9 +24,12 @@ export interface AttachmentBlobsImpl {
   /** The bytes stored under `key`, or `null` when there are none (the file
    *  is gone) — a state the serve route answers `410` for. */
   read(key: string): Promise<Blob | null>;
-  /** Drop the bytes under `key`. Best effort, after the row is already gone:
-   *  bytes that are already missing are not an error, and a failure never
-   *  undoes the row's deletion. */
+  /** Drop the bytes under `key` — when this host wrote them. Best effort,
+   *  after the row is already gone: bytes that are already missing are not an
+   *  error, and a failure never undoes the row's deletion. A store shared
+   *  between hosts whose databases fork one another (the desktop's checkouts)
+   *  keeps another host's bytes: the forked row was this database's to drop,
+   *  the file is still its writer's. */
   delete(key: string): Promise<void>;
   /** Make the store usable (`onReady`; before the first write too). */
   ensureRoot(): Promise<void>;

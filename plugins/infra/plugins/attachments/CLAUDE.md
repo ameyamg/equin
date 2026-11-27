@@ -12,6 +12,19 @@ records as `disk_path` and the size, `read(key)` → a `Blob` or `null` (the ser
 `attachments#machine` (UUID-named files in the host-global `state/attachments`
 data dir); a host without a filesystem boots `plugins/memory-blobs`.
 
+### Each checkout owns the files it wrote
+
+Every checkout's backend shares the host-global dir, and a worktree's database
+is a fork of main's — it holds main's rows, `disk_path` included. So the key
+names its writer: main writes at the dir's top level, any other namespace under
+`checkouts/<namespace>/` (`machine/internal/paths.ts`), and `delete(key)` drops
+only a key in this checkout's own place. A worktree deleting a row it forked
+(the DELETE route, an import's cleanup, a sweep run there) leaves main's file
+in place; a worktree importing an id main already holds (mail's derived ids,
+a proposal's file) writes its own copy instead of renaming over main's. Files
+written before this layout sit at the top level and so count as main's: no
+worktree removes them.
+
 `write(id, filename, stream, maxBytes)` reads the bytes as they arrive
 (`pipeBounded`, the one bounded read), refuses past `maxBytes`
 (`AttachmentTooLargeError`, nothing stored) and lands atomically (the desktop:
