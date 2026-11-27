@@ -10,8 +10,12 @@ import {
   type SidebarToggleIcons,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  type StackProps,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   SurfaceChromeContext,
   type PaneObject,
@@ -176,6 +180,11 @@ function ToolbarItem(item: AppShellToolbarItem) {
  */
 function useSlotHasContributions(slot: SlotHandle | undefined): boolean {
   return useRawContributions(slot).length > 0;
+}
+
+/** The sidebar's rows as one gapless column — the host its scroller renders as. */
+function SidebarColumn(props: Omit<StackProps, "gap">) {
+  return <Stack gap="none" {...props} />;
 }
 
 /**
@@ -375,14 +384,24 @@ export function AppShellLayout({
             : `${surfaceId}:sidebar:${sidebarSlot.id}`
         }
       >
-        <sidebarSlot.Render>
-          {(item) => <SidebarItem {...item} />}
-        </sidebarSlot.Render>
+        {/* The sidebar's own scroller: the column below the brand, so a
+            sidebar whose rows outgrow it scrolls instead of clipping its last
+            rows (an app of plain nav entries — Debug's ~30 — has no section
+            of its own that would scroll). Still a flex column filling the
+            framing's column: a section that takes the leftover height
+            (`flex-1 min-h-0`, its own `<Scroll>` inside) gets it exactly as
+            before, and this scroller engages only once the rigid rows alone
+            exceed the height. */}
+        <Scroll as={SidebarColumn} fill keep="sidebar">
+          <sidebarSlot.Render>
+            {(item) => <SidebarItem {...item} />}
+          </sidebarSlot.Render>
+          {/* The sidebar's bottom inset under its last item — sidebar-metrics
+              `sidebarEndPad`, default 0 (nothing). A box rather than padding,
+              so it scrolls with the rows. */}
+          <div aria-hidden className={`${rigidClass()} h-sidebar-end`} />
+        </Scroll>
       </KeepScrollScope>
-      {/* The sidebar's bottom inset under its last item — sidebar-metrics
-          `sidebarEndPad`, default 0 (nothing). A box rather than padding: this
-          wrapper is `display: contents` and the framing owns the column. */}
-      <div aria-hidden className={`${rigidClass()} h-sidebar-end`} />
     </div>
   );
 

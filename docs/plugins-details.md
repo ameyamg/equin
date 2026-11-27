@@ -53182,10 +53182,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors:
           - `AppShell.Framing` ← `ui.sidebar-framing`
           - `AppShell.Brand` ← `apps-core.app-launcher`
-        - Uses: 34 symbols — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+        - Uses: 36 symbols — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
           - `primitives/css/ui-kit` ×13
           - `primitives/pane` ×4
           - `primitives/collapsible` ×3
+          - `primitives/css/spacing` ×2
           - `primitives/slot-render` ×2
           - `ui/icons` ×2
           - `primitives/bar.Bar`
@@ -53194,7 +53195,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/inline.Inline`
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
-          - `primitives/css/spacing.Stack`
+          - `primitives/css/scroll.Scroll`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/auto-scroll.KeepScrollScope`
           - `primitives/scope/surface-id.useSurfaceTabId`
@@ -54665,10 +54666,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Imported by: 105 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 106 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×30
               - `apps` ×23
-              - `primitives` ×17
+              - `primitives` ×18
               - `debug` ×10
               - `page` ×5
               - `build` ×2
