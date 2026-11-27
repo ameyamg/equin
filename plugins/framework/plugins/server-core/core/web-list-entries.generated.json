@@ -606,6 +606,7 @@
   {"list":"apps.website.shell.learn-entry","plugin":"apps.website.pages.foundations","fact":{"component":{"$code":true},"id":"foundations","label":"Foundations"}},
   {"list":"apps.website.shell.learn-entry","plugin":"apps.website.pages.story","fact":{"component":{"$code":true},"id":"story","label":"Story"}},
   {"list":"apps.website.shell.learn-entry","plugin":"apps.website.pages.tips","fact":{"component":{"$code":true},"id":"tips","label":"Tips"}},
+  {"list":"apps.website.shell.page-end","plugin":"apps.website.landing.try","fact":{"component":{"$code":true},"id":"try","label":"Try it"}},
   {"list":"apps.website.shell.resident","plugin":"apps.website.live-demo","fact":{"component":{"$code":true},"id":"live-demo","label":"Live demo"}},
   {"list":"apps.website.shell.section","plugin":"apps.website.landing.contact","fact":{"component":{"$code":true},"id":"contact","label":"Contact"}},
   {"list":"apps.website.shell.section","plugin":"apps.website.landing.hero","fact":{"component":{"$code":true},"id":"hero","label":"Hero"}},

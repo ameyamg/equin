@@ -14160,9 +14160,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/type-scale --font-weight-normal`
-            - **`try`** — Landing Try it band: between the hero and the layers, a title, one line and two pill buttons — Open the demo (the live demo page, its box growing out of the button as the demo's Maximize grows the frame) and Download (the download page).
+            - **`try`** — The site's Try it band: a title, one line and two pill buttons — Open the demo (the live demo page, its box growing out of the button as the demo's Maximize grows the frame) and Download (the download page). On the homepage between the hero and the layers, and at the end of every other reading page (Website.PageEnd).
               - Web:
-                - Contributes: `Website.Section` "Try it" → `TrySection`
+                - Contributes:
+                  - `Website.Section` "Try it" → `HomeTrySection`
+                  - `Website.PageEnd` "Try it" → `PageEndTrySection`
                 - Uses:
                   - `apps-core/tabs.useNavigate`
                   - `apps/deploy/analytics/collect.track`
@@ -14261,25 +14263,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/website/landing/hero`
         - **`pages`** — The inner pages of the public website: the apps gallery, the vision for applications, the technical foundations, the story of how equin came to be, the getting-started guide, and how to install it.
           - Plugins:
-            - **`apps`** — The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, the ways to use equin as a whole surface — Desktop and Isle —, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`apps`** — The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, the ways to use equin as a whole surface — Desktop and Isle —, coming next), each card's Install and the 'Missing an app?' band going to the download page, and its Apps nav link; the page ends on the site's Try it band. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-apps"
                   - `WebsiteHeader` "apps" → `AppsNavItem`
                   - `ThemeEngine.SubTheme` "equin closing"
                   - `ThemeEngine.SubTheme` "equin gallery"
-                - Uses: 38 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
+                - Uses: 35 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
                   - `apps/website/shell` ×6
                   - `primitives/css/ui-kit` ×4
-                  - `primitives/pane` ×4
+                  - `primitives/pane` ×3
                   - `primitives/dom/scroll-reveal` ×2
                   - `primitives/kept-state` ×2
                   - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/collect.track`
                   - `apps/website/app-tiles.WebsiteAppTile`
                   - `apps/website/pages/download.downloadPane`
-                  - `apps/website/pages/foundations.foundationsPane`
-                  - `apps/website/pages/vision.visionPane`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/card.Card`
                   - `primitives/css/fill.Fill`
@@ -14436,9 +14436,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/font-family --font-sans`
                   - `ui/tokens/shape --spacing`
-                - Imported by:
-                  - `apps/website/landing/layers`
-                  - `apps/website/pages/apps`
+                - Imported by: `apps/website/landing/layers`
             - **`guide`** — The getting-started guide of the equin website: the /about/guide pane on the first tasks, agents and changes once equin is installed (a placeholder heading for now), its Guide nav link, and the WebsiteGuide.Section slot the guide is written into. The getting-started guide of the equin website on the server: its sitemap entry (WebsitePages.Page), listed only once the guide is written (GUIDE_READY).
               - Web:
                 - Slots: `WebsiteGuide.Section`
@@ -14714,9 +14712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/density --space-2xl`
                   - `ui/tokens/font-family --font-sans`
-                - Imported by:
-                  - `apps/website/landing/layers`
-                  - `apps/website/pages/apps`
+                - Imported by: `apps/website/landing/layers`
         - **`promo-film`** — The equin showcase film (script: the Video page's Script v2): the real app recorded as one continuous session on the seeded promo-film composition (e2e/record.ts), ending on equin's desktop mode, rendered over media/film with a short open-source and end-card tail (e2e/film.ts), and its music track.
           - Deps:
             - Uses:
@@ -14811,6 +14807,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Website.Layer`
               - `Website.Resident`
               - `Website.LearnEntry`
+              - `Website.PageEnd`
               - `Website.FooterLink`
               - `WebsiteHeader`
             - Slot contributors:
@@ -14825,6 +14822,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Website.LearnEntry` ← `apps.website.pages.foundations`
               - `Website.LearnEntry` ← `apps.website.pages.story`
               - `Website.LearnEntry` ← `apps.website.pages.tips`
+              - `Website.PageEnd` ← `apps.website.landing.try`
               - `Website.FooterLink` ← `apps.website.pages.privacy`
               - `WebsiteHeader` ← `apps.website.improve`
               - `WebsiteHeader` ← `apps.website.pages.apps`
@@ -62703,8 +62701,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 317 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×317
+    - Contributes: 318 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×318
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -62728,8 +62726,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 316 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×316
+    - Contributes: 317 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×317
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:

@@ -28,7 +28,9 @@ export const landingPane = Pane.define({
 
 function LandingBody() {
   return (
-    <WebsiteChrome pane={landingPane}>
+    // Try it is one of the homepage's own sections (between the hero and the
+    // layers, `section.jsonc`), so the page does not end on it again.
+    <WebsiteChrome pane={landingPane} pageEnd={false}>
       <Website.Section.Render />
     </WebsiteChrome>
   );

@@ -4,9 +4,11 @@
 
 ## Plugin reference
 
-- Description: Landing Try it band: between the hero and the layers, a title, one line and two pill buttons — Open the demo (the live demo page, its box growing out of the button as the demo's Maximize grows the frame) and Download (the download page).
+- Description: The site's Try it band: a title, one line and two pill buttons — Open the demo (the live demo page, its box growing out of the button as the demo's Maximize grows the frame) and Download (the download page). On the homepage between the hero and the layers, and at the end of every other reading page (Website.PageEnd).
 - Web:
-  - Contributes: `Website.Section` "Try it" → `TrySection`
+  - Contributes:
+    - `Website.Section` "Try it" → `HomeTrySection`
+    - `Website.PageEnd` "Try it" → `PageEndTrySection`
   - Uses:
     - `apps-core/tabs.useNavigate`
     - `apps/deploy/analytics/collect.track`

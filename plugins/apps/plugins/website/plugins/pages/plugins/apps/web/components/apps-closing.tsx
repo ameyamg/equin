@@ -1,12 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { transient } from "@plugins/primitives/plugins/kept-state/core";
-import {
-  useOpenPane,
-  type PaneObject,
-} from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
@@ -17,20 +13,18 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { downloadPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/download/web";
-import { visionPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/vision/web";
-import { foundationsPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/foundations/web";
 import { equinClosingTheme } from "../internal/theme";
 
 /**
- * The page's end, in its own sizes (`equinClosingTheme`): "Missing an app?",
- * then the two pages to read next. Its distances from the gallery above and
- * between its two parts are the gallery's score, in `apps-gallery.css`.
+ * The gallery's last word, in its own sizes (`equinClosingTheme`): "Missing an
+ * app?". The page then ends as every reading page does, on the site's Try it
+ * band (`Website.PageEnd`, drawn by `WebsiteChrome`). Its distance from the
+ * gallery above is the gallery's score, in `apps-gallery.css`.
  */
 export function AppsClosing() {
   return (
     <Theme name={subThemeScope(equinClosingTheme)} surface="none">
       <AppsCompose />
-      <AppsReadNext />
     </Theme>
   );
 }
@@ -95,68 +89,5 @@ function AppsCompose() {
         </Stack>
       </Stack>
     </Card>
-  );
-}
-
-interface NextPage {
-  /** The reader's own question. */
-  question: string;
-  /** The page that answers it, named on the card's link line. */
-  answer: string;
-  pane: PaneObject;
-}
-
-const NEXT: NextPage[] = [
-  { question: "Where is this going?", answer: "The vision", pane: visionPane },
-  {
-    question: "How is this different from other agentic builders?",
-    answer: "The foundations",
-    pane: foundationsPane,
-  },
-];
-
-/**
- * The page's end: the two questions a reader who got through the gallery is
- * likely to have — where the apps are going, and what sets them apart — each
- * as a card that opens the page answering it.
- */
-function AppsReadNext() {
-  const openPane = useOpenPane();
-  return (
-    <Grid
-      as="nav"
-      aria-label="Read next"
-      minCellWidth="18rem"
-      mode="fit"
-      gap="lg"
-      className="website-apps-next"
-    >
-      {NEXT.map((next) => (
-        <Card
-          key={next.answer}
-          as="button"
-          interactive
-          className="website-app-next hover:bg-card text-left shadow-none"
-          {...openPane.link(next.pane, {}, { mode: "root" })}
-        >
-          <Stack gap="sm" align="start">
-            <Text
-              as="span"
-              variant="subheading"
-              className="font-semibold tracking-[-0.02em]"
-            >
-              {next.question}
-            </Text>
-            <Text
-              as="span"
-              variant="body"
-              className="website-app-next-go font-semibold"
-            >
-              {next.answer} →
-            </Text>
-          </Stack>
-        </Card>
-      ))}
-    </Grid>
   );
 }

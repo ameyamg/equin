@@ -72,6 +72,17 @@ export const Website = {
     docLabel: (p) => p.label,
   }),
   /**
+   * What every page of the site ends on, after its own content and before the
+   * footer: the Try it band (Open the demo / Download), so wherever a reader
+   * stops reading, the way in is right there. Rendered by `WebsiteChrome`; a
+   * page whose own end already IS that invitation opts out with
+   * `pageEnd={false}` (the homepage, which carries Try it in its own reading
+   * order, and Download, which is the way in).
+   */
+  PageEnd: defineRenderSlot<{ label: string; component: ComponentType }>({
+    docLabel: (p) => p.label,
+  }),
+  /**
    * The footer's quiet links, beside the address and the source — a page that
    * belongs in the small print rather than in the header (Privacy). Each
    * renders one `WebsiteFooterLink`.

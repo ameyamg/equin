@@ -24,8 +24,8 @@ const appsQuery = defineKept({
 
 /**
  * The apps gallery's body: the heading with the search under it, then one body
- * band holding the gallery, the "Missing an app?" card and the two pages to
- * read next, inside `WebsiteChrome`. Its own chunk (`websitePagePart`),
+ * band holding the gallery and the "Missing an app?" card, inside
+ * `WebsiteChrome` (which ends the page on the site's Try it band). Its own chunk (`websitePagePart`),
  * fetched only where the page is shown.
  */
 export function AppsBody() {

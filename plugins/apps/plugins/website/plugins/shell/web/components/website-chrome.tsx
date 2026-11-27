@@ -9,7 +9,8 @@ import { WebsitePage } from "./website-page";
 
 /**
  * The one chrome every website pane wears: the shared site header above, the
- * page's bands, then the site footer.
+ * page's bands, the site's page end (`Website.PageEnd`: the Try it band), then
+ * the site footer.
  *
  * It exists so a new page costs a `WebsiteChrome` and nothing else — the header
  * is borrowed by naming `actions: WebsiteHeader` on the pane, and the footer
@@ -32,6 +33,7 @@ export function WebsiteChrome({
   pane,
   headerTheme,
   headerGlass,
+  pageEnd = true,
   children,
 }: {
   pane: AnyPane;
@@ -39,6 +41,12 @@ export function WebsiteChrome({
   headerTheme?: SubTheme;
   /** Frost the header once content scrolls under it (`PaneChrome headerGlass`). */
   headerGlass?: boolean;
+  /**
+   * End the page on the site's page end (`Website.PageEnd`, the Try it band).
+   * `false` only for a page whose own end already is that invitation: the
+   * homepage (Try it is one of its sections) and Download (the way in itself).
+   */
+  pageEnd?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -59,7 +67,7 @@ export function WebsiteChrome({
         headerTheme={headerTheme && subThemeScope(headerTheme)}
       >
         <WebsitePageKeyProvider pane={pane}>
-          <WebsitePage>{children}</WebsitePage>
+          <WebsitePage pageEnd={pageEnd}>{children}</WebsitePage>
         </WebsitePageKeyProvider>
       </PaneChrome>
     </Theme>

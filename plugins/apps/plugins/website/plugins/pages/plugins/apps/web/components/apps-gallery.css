@@ -9,16 +9,14 @@
  * where none is), so it re-tints with the site and inverts with it in light
  * mode. */
 
-.website-app-card,
-.website-app-next {
+.website-app-card {
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
     border-color 0.2s ease;
 }
 
-.website-app-card:hover,
-.website-app-next:hover {
+.website-app-card:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--foreground) 22%, transparent);
   box-shadow: 0 24px 48px -28px oklch(0 0 0 / 90%);
@@ -80,18 +78,6 @@
   background: var(--primary);
   border-color: var(--primary);
   color: var(--primary-foreground);
-}
-
-/* A read-next card's link line: underlined in the small print's grey, coming up
- * to the foreground while its card is hovered or keyboard-focused. */
-.website-app-next-go {
-  border-bottom: 1px solid var(--faint-foreground);
-  transition: border-color 0.2s ease;
-}
-
-.website-app-next:hover .website-app-next-go,
-.website-app-next:focus-visible .website-app-next-go {
-  border-color: var(--foreground);
 }
 
 /* A card for an app not built yet: dashed, unfilled, its picture faded and its
@@ -188,7 +174,7 @@
 /* ---- the gallery's vertical score ----
  * Like the site's band rhythms, a measured score above the spacing ramp: the
  * chip row's air (26px above, 18px below its rule), each group's (34px above,
- * 8px below), then 40px to "Missing an app?" and 64px to the read-next cards. */
+ * 8px below), then 40px to "Missing an app?". */
 .website-apps-filters {
   padding-block: 1.625rem 1.125rem;
 }
@@ -283,15 +269,6 @@
   border-color: var(--primary);
 }
 
-.website-apps-next {
-  margin-top: 4rem;
-}
-
-.website-app-next {
-  padding: 1.625rem 1.75rem;
-  border-radius: 1.25rem;
-}
-
 @media (max-width: 53.75rem) {
   .website-apps-compose-ask {
     width: 100%;
@@ -300,13 +277,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .website-app-card,
-  .website-app-next {
+  .website-app-card {
     transition: border-color 0.2s ease;
   }
 
-  .website-app-card:hover,
-  .website-app-next:hover {
+  .website-app-card:hover {
     transform: none;
   }
 }

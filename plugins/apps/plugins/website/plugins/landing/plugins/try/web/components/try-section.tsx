@@ -27,7 +27,25 @@ const LINE =
 const DEMO_URL = demoPagePath(undefined);
 
 /**
- * "Try it": the homepage's one invitation, between the hero and the layers —
+ * Where a Try it band sits, which its analytics events are named after:
+ * `home` (the homepage's section, `home_try_demo`) or `page_end` (the end of
+ * every other reading page, `page_end_try_demo`).
+ */
+type TryPlacement = "home" | "page_end";
+
+/** The homepage's Try it, between the hero and the layers. */
+export function HomeTrySection() {
+  return <TrySection placement="home" />;
+}
+
+/** The Try it every other reading page ends on (`Website.PageEnd`). */
+export function PageEndTrySection() {
+  return <TrySection placement="page_end" />;
+}
+
+/**
+ * "Try it": the site's one invitation — on the homepage between the hero and
+ * the layers, and at the end of every other reading page —
  * a title, one line, and two pills. Open the demo (filled) is the real app in
  * this tab: the click grows the demo's box out of the button to the whole
  * tab, the motion the demo's own Maximize makes (`morphDemoFrame`), so the
@@ -37,7 +55,7 @@ const DEMO_URL = demoPagePath(undefined);
  * sticky header offers the same two all along, so this must invite rather
  * than push.
  */
-export function TrySection() {
+function TrySection({ placement }: { placement: TryPlacement }) {
   const openPane = useOpenPane();
   const go = useNavigate();
   // The button's element, for the morph to grow out of: state through a
@@ -45,7 +63,7 @@ export function TrySection() {
   const [demoButton, setDemoButton] = useState<HTMLElement | null>(null);
   const openDemo = linkProps({
     open: () => {
-      track("home_try_demo");
+      track(`${placement}_try_demo`);
       morphDemoFrame(() => go(DEMO_URL), demoButton ?? undefined);
     },
     href: () => DEMO_URL,
@@ -83,7 +101,7 @@ export function TrySection() {
               shape="pill"
               className="font-semibold"
               {...openPane.link(downloadPane, {}, { mode: "root" })}
-              onClickCapture={() => track("home_try_download")}
+              onClickCapture={() => track(`${placement}_try_download`)}
             >
               Download
             </Button>

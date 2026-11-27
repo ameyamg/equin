@@ -9,7 +9,9 @@ One developer's open-source proof of concept, so the homepage's job is to state
 the claim, show what it looks like, and then get out of the way:
 
 - [`landing`](plugins/landing/CLAUDE.md) — the homepage's bands: the hero, Try
-  it (Open the demo / Download), the layers, the contact block.
+  it (Open the demo / Download), the layers, the contact block. Try it is also
+  what every other reading page ends on (`Website.PageEnd`, drawn by
+  `WebsiteChrome`; Download opts out with `pageEnd={false}`).
 - [`demos`](plugins/demos/CLAUDE.md) — the live demos, one plugin each, each owning
   its data and writing it into its own browser host through the apps' fixture
   writers (`demos/workspace`: the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin).

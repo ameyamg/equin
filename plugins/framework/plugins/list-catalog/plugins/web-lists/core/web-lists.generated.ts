@@ -196,6 +196,7 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"apps.website.shell.header","plugin":"apps.website.shell","key":"header","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.website.shell.layer","plugin":"apps.website.shell","key":"layer","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.website.shell.learn-entry","plugin":"apps.website.shell","key":"learn-entry","meta":{"kind":"render","reorderable":true},"inMain":true},
+  {"id":"apps.website.shell.page-end","plugin":"apps.website.shell","key":"page-end","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"apps.website.shell.resident","plugin":"apps.website.shell","key":"resident","meta":{"kind":"wrap","reorderable":false},"inMain":true},
   {"id":"apps.website.shell.section","plugin":"apps.website.shell","key":"section","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"auth.accounts-account.actions","plugin":"auth","key":"accounts-account.actions","meta":{"kind":"render","reorderable":true},"inMain":true},

@@ -91,6 +91,7 @@ hover.
     - `Website.Layer`
     - `Website.Resident`
     - `Website.LearnEntry`
+    - `Website.PageEnd`
     - `Website.FooterLink`
     - `WebsiteHeader`
   - Slot contributors:
@@ -105,6 +106,7 @@ hover.
     - `Website.LearnEntry` ← `apps.website.pages.foundations`
     - `Website.LearnEntry` ← `apps.website.pages.story`
     - `Website.LearnEntry` ← `apps.website.pages.tips`
+    - `Website.PageEnd` ← `apps.website.landing.try`
     - `Website.FooterLink` ← `apps.website.pages.privacy`
     - `WebsiteHeader` ← `apps.website.improve`
     - `WebsiteHeader` ← `apps.website.pages.apps`

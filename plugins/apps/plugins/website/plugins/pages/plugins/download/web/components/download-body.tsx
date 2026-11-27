@@ -10,7 +10,9 @@ import { DownloadInstall } from "./download-install";
  */
 export function DownloadBody() {
   return (
-    <WebsiteChrome pane={downloadPane}>
+    // The page is the way in itself, and closes on its own two cards (Learn the
+    // tricks, Try it in your browser first): no Try it band after them.
+    <WebsiteChrome pane={downloadPane} pageEnd={false}>
       <DownloadOpening />
       <DownloadInstall />
     </WebsiteChrome>

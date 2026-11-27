@@ -6,8 +6,8 @@
 //   - the site header's wordmark and nav sit on the 1040px measure's edges;
 //   - chips, cards, Install, search, group heads and the card's words carry
 //     the mock's sizes;
-//   - "Missing an app?", the read-next cards and the footer keep the mock's
-//     paddings, corners and distances.
+//   - "Missing an app?" keeps the mock's paddings and corners, and the page
+//     ends on the site's Try it band.
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/website/plugins/pages/plugins/apps/e2e/apps-verify.ts \
@@ -204,37 +204,24 @@ await withBrowser(async (h) => {
       near(composeCard.field, 42),
     JSON.stringify({ compose, composeCard }),
   );
-  const question = await measure("span", "Where is this going?");
-  const nextCard = await page.evaluate(() => {
-    const el = document.querySelector<HTMLElement>(".website-app-next");
-    if (!el) return null;
-    const s = getComputedStyle(el);
-    return {
-      padding: s.padding,
-      radius: s.borderTopLeftRadius,
-      bottom: el.getBoundingClientRect().bottom,
-    };
+  // The page ends as every reading page does: the site's Try it band, after
+  // "Missing an app?" (`Website.PageEnd`).
+  const tryIt = await page.evaluate(() => {
+    const h = [...document.querySelectorAll("h2")].find(
+      (e) => e.textContent?.trim() === "Try it",
+    );
+    const card = document.querySelector(".website-apps-compose");
+    return h && card
+      ? {
+          below:
+            h.getBoundingClientRect().top > card.getBoundingClientRect().bottom,
+        }
+      : null;
   });
   r.ok(
-    "a read-next card is 26 × 28px inset with 20px corners, its question 19px on a 1.35 line",
-    question !== null &&
-      question.fontSize === "19px" &&
-      near(parseFloat(question.lineHeight), 25.65, 0.1) &&
-      nextCard !== null &&
-      nextCard.padding === "26px 28px" &&
-      nextCard.radius === "20px",
-    JSON.stringify({ question, nextCard }),
-  );
-  const footerRule = await page.evaluate(() => {
-    const el = document.querySelector("footer > * > *");
-    return el instanceof HTMLElement ? el.getBoundingClientRect().top : null;
-  });
-  r.ok(
-    "the footer's rule sits 64px under the read-next cards",
-    footerRule !== null &&
-      nextCard !== null &&
-      near(footerRule - nextCard.bottom, 64, 1),
-    JSON.stringify({ footerRule, cards: nextCard?.bottom }),
+    'the page ends on the Try it band, under "Missing an app?"',
+    tryIt?.below === true,
+    JSON.stringify(tryIt),
   );
   await snap(page, out, "end");
 
