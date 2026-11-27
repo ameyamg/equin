@@ -16,7 +16,11 @@ import { symbol } from "./icon-ref";
  * - `hostApp` — out of the browser into the machine: a host file opened with
  *   its default app. (A monitor.)
  * - `sidePane` — beside what you are reading, in this surface: a pane pushed to
- *   the right. (A panel opening on the right.)
+ *   the right. (A panel opening on the right.) Material's convention: the
+ *   chevron points the way the panel moves — `<`, sliding in from the edge.
+ * - `sidePaneClose` — the same side pane's toggle while it is open: the
+ *   chevron `>` sends it back to the edge. A toggle swaps `sidePane` ↔
+ *   `sidePaneClose` by state, so the glyph says what a click does.
  * - `expand` — this destination takes over the surface: the pane promoted to
  *   the root, or the thing opened in its home app ("Open in Pages"). (Diagonal
  *   arrows outward.)
@@ -32,5 +36,6 @@ export const navIcons = {
   newAppTab: symbol("tab-new-right"),
   hostApp: symbol("desktop-windows"),
   sidePane: symbol("right-panel-open"),
+  sidePaneClose: symbol("right-panel-close"),
   expand: symbol("open-in-full"),
 } as const;

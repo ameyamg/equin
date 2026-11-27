@@ -11,7 +11,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   AgentThread,
@@ -40,7 +40,7 @@ import {
 } from "../internal/camera-rest-store";
 
 const sonnetIcon = symbol("auto-awesome");
-const hideIcon = symbol("right-panel-close");
+const hideIcon = navIcons.sidePaneClose;
 const expandIcon = symbol("chevron-right");
 const collapseIcon = symbol("expand-more");
 

@@ -164,19 +164,18 @@ export function TaskDecisionsPanel({
               </Fill>
             </Line>
           )}
+          <Button variant="ghost" {...activationProps(inboxLink)}>
+            Open in Decisions
+          </Button>
           {beside === undefined ? null : (
             <IconButton
-              icon={navIcons.sidePane}
+              icon={shownBeside ? navIcons.sidePaneClose : navIcons.sidePane}
               label={shownBeside ? "Close the side pane" : "Open beside"}
-              variant={shownBeside ? "secondary" : "ghost"}
               aria-pressed={shownBeside}
               data-testid="decisions-panel-beside"
               {...linkProps(beside.toggle)}
             />
           )}
-          <Button variant="ghost" {...activationProps(inboxLink)}>
-            Open in Decisions
-          </Button>
         </Line>
         {shownBeside ? null : (
           <FoldMotion {...contentProps}>

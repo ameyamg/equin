@@ -27,7 +27,7 @@ import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/w
 import { useRevealedLater } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { useConfigResult } from "@plugins/config_v2/web";
 import { placeCardsConfig } from "../../core";
-import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   places as placesCollection,
@@ -62,7 +62,7 @@ const PANEL_VIEW = defineDataView("places.panel");
 
 const listIcon = symbol("view-list");
 const galleryIcon = symbol("grid-view");
-const hideIcon = symbol("right-panel-close");
+const hideIcon = navIcons.sidePaneClose;
 const backIcon = symbol("arrow-back");
 const fitIcon = symbol("fit-screen");
 const outOfViewIcon = symbol("travel-explore");

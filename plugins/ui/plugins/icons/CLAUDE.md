@@ -127,9 +127,10 @@ A control that opens something wears the icon of WHERE it sends you, from
 |---|---|---|
 | `navIcons.newTab` | `open-in-new` | Elsewhere, leaving this view: a new browser/app tab, an external site, the system browser, a host app. |
 | `navIcons.sidePane` | `right-panel-open` | Beside what you are reading: a pane pushed to the right. |
+| `navIcons.sidePaneClose` | `right-panel-close` | The same side pane's toggle while it is open (closes it). A toggle swaps `sidePane` ↔ `sidePaneClose` by state; the chevron points the way the panel moves (Material's convention). |
 | `navIcons.expand` | `open-in-full` | Takes over the surface: the pane promoted to root, or opened in its home app ("Open in Pages", "Open in Debug"). |
 
-The three glyphs are reserved: `icons/reserved-nav-icon` rejects `symbol("…")`
+The glyphs are reserved: `icons/reserved-nav-icon` rejects `symbol("…")`
 of any of them outside `nav-icons.ts`. `fullscreen` is the window-level idea
 (solo mode, browser fullscreen, presenting, a full-screen viewer), not a
 destination.

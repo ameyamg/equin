@@ -8,6 +8,7 @@ const createRule = lintRuleCreator(import.meta.url);
 const RESERVED: Record<string, string> = {
   "open-in-new": "newTab",
   "right-panel-open": "sidePane",
+  "right-panel-close": "sidePaneClose",
   "open-in-full": "expand",
   "tab-new-right": "newAppTab",
 };
@@ -23,12 +24,12 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Reserve the navigation glyphs (open-in-new, right-panel-open, open-in-full, tab-new-right) to navIcons from the icons core.",
+        "Reserve the navigation glyphs (open-in-new, right-panel-open, right-panel-close, open-in-full, tab-new-right) to navIcons from the icons core.",
     },
     schema: [],
     messages: {
       reserved:
-        '`symbol("{{name}}")` is a navigation icon: use `navIcons.{{key}}` from the icons core, and pick the key by where the control sends you (newTab / newAppTab / sidePane / expand / hostApp).',
+        '`symbol("{{name}}")` is a navigation icon: use `navIcons.{{key}}` from the icons core, and pick the key by where the control sends you (newTab / newAppTab / sidePane / sidePaneClose / expand / hostApp).',
     },
   },
   defaultOptions: [],
