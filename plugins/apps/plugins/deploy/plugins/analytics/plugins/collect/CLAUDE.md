@@ -388,7 +388,7 @@ dropped and re-copied.
 
 ## Plugin reference
 
-- Description: The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only, the viewport on each) and the visible time on each; on a local page framed by the Sessions tab's replay, follows its commands (navigate in-app, scroll a section into view); track(name, props?) records a custom event on the current page; every click on a link leaving the site records outbound_click (destination named by the tracker's destinationOf, else the host; the page; the link's data-link-placement, else its page section) from one delegated listener, so no link can skip it; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+- Description: The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only, the viewport on each) and the visible time on each; on a local page framed by the Sessions tab's replay, follows its commands (navigate in-app, scroll a section into view); track(name, props?) records a custom event on the current page; every click on a link leaving the site records outbound_click (destination named by the tracker's destinationOf, else the host; the page; the link's data-link-placement, else its page section) from one delegated listener, so no link can skip it; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useReachEvent(name, props?) / observeReach(el, name, props?) record any event once at that same moment, for a thing on a page that is not one of its sections (one tip of a list), so it stays out of the page's read %; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
     - `table-mirror-set` "analytics"
@@ -463,10 +463,12 @@ dropped and re-copied.
     - `ConsentState`
   - Exports (values):
     - `AnalyticsTracker`
+    - `observeReach`
     - `observeSectionReach`
     - `setAnalyticsConsent`
     - `track`
     - `useAnalyticsConsent`
+    - `useReachEvent`
     - `useSectionReach`
 - Core:
   - Uses:
@@ -676,6 +678,7 @@ dropped and re-copied.
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`
     - `apps/website/pages/privacy`
+    - `apps/website/pages/tips`
     - `apps/website/pages/vision`
     - `apps/website/shell`
 - Exemptions:

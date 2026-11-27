@@ -37,10 +37,11 @@ End to end: `apps/deploy/site-feeds/editor`'s `e2e/publish-roundtrip.ts`
     - `SiteFeeds.Feed` "tips"
     - `Pane.Register` "website-tips"
     - `Website.LearnEntry` "Tips" → `TipsNavItem`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×7
     - `apps/deploy/site-feeds/box` ×4
     - `primitives/pane` ×3
+    - `apps/deploy/analytics/collect` ×2
     - `primitives/overlay/image-viewer` ×2
     - `fields/date/format.useDateFormatter`
     - `infra/endpoints.useAssetSrc`

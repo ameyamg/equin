@@ -19,6 +19,10 @@ import {
   WebsiteHero,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import {
+  track,
+  useReachEvent,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
+import {
   siteFeedMediaAsset,
   useSiteFeed,
   type SiteFeedEntry,
@@ -81,12 +85,17 @@ export function TipsBody() {
  * One tip: when it was published, its title, its text, then its media in
  * order. Its screenshots are one gallery: a click opens the full-window
  * viewer, ← / → step through that tip's other screenshots.
+ *
+ * Measured per tip, its `tip` prop the entry's id: `tip_seen` once per visit
+ * to the page when the card reaches the upper half of the screen (read, not
+ * scrolled past), `tip_media_open` when one of its screenshots is opened.
  */
 function TipCard({ entry }: { entry: SiteFeedEntry<TipsFields> }) {
   const { title, body, media } = entry.values;
   const fmt = useDateFormatter();
+  const seen = useReachEvent<HTMLElement>("tip_seen", { tip: entry.id });
   return (
-    <Card as="article" className={CARD_CLASS}>
+    <Card as="article" ref={seen} className={CARD_CLASS}>
       <Stack gap="lg">
         <Stack gap="sm">
           <Text as="p" variant="caption" tone="muted">
@@ -153,14 +162,22 @@ function TipMedia({ entryId, media }: { entryId: string; media: MediaRef }) {
       />
     );
   }
-  return <TipImage src={src.src} media={media} />;
+  return <TipImage entryId={entryId} src={src.src} media={media} />;
 }
 
 /**
  * A screenshot at the card's width; a click (or Enter) opens it in the
  * enclosing tip's image viewer, which grows out of this box.
  */
-function TipImage({ src, media }: { src: string; media: MediaRef }) {
+function TipImage({
+  entryId,
+  src,
+  media,
+}: {
+  entryId: string;
+  src: string;
+  media: MediaRef;
+}) {
   const trigger = useImageViewerTrigger<HTMLButtonElement>({
     src,
     name: media.filename,
@@ -173,6 +190,10 @@ function TipImage({ src, media }: { src: string; media: MediaRef }) {
       aria-label={`Open ${media.filename}`}
       className={`${MEDIA_CLASS} focus-ring block cursor-zoom-in`}
       {...trigger}
+      onClick={(event) => {
+        trigger.onClick(event);
+        track("tip_media_open", { tip: entryId });
+      }}
     >
       <img
         src={src}

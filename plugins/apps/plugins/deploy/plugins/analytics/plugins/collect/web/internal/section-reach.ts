@@ -25,6 +25,27 @@ import { SECTION_REACH_EVENT, SECTION_REACH_PROP } from "../../core";
  */
 export function observeSectionReach(el: Element, section: string): () => void {
   const unregister = registerPageSection(el, section);
+  const stop = observeReach(el, SECTION_REACH_EVENT, {
+    [SECTION_REACH_PROP]: section,
+  });
+  return () => {
+    stop();
+    unregister();
+  };
+}
+
+/**
+ * Records the event `name` (with `props`) once when `el` is first being read,
+ * by the same two rules as {@link observeSectionReach} — for a thing on a page
+ * that is not one of its sections (one tip in a list of them): it is not
+ * listed in the page's section list, so it stays out of the page's "read %".
+ * Returns a disposer for an element unmounted before it is reached.
+ */
+export function observeReach(
+  el: Element,
+  name: string,
+  props?: Record<string, string>,
+): () => void {
   // Either rule reaches it; whichever fires first records it and stops both.
   let done = false;
   const reached = () => {
@@ -32,7 +53,7 @@ export function observeSectionReach(el: Element, section: string): () => void {
     done = true;
     pastMiddle.disconnect();
     wholly.disconnect();
-    track(SECTION_REACH_EVENT, { [SECTION_REACH_PROP]: section });
+    track(name, props);
   };
   const pastMiddle = createInViewWatcher(
     (entries) => {
@@ -54,8 +75,26 @@ export function observeSectionReach(el: Element, section: string): () => void {
   return () => {
     pastMiddle.disconnect();
     wholly.disconnect();
-    unregister();
   };
+}
+
+/**
+ * {@link observeReach} for a React element: attach the returned ref to it.
+ * Observed again when `name` or a prop changes.
+ */
+export function useReachEvent<T extends Element>(
+  name: string,
+  props?: Record<string, string>,
+): RefObject<T | null> {
+  const ref = useRef<T>(null);
+  const key = JSON.stringify(props ?? {});
+  useEffect(() => {
+    const el = ref.current;
+    if (!el)
+      throw new Error(`[analytics] useReachEvent("${name}"): ref not attached`);
+    return observeReach(el, name, JSON.parse(key) as Record<string, string>);
+  }, [name, key]);
+  return ref;
 }
 
 /** {@link observeSectionReach} for a React element: attach the returned ref to the section. */
