@@ -77,7 +77,7 @@ export const Website = {
    * stops reading, the way in is right there. Rendered by `WebsiteChrome`; a
    * page whose own end already IS that invitation opts out with
    * `pageEnd={false}` (the homepage, which carries Try it in its own reading
-   * order, and Download, which is the way in).
+   * order, Download, which is the way in, and Privacy, small print).
    */
   PageEnd: defineRenderSlot<{ label: string; component: ComponentType }>({
     docLabel: (p) => p.label,

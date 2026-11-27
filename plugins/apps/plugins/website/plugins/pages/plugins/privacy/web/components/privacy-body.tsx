@@ -10,7 +10,9 @@ import { PrivacyPolicy } from "./privacy-policy";
  */
 export function PrivacyBody() {
   return (
-    <WebsiteChrome pane={privacyPane}>
+    // Small print, not a reading page: it ends on its Questions, not on the
+    // site's Try it band.
+    <WebsiteChrome pane={privacyPane} pageEnd={false}>
       <PrivacyOpening />
       <PrivacyPolicy />
     </WebsiteChrome>

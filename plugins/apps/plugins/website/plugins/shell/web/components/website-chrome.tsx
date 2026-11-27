@@ -44,7 +44,8 @@ export function WebsiteChrome({
   /**
    * End the page on the site's page end (`Website.PageEnd`, the Try it band).
    * `false` only for a page whose own end already is that invitation: the
-   * homepage (Try it is one of its sections) and Download (the way in itself).
+   * homepage (Try it is one of its sections) and Download (the way in itself)
+   * — and Privacy, small print rather than a reading page.
    */
   pageEnd?: boolean;
   children: ReactNode;
