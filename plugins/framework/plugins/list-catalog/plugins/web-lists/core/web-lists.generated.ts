@@ -425,7 +425,6 @@ export const webLists: readonly WebListDeclaration[] = [
   {"id":"tasks.automations.automation-config","plugin":"tasks.automations","key":"automation-config","meta":{"kind":"slot","reorderable":false,"catalog":{"omitted":"each entry is an automation's config descriptor (settings)"}},"inMain":true},
   {"id":"tasks.automations.automation-detail.actions","plugin":"tasks.automations","key":"automation-detail.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.automations.automation-section","plugin":"tasks.automations","key":"automation-section","meta":{"kind":"render","reorderable":true},"inMain":true},
-  {"id":"tasks.automations.automation-task-detail","plugin":"tasks.automations","key":"automation-task-detail","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.automations.automations.actions","plugin":"tasks.automations","key":"automations.actions","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.decisions.above-answer","plugin":"tasks.decisions","key":"above-answer","meta":{"kind":"render","reorderable":true},"inMain":true},
   {"id":"tasks.decisions.answer-action","plugin":"tasks.decisions","key":"answer-action","meta":{"kind":"render","reorderable":true},"inMain":true},

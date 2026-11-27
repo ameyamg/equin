@@ -3,20 +3,19 @@ import { conversationStatusChanged } from "@plugins/tasks/plugins/tasks-core/ser
 import { watchSource } from "@plugins/tasks/plugins/orchestration/plugins/watch/machine";
 import { grantOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
-import { outcomeReportSubmitted } from "../../server/internal/tables-events";
+import { outcomeReportHandedBack } from "../../server/internal/tables-events";
 
 /** A handed-back run reaches whoever watches its task: `reported`, its
- * summary the whole report. */
+ * summary the agent's whole last message. */
 export const outcomeReportWatchSource = watchSource({
   id: "outcome-report",
-  on: outcomeReportSubmitted,
+  on: outcomeReportHandedBack,
   toEvents: (p) => [
     {
       kind: "reported",
       taskId: p.taskId,
       actorConversationId: p.conversationId,
-      summary: `report (${p.standing}):\n${p.body}`,
-      payload: { standing: p.standing },
+      summary: `last message:\n${p.body}`,
     },
   ],
 });

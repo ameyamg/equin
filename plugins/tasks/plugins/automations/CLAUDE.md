@@ -223,12 +223,8 @@ contributions for this automation (a render slot keyed by `automationId` —
 e.g. the autopilot's Run until), Sources,
 Prompt (the template; "Customized" when the user layer supplies it, Reset to
 default through config_v2's `resetConfigField`; a template naming an unknown
-variable is not saved), History (filed and started tasks). A History row
-expands (the list view's `detail` option; open rows live in the view's expand
-map) into every `Automations.TaskDetail` contribution for its task — a render
-slot whose component gets `{ taskId, automationId }` and renders nothing when it
-has nothing to say (the outcome-report plugin contributes the agent's report).
-This plugin names no contributor; they import it, never the reverse.
+variable is not saved), History (filed and started tasks; a row opens its task, whose
+conversation ends with what its agent handed back).
 
 ## Where a task came from
 
@@ -297,12 +293,11 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
 
 ## Plugin reference
 
-- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or its agent reports — the automations.slot code watcher on every launched task, fed the outcome report and the task's settled / stopped / held facts through the watch plugin —, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe (and, for a file automation whose `watch` is refire, the automations.refire code watcher on each filed task, running it again as soon as that task settles), the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
+- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row opening its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or its agent reports — the automations.slot code watcher on every launched task, fed its agent's hand-back (reported / asking) and the task's settled / stopped / held facts through the watch plugin —, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe (and, for a file automation whose `watch` is refire, the automations.refire code watcher on each filed task, running it again as soon as that task settles), the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
 - Web:
   - Slots:
     - `Automations.Config`
     - `Automations.Section`
-    - `Automations.TaskDetail`
     - `automations.actions`
     - `automation-detail.actions`
   - Slot contributors:
@@ -310,7 +305,6 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `Automations.Config` ← `tasks.sidequest-autopilot`
     - `Automations.Config` ← `upstream`
     - `Automations.Section` ← `tasks.sidequest-autopilot`
-    - `Automations.TaskDetail` ← `tasks.outcome-report`
     - `automations.actions` ← `primitives.pane`
     - `automation-detail.actions` ← `primitives.pane`
   - Contributes:
@@ -520,7 +514,6 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `infra/deps/updates`
-    - `tasks/outcome-report`
     - `tasks/sidequest-autopilot`
     - `tasks/supervisor-roles/spend`
     - `tasks/task-triage`

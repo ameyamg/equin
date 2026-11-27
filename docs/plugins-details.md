@@ -31602,11 +31602,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×37
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 154 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 153 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×68
       - `apps` ×28
       - `conversations` ×12
-      - `tasks` ×10
+      - `tasks` ×9
       - `infra` ×6
       - `debug` ×5
       - `page` ×4
@@ -32042,10 +32042,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 75 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 74 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×20
               - `conversations` ×12
-              - `tasks` ×10
+              - `tasks` ×9
               - `infra` ×7
               - `debug` ×5
               - `page` ×5
@@ -33988,10 +33988,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 126 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 125 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×36
               - `conversations` ×22
-              - `tasks` ×20
+              - `tasks` ×19
               - `infra` ×8
               - `page` ×8
               - `primitives` ×6
@@ -39935,9 +39935,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 51 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 50 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×19
-          - `tasks` ×16
+          - `tasks` ×15
           - `conversations` ×13
           - `page` ×3
       - Exemptions:
@@ -46316,10 +46316,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sliceRange`
           - `windowAppPreload`
       - Cross-plugin:
-        - Imported by: 379 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 378 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×97
           - `conversations` ×74
-          - `tasks` ×38
+          - `tasks` ×37
           - `debug` ×36
           - `infra` ×25
           - `page` ×15
@@ -46758,11 +46758,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 336 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 335 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×88
               - `conversations` ×49
               - `debug` ×31
-              - `tasks` ×31
+              - `tasks` ×30
               - `ui` ×26
               - `primitives` ×17
               - `page` ×16
@@ -54159,12 +54159,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 197 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `debug` ×40
               - `apps` ×39
               - `conversations` ×28
               - `reports` ×20
-              - `tasks` ×15
+              - `tasks` ×14
               - `primitives` ×10
               - `plugin-meta` ×8
               - `build` ×6
@@ -55260,14 +55260,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 487 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 486 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×120
               - `conversations` ×79
               - `primitives` ×57
               - `debug` ×39
               - `ui` ×32
               - `page` ×26
-              - `tasks` ×22
+              - `tasks` ×21
               - `plugin-meta` ×16
               - `fields` ×15
               - `infra` ×9
@@ -55523,13 +55523,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×38
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 461 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 460 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×118
               - `conversations` ×84
               - `primitives` ×50
               - `debug` ×39
               - `page` ×26
-              - `tasks` ×23
+              - `tasks` ×22
               - `ui` ×18
               - `plugin-meta` ×15
               - `fields` ×13
@@ -58319,7 +58319,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `code-explorer/commit-detail`
           - `conversations/conversation-view/jsonl-viewer/user-text`
-          - `tasks/outcome-report`
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable chips activating fileTarget(path, line) (a LinkTarget, so ⌘/middle-click opens a browser tab). Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides, and <FileLinksWorkspaceProvider/> / useFileLinksWorkspace(): the checkout a subtree's paths name, supplied by whoever hosts the content (outside every provider, paths stay plain).
       - Web:
         - Uses:
@@ -59234,13 +59233,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 249 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 248 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×75
           - `conversations` ×26
           - `ui` ×24
-          - `tasks` ×21
           - `debug` ×20
           - `primitives` ×20
+          - `tasks` ×20
           - `page` ×11
           - `build` ×6
           - `companions` ×6
@@ -59446,9 +59445,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
+        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/markdown/REFERENCE.md`](../plugins/primitives/plugins/markdown/REFERENCE.md)
           - `conversations` ×15
-          - `tasks` ×5
+          - `tasks` ×4
           - `active-data` ×2
           - `debug` ×2
           - `code-explorer/commit-detail`
@@ -61292,11 +61291,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×26
           - `debug` ×15
           - `conversations` ×11
-          - `tasks` ×8
+          - `tasks` ×7
           - `infra` ×4
           - `build` ×3
           - `primitives` ×2
@@ -63373,8 +63372,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 319 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×319
+    - Contributes: 318 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×318
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -63398,8 +63397,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 318 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×318
+    - Contributes: 317 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×317
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -66926,7 +66925,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/drop-and-exit`
           - `conversations/conversation-view/push-and-exit`
           - `network/live`
-          - `tasks/outcome-report`
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to, and the job and host-scoped boot warm-up that clear the marker of every task whose status decides `disarm` (AUTO_START_DECISIONS: dropped, done, or an agent running).
       - Web:
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
@@ -67042,12 +67040,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `autoStartLaunchOption`
           - Cross-plugin:
             - Imported by: `conversations/agent-thread`
-    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or its agent reports — the automations.slot code watcher on every launched task, fed the outcome report and the task's settled / stopped / held facts through the watch plugin —, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe (and, for a file automation whose `watch` is refire, the automations.refire code watcher on each filed task, running it again as soon as that task settles), the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
+    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row opening its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or its agent reports — the automations.slot code watcher on every launched task, fed its agent's hand-back (reported / asking) and the task's settled / stopped / held facts through the watch plugin —, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe (and, for a file automation whose `watch` is refire, the automations.refire code watcher on each filed task, running it again as soon as that task settles), the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
       - Web:
         - Slots:
           - `Automations.Config`
           - `Automations.Section`
-          - `Automations.TaskDetail`
           - `automations.actions`
           - `automation-detail.actions`
         - Slot contributors:
@@ -67055,7 +67052,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Automations.Config` ← `tasks.sidequest-autopilot`
           - `Automations.Config` ← `upstream`
           - `Automations.Section` ← `tasks.sidequest-autopilot`
-          - `Automations.TaskDetail` ← `tasks.outcome-report`
           - `automations.actions` ← `primitives.pane`
           - `automation-detail.actions` ← `primitives.pane`
         - Contributes:
@@ -67265,7 +67261,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-caption`
         - Imported by:
           - `infra/deps/updates`
-          - `tasks/outcome-report`
           - `tasks/sidequest-autopilot`
           - `tasks/supervisor-roles/spend`
           - `tasks/task-triage`
@@ -68216,28 +68211,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/watch`
                   - `tasks/supervisor-roles/sessions`
-    - **`outcome-report`** — The outcome report a supervisor's worker or an automation's run handed back (its last message of the run, captured at the turn's end): OutcomeReportDetail — its markdown body and pushed / branch-waiting / no-changes standing — shown in an expanded row of an automation's History (Automations.TaskDetail). Not drawn in the conversation itself: the report is its last message, already shown just above. Outcome reports: owns tasks_ext_outcome_report (one report per task — the agent's last message of the run it handed back, markdown, and the attempt's git-measured standing) and outcome_report_turn_addressees (whom an agent said its latest turn is for, `user` or `supervisor`), serves the outcome-reports lookup collection, registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.submitted event a hand-back emits. The hand-back at the turn's end, the turn_for MCP tool and its stop gate, the question bell and the watch sources are the machine half.
+    - **`outcome-report`** — Outcome reports, web half: registers the report.required Mandate line (a prompt config) for Settings → Config. Nothing is drawn: a handed-back run's report is its agent's last message, already the transcript's last line. Outcome reports — how an agent nobody watches hands its run back: owns outcome_report_handbacks (each conversation's latest hand-back: which message, when) and outcome_report_turn_addressees (whom an agent said its latest turn is for, `user` or `supervisor`), registers the report.required Mandate line (a prompt config, Settings → Config), and declares the outcomeReport.handedBack event a hand-back emits (the agent's last message). The hand-back at the turn's end, the turn_for MCP tool and its stop gate, the question bell and the watch sources are the machine half.
       - Web:
-        - Contributes:
-          - `ConfigV2.WebRegister` "agent-instructions"
-          - `Automations.TaskDetail` → `OutcomeReportDetail`
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `network/live.useLive`
-          - `network/live/live-state.ResourceErrorInline`
-          - `primitives/css/badge.Badge`
-          - `primitives/css/badge.BadgeVariant`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
-          - `primitives/expandable.Expandable`
-          - `primitives/loading.Loading`
-          - `primitives/markdown.Markdown`
-          - `primitives/relative-time.RelativeTime`
-          - `tasks/automations.Automations`
-        - Exports (values): `OutcomeReportDetail`
+        - Contributes: `ConfigV2.WebRegister` "agent-instructions"
+        - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes:
-          - `resource.declare` "outcome-reports:rows"
           - `ConfigV2.Register` "agent-instructions"
           - `mandateCapability` "report.required"
           - `conversations.stop-gate` "outcome-report.turn-for"
@@ -68252,21 +68231,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.ConfigV2`
           - `database/sql-column.parsedText`
-          - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
-          - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
-          - `tasks/tasks-core._tasks`
         - DB schema:
           - `plugins/tasks/plugins/outcome-report/server/internal/tables-events.ts`
           - `plugins/tasks/plugins/outcome-report/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_outcome_report`)
-        - Exports (types): `OutcomeReportSubmittedPayload`
+        - Exports (types): `OutcomeReportHandedBackPayload`
         - Exports (values):
-          - `_outcomeReportSubmittedTriggers`
-          - `outcomeReportSubmitted`
-        - Register: `defineTriggerEvent('outcomeReport.submitted')`
-        - Resources: `outcome-reports:rows` (keyed, point)
+          - `_outcomeReportHandedBackTriggers`
+          - `outcomeReportHandedBack`
+        - Register: `defineTriggerEvent('outcomeReport.handedBack')`
       - Machine:
         - Uses: `tasks/orchestration/watch.watchSource`
         - Register:
@@ -68278,22 +68252,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.defineConfig`
           - `config_v2/prompts.promptField`
-          - `fields.nullable`
-          - `fields/date/config.dateField`
-          - `fields/text/config.enumTextField`
-          - `fields/text/config.textField`
-          - `infra/entity-extensions.defineExtensionShape`
-          - `network/live.liveCollection`
-        - Exports (types):
-          - `OutcomeReport`
-          - `ReportStanding`
-          - `TurnAddressee`
+        - Exports (types): `TurnAddressee`
         - Exports (values):
           - `outcomeReportPromptsConfig`
-          - `outcomeReportRows`
-          - `OutcomeReportSchema`
-          - `outcomeReportShape`
-          - `REPORT_STANDINGS`
           - `TURN_ADDRESSEES`
           - `TurnAddresseeSchema`
       - Exemptions:
@@ -70757,7 +70718,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-mandate/manage-grant` (table `tasks_ext_manage_grant`)
           - `tasks/orchestration/watch` (table `tasks_ext_manager`)
           - `tasks/automations` (table `tasks_ext_origin`)
-          - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
           - `tasks/task-title` (table `tasks_ext_short_title`)

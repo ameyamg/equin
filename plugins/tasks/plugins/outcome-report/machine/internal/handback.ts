@@ -9,13 +9,9 @@ import { isAgentBusy } from "@plugins/conversations/core";
 import { readConversationTurns } from "@plugins/conversations/server";
 import { grantOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { reportRequired } from "@plugins/tasks/plugins/outcome-report/plugins/capability/core";
-import { getAttemptStanding } from "@plugins/tasks/plugins/attempt-work/server";
 import { wakeReasons } from "@plugins/conversations/plugins/stop-gate/server";
-import {
-  _turnAddressees,
-  taskOutcomeReports,
-} from "../../server/internal/tables";
-import { outcomeReportSubmitted } from "../../server/internal/tables-events";
+import { _handBacks, _turnAddressees } from "../../server/internal/tables";
+import { outcomeReportHandedBack } from "../../server/internal/tables-events";
 import { readRunState, runEnd } from "./run-state";
 
 /** One finished turn of an agent: its last message and when it ended. */
@@ -26,17 +22,18 @@ export interface EndedTurn {
 }
 
 // The live path and the backstop may judge the same turn at once: one at a
-// time per conversation, so the second sees the first's report and skips.
+// time per conversation, so the second sees the first's hand-back and skips.
 const handBackLock = createKeyedMutex("outcome-report.hand-back");
 
 /**
- * Hands a run back at its turn's end: the agent's last message is its report
- * — no tool writes it, so an agent cannot stop without reporting. `runEnd`
- * decides, as the run stood when the turn ended, whether this end is the
- * run's; the turn's `turn_for`, if any, is used up either way, so the next
- * turn says again. Then the standing measured from git, the row, and the
- * event whoever waits on the run hears (a watcher's `reported`, an
- * automation's slot). A message already handed back is not handed back again.
+ * Hands a run back at its turn's end: the agent's last message is what
+ * whoever started it hears — no tool writes it, so an agent cannot stop
+ * without reporting. `runEnd` decides, as the run stood when the turn ended,
+ * whether this end is the run's; the turn's `turn_for`, if any, is used up
+ * either way, so the next turn says again. Then the marker (which message,
+ * when) and the event whoever waits on the run hears (a watcher's `reported`,
+ * an automation's slot). A message already handed back is not handed back
+ * again.
  */
 export function handBackTurn(
   conversationId: string,
@@ -46,37 +43,25 @@ export function handBackTurn(
     if ((await grantOf(reportRequired, conversationId)) === null) return;
     const conversation = await getConversation(conversationId);
     if (conversation === null) return;
-    const report = await taskOutcomeReports.get(conversation.taskId);
-    if (
-      turn.messageId !== null &&
-      report?.conversationId === conversationId &&
-      report.messageId === turn.messageId
-    )
-      return;
+    const [last] = await db
+      .select({ messageId: _handBacks.messageId })
+      .from(_handBacks)
+      .where(eq(_handBacks.conversationId, conversationId));
+    if (turn.messageId !== null && last?.messageId === turn.messageId) return;
     const state = await readRunState(conversation, turn.endedAt);
     const decision = runEnd(state, await wakeReasons(conversationId));
     if (decision === "hand-back") {
-      // Measured from git (attempt-work), never guessed: an unmeasurable
-      // attempt fails the job, which the job runner retries — a bound
-      // around git. The declaration is kept until the hand-back lands, so a
-      // retry judges the turn the same way.
-      const measured = await getAttemptStanding(conversation.attemptId);
-      if (!measured.resolved)
-        throw new Error(
-          `outcome-report: could not measure attempt ${conversation.attemptId} against main (${measured.reason})`,
-        );
-      const standing = measured.value;
-      await taskOutcomeReports.upsert(conversation.taskId, {
-        conversationId,
-        body: turn.text,
-        standing,
+      const marker = {
         messageId: turn.messageId,
-        submittedAt: turn.endedAt,
-      });
-      await outcomeReportSubmitted.emit({
+        handedBackAt: turn.endedAt,
+      };
+      await db
+        .insert(_handBacks)
+        .values({ conversationId, ...marker })
+        .onConflictDoUpdate({ target: _handBacks.conversationId, set: marker });
+      await outcomeReportHandedBack.emit({
         taskId: conversation.taskId,
         conversationId,
-        standing,
         body: turn.text,
       });
     }
@@ -98,7 +83,7 @@ export function handBackTurn(
 export const handBackJob = defineJob({
   name: "outcome-report.hand-back",
   description:
-    "At the end of an agent's turn, when its mandate hands its runs back: if the run is over (nobody but its starter in it and nothing will wake it, or the agent said the turn is for its supervisor), records its last message as the task's report and tells whoever started it.",
+    "At the end of an agent's turn, when its mandate hands its runs back: if the run is over (nobody but its starter in it and nothing will wake it, or the agent said the turn is for its supervisor), tells whoever started it, with its last message.",
   hold: "instant",
   input: z.object({}),
   // Concurrent runs for one conversation queue on handBackLock.

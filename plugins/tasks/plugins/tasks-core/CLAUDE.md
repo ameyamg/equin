@@ -846,7 +846,6 @@ serves them.
     - `tasks/task-mandate/manage-grant` (table `tasks_ext_manage_grant`)
     - `tasks/orchestration/watch` (table `tasks_ext_manager`)
     - `tasks/automations` (table `tasks_ext_origin`)
-    - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
     - `tasks/task-title` (table `tasks_ext_short_title`)

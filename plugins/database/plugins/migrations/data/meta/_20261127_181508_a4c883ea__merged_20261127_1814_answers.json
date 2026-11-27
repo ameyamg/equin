@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "table:outcome_report_handbacks",
+      "entityType": "table",
+      "entityName": "outcome_report_handbacks",
+      "action": "create"
+    },
+    {
+      "key": "table:outcomeReport_handedBack_triggers",
+      "entityType": "table",
+      "entityName": "outcomeReport_handedBack_triggers",
+      "action": "rename",
+      "from": "outcomeReport_submitted_triggers"
+    }
+  ]
+}

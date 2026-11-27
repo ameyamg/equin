@@ -10,15 +10,12 @@ import { TreeDigest } from "@plugins/tasks/plugins/orchestration/plugins/tree-di
 import { latestPersonTurnAt } from "@plugins/conversations/plugins/turn-ledger/server";
 import { latestAnswerAt } from "@plugins/conversations/plugins/question-relay/server";
 import type { TurnAddressee } from "../../core";
-import {
-  _taskOutcomeReportsExt,
-  _turnAddressees,
-} from "../../server/internal/tables";
+import { _handBacks, _turnAddressees } from "../../server/internal/tables";
 import { latest } from "./run-state";
 
 const MAX = 120;
 
-/** A report's first sentence, as one digest word: markdown emphasis and
+/** A text's first sentence, as one digest word: markdown emphasis and
  * headings dropped, cut at the first sentence end or line, capped. */
 export function firstSentence(body: string): string {
   const line =
@@ -38,6 +35,7 @@ export function firstSentence(body: string): string {
 
 export const ASKING_USER = "asking the user";
 export const WAITING_ON_USER = "waiting on the user";
+export const HANDED_BACK = "handed back";
 
 /** One task's latest conversation, with its recorded `turn_for` if any. */
 export interface RestingCandidate {
@@ -77,7 +75,9 @@ export function restingOnUser(c: RestingCandidate): string | null {
     : `${WAITING_ON_USER}: ${firstSentence(d.awaiting)}`;
 }
 
-async function restingWords(
+/** Each task's word: whether its latest conversation rests on the user
+ * ({@link restingOnUser}), else whether it handed its run back. */
+async function taskWords(
   taskIds: readonly string[],
 ): Promise<Map<string, string>> {
   const rows = await db
@@ -90,6 +90,7 @@ async function restingWords(
       to: _turnAddressees.to,
       awaiting: _turnAddressees.awaiting,
       declaredAt: _turnAddressees.declaredAt,
+      handedBackAt: _handBacks.handedBackAt,
     })
     .from(_conversations)
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
@@ -97,6 +98,7 @@ async function restingWords(
       _turnAddressees,
       eq(_turnAddressees.conversationId, _conversations.id),
     )
+    .leftJoin(_handBacks, eq(_handBacks.conversationId, _conversations.id))
     .where(inArray(_attempts.taskId, [...taskIds]));
   // A task's agent is its latest conversation, whatever its status: an
   // older one left open (gone, never closed) is not what the task waits on.
@@ -116,6 +118,11 @@ async function restingWords(
         (c.waitingFor === null && c.to === "user")),
   );
   const out = new Map<string, string>();
+  // Its latest conversation, at rest, handed its run back: the word unless
+  // it rests on the user since (set below, over it).
+  for (const c of latestByTask.values())
+    if (c.handedBackAt !== null && !isAgentBusy(c.status))
+      out.set(c.taskId, HANDED_BACK);
   await Promise.all(
     candidates.map(async (c) => {
       const [turnAt, answerAt] = await Promise.all([
@@ -137,29 +144,15 @@ async function restingWords(
   return out;
 }
 
-/** On every digested task: `report: <first sentence>` when it has a report,
- * and `waiting on the user: …` / `asking the user` when its agent rests on
- * the user ({@link restingOnUser}). */
+/** On every digested task whose agent rests on the user: `waiting on the
+ * user: …` / `asking the user` ({@link restingOnUser}); otherwise `handed
+ * back` once its latest conversation handed its run back — the message
+ * itself reached the watcher in its `reported` event. */
 export const outcomeReportDigestAnnotation = TreeDigest.Annotation({
   id: "outcome-report",
   async annotate(tasks) {
     if (tasks.length === 0) return new Map();
-    const ids = tasks.map((t) => t.id);
-    const [rows, resting] = await Promise.all([
-      db
-        .select({
-          taskId: _taskOutcomeReportsExt.taskId,
-          body: _taskOutcomeReportsExt.body,
-        })
-        .from(_taskOutcomeReportsExt)
-        .where(inArray(_taskOutcomeReportsExt.taskId, ids)),
-      restingWords(ids),
-    ]);
-    const out = new Map<string, string[]>();
-    for (const r of rows)
-      out.set(r.taskId, [`report: ${firstSentence(r.body)}`]);
-    for (const [taskId, word] of resting)
-      out.set(taskId, [word, ...(out.get(taskId) ?? [])]);
-    return out;
+    const words = await taskWords(tasks.map((t) => t.id));
+    return new Map([...words].map(([taskId, word]) => [taskId, [word]]));
   },
 });

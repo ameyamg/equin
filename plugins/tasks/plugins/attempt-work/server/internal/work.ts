@@ -56,7 +56,7 @@ const SINCE_PAD_MS = 60 * 60 * 1000;
  *   `attemptFactsFrom`) — read through collection tuples, so a write reaches
  *   only the attempts whose facts it moves;
  * - `readAttemptFacts`, the same facts by SQL, for the callers that are not a
- *   resource (the exit-drop guard, the outcome-report MCP tool).
+ *   resource (the exit-drop guard).
  *
  * Every read is a TABLE's (`attempts`, `conversations`, `pushes`,
  * `attempt_deliveries`), never a view's: a view's read-set would make every
@@ -410,7 +410,7 @@ export async function attemptWorkFrom(
 }
 
 /**
- * The standing a DECISION acts on — the exit-drop guard, the outcome report —
+ * The standing a DECISION acts on — the exit-drop guard —
  * not a display: measured against `main` as git holds it now (never the
  * watcher's copy, which may not have heard a push that landed seconds ago),
  * through the same memo, so a caller pays nothing extra when a subscriber

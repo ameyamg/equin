@@ -1,19 +1,24 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import {
-  _conversations,
-  _tasks,
-} from "@plugins/tasks/plugins/tasks-core/server";
-import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
+import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
-import { outcomeReportShape, TurnAddresseeSchema } from "../../core";
+import { TurnAddresseeSchema } from "../../core";
 
-export const taskOutcomeReports = defineExtension(
-  _tasks,
-  "outcome_report",
-  outcomeReportShape,
-);
-// Re-exported so drizzle-kit discovers the underlying pgTable.
-export const _taskOutcomeReportsExt = taskOutcomeReports.table;
+/**
+ * The latest hand-back of each conversation: which of its messages was handed
+ * back, and when. Only the marker — the message itself is the transcript's,
+ * and reached whoever watches the task in its `reported` event.
+ * - `messageId` — the handed-back message's id (the API's), so one message is
+ *   handed back once whichever path sees its turn end;
+ * - `handedBackAt` — the end of that turn: the user speaking after it puts
+ *   them back in the run (`userInRun`).
+ */
+export const _handBacks = pgTable("outcome_report_handbacks", {
+  conversationId: text("conversation_id")
+    .primaryKey()
+    .references(() => _conversations.id, { onDelete: "cascade" }),
+  messageId: text("message_id"),
+  handedBackAt: timestamp("handed_back_at", { withTimezone: true }).notNull(),
+});
 
 /**
  * The latest `turn_for` an agent declared, one row per conversation: whom its

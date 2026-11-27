@@ -1892,7 +1892,6 @@
   {"list":"tasks.automations.automation-section","plugin":"tasks.sidequest-autopilot","fact":{"automationId":"sidequest-autopilot","component":{"$code":true},"id":"launch-list"}},
   {"list":"tasks.automations.automation-section","plugin":"tasks.sidequest-autopilot","fact":{"automationId":"sidequest-autopilot","component":{"$code":true},"id":"run-until"}},
   {"list":"tasks.automations.automation-section","plugin":"tasks.sidequest-autopilot","fact":{"automationId":"sidequest-autopilot","component":{"$code":true},"id":"triage"}},
-  {"list":"tasks.automations.automation-task-detail","plugin":"tasks.outcome-report","fact":{"component":{"$code":true},"id":"outcome-report"}},
   {"list":"tasks.automations.automations.actions","plugin":"primitives.pane","fact":{"cell":"yield","component":{"$code":true},"id":"title"}},
   {"list":"tasks.decisions.above-answer","plugin":"tasks.decisions.ask","fact":{"component":{"$code":true},"id":"ask"}},
   {"list":"tasks.decisions.above-answer","plugin":"tasks.decisions.notes","fact":{"component":{"$code":true},"id":"note"}},

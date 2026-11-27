@@ -3,18 +3,14 @@ import { db } from "@plugins/database/server";
 import { latestPersonTurnAt } from "@plugins/conversations/plugins/turn-ledger/server";
 import { latestAnswerAt } from "@plugins/conversations/plugins/question-relay/server";
 import type { TurnAddressee } from "../../core";
-import {
-  _turnAddressees,
-  taskOutcomeReports,
-} from "../../server/internal/tables";
+import { _handBacks, _turnAddressees } from "../../server/internal/tables";
 
 /**
  * Where one conversation's run stands, as the stop gate and the hand-back
  * read it:
  * - `userSpokeAt` — the user's latest word to it: a turn they sent, or an
  *   answer to one of its questions (null: never);
- * - `handedBackAt` — when this conversation last handed its run back (its
- *   task's report, when this conversation wrote it);
+ * - `handedBackAt` — when this conversation last handed its run back;
  * - `addressee` — whom the agent said its turn is for, counted only when it
  *   said so after the user's latest word; `declaredAt` identifies that
  *   declaration, so the turn it was for can use it up.
@@ -63,23 +59,23 @@ export function latest(a: Date | null, b: Date | null): Date | null {
  * the next turn's, not this one's.
  */
 export async function readRunState(
-  conversation: { id: string; taskId: string },
+  conversation: { id: string },
   asOf?: Date,
 ): Promise<RunState> {
-  const [turnAt, answerAt, report, [declared]] = await Promise.all([
+  const [turnAt, answerAt, [handBack], [declared]] = await Promise.all([
     latestPersonTurnAt(conversation.id, asOf),
     latestAnswerAt(conversation.id, asOf),
-    taskOutcomeReports.get(conversation.taskId),
+    db
+      .select({ at: _handBacks.handedBackAt })
+      .from(_handBacks)
+      .where(eq(_handBacks.conversationId, conversation.id)),
     db
       .select()
       .from(_turnAddressees)
       .where(eq(_turnAddressees.conversationId, conversation.id)),
   ]);
   const userSpokeAt = latest(turnAt, answerAt);
-  const handedBackAt =
-    report?.conversationId === conversation.id
-      ? new Date(report.submittedAt)
-      : null;
+  const handedBackAt = handBack?.at ?? null;
   const counts =
     declared !== undefined &&
     declared.usedAt === null &&

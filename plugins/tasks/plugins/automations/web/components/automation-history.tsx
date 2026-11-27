@@ -26,7 +26,6 @@ import {
 import { useTasksById } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { automationTasks, type AutomationTaskRow } from "../../core";
-import { Automations } from "../internal/slots";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const HISTORY_VIEW = defineDataView("tasks.automations.history");
@@ -156,18 +155,6 @@ export function AutomationHistory({
     [taskById],
   );
 
-  // Expanding a row shows what the contributing plugins say about its task.
-  const viewOptions = useMemo(
-    () => ({
-      list: {
-        detail: (r: AutomationTaskRow) => (
-          <TaskDetail taskId={r.taskId} automationId={automationId} />
-        ),
-      },
-    }),
-    [automationId],
-  );
-
   return (
     <Stack gap="xs">
       <DataView<AutomationTaskRow>
@@ -186,7 +173,6 @@ export function AutomationHistory({
         searchAccessor={(r) => taskById.get(r.taskId)?.title ?? ""}
         searchPlaceholder="Search its tasks…"
         recipe="timeline"
-        viewOptions={viewOptions}
         emptyState={<>It has not filed or started a task yet.</>}
       />
       {truncated ? (
@@ -195,23 +181,5 @@ export function AutomationHistory({
         </Text>
       ) : null}
     </Stack>
-  );
-}
-
-/** What the plugins contributing to `Automations.TaskDetail` say about one
- * task — an expanded History row. */
-function TaskDetail({
-  taskId,
-  automationId,
-}: {
-  taskId: string;
-  automationId: string;
-}): ReactElement {
-  return (
-    <Automations.TaskDetail.Render>
-      {(contribution) => (
-        <contribution.component taskId={taskId} automationId={automationId} />
-      )}
-    </Automations.TaskDetail.Render>
   );
 }
