@@ -170,7 +170,7 @@ proto-1789664064-nr56).
 - **Web**: the row's `glance` (load per core — context, never coloured — · memory available · disk free · builds, plus a banner
   naming what tripped it or saying the numbers are old) and `component` (one
   line per signal with a bar and "X of LIMIT", amber from ⅔ of the limit, red at
-  it; then "N worktrees running · Updated 3s ago") read `sentinel.vitals`, so
+  it; then "N backends up · Updated 3s ago") read `sentinel.vitals`, so
   only an open report receives it. A reading older than 3 ticks, or not
   `current`, greys out. The view model is pure: `plugins/health-row/web/internal/vitals-view.ts` (the row is the `health-row` sub-plugin).
 - **Where it goes** (`plugins/machine-usage`): inside the expanded card,

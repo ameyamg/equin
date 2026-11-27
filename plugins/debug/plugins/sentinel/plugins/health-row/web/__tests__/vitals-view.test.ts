@@ -86,7 +86,7 @@ describe("vitalsView", () => {
     );
     expect(view.stale).toBe(false);
     expect(view.banner).toBeNull();
-    expect(view.footer).toBe("11 worktrees running · Updated 3s ago");
+    expect(view.footer).toBe("11 backends up · Updated 3s ago");
   });
 
   it("shows a missing reading as a dash with an empty bar", () => {
@@ -229,7 +229,7 @@ describe("vitalsView", () => {
     expect(view.banner?.text).toMatch(
       /^No new reading for 2 minutes\. These numbers are from .*10.*\.$/,
     );
-    expect(view.footer).toBe("11 worktrees running · Updated 2m ago");
+    expect(view.footer).toBe("11 backends up · Updated 2m ago");
   });
 
   it("is stale when the reading is not from the watcher running now", () => {

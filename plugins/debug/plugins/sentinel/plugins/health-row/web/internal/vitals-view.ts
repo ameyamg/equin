@@ -106,7 +106,7 @@ export interface VitalsView {
   banner: BannerView | null;
   glance: GlanceFigureView[];
   signals: SignalLineView[];
-  /** "11 worktrees running · Updated 3s ago". */
+  /** "11 backends up · Updated 3s ago". */
   footer: string;
 }
 
@@ -285,6 +285,6 @@ export function vitalsView(
     footer:
       running === null
         ? updated
-        : `${plural(running, "worktree", "worktrees")} running · ${updated}`,
+        : `${plural(running, "backend", "backends")} up · ${updated}`,
   };
 }
