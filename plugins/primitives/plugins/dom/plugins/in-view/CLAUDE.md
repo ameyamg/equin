@@ -34,9 +34,17 @@ primitive.
   later box near at once. A section not mounted yet is missed by find-in-page
   and print. Not a virtualizer (see `primitives/virtual-rows`).
 
-There is deliberately **no** `useIsInView(): boolean`. Both single-element
-consumers write to a ref rather than to state precisely so a scroll costs no
-render; a boolean form would have no caller and would invite one.
+- `useNear(boxRef, { rootMargin?, scrollRoot? })` → `boolean` — whether the
+  box is near the visible part of its scroller NOW: `false` until the first
+  observation, then following the box both ways (no latch), and `false` in a
+  hidden subtree (`display: none`, a resident tab off screen). For what a box
+  should hold only while it can be seen — a list row's live reads (the
+  conversation item's chips), so a long list keeps subscribed the rows near
+  the screen, not every row it mounted. It renders on a crossing only, never
+  per scroll frame.
+
+A consumer that only needs to REACT to visibility (not render by it) still
+uses `useInView` and writes to a ref, so a scroll costs no render.
 
 ## `deps` is load-bearing, not ergonomics
 
@@ -67,7 +75,7 @@ allowlisting a copy.
 
 ## Plugin reference
 
-- Description: The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element). <MountWhenNear fallback scrollRoot?> mounts a heavy section only once its box nears the visible part of its scroller, then keeps it (a dashboard pays for what is on screen, not for every section below the fold).
+- Description: The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element). <MountWhenNear fallback scrollRoot?> mounts a heavy section only once its box nears the visible part of its scroller, then keeps it (a dashboard pays for what is on screen, not for every section below the fold). useNear(boxRef, {rootMargin?, scrollRoot?}) is the non-latching read: whether the box is near the visible part of its scroller now, following it both ways (false in a hidden subtree) — for what a list row holds only while it can be seen, such as its live reads.
 - Web:
   - Uses: `primitives/latest-ref.useEventCallback`
   - Exports (types):
@@ -76,10 +84,12 @@ allowlisting a copy.
     - `InViewTarget`
     - `InViewWatcher`
     - `MountWhenNearProps`
+    - `UseNearOptions`
   - Exports (values):
     - `createInViewWatcher`
     - `MountWhenNear`
     - `useInView`
+    - `useNear`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/collect`
@@ -90,6 +100,7 @@ allowlisting a copy.
     - `apps/website/pages/story/skills-graph`
     - `apps/website/pages/vision`
     - `conversations/agent-thread`
+    - `conversations/conversation-ui/item`
     - `conversations/conversation-view/jsonl-viewer`
     - `hints`
     - `media/player`

@@ -22,22 +22,38 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import type { RelativeTimeFormat } from "@plugins/primitives/plugins/relative-time/web";
-import type { Ref } from "react";
+import { useRef, type Ref } from "react";
+import { useNear } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
+import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { Item } from "../slots";
 import { convStatusDot } from "./conv-status-dot";
 
 function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
   const items = Item.Chips.useContributions();
+  const box = useRef<HTMLElement>(null);
+  // The chips mount only while the row is near the screen. Each chip reads its
+  // own live data by this row's id (progress, decisions, blocked count,
+  // preprompt, the supervisor check), so a list that mounts every row held
+  // about 6 subscriptions per row, on screen or not: 438 of the /agents tab's
+  // 574, with 22% of the sidebar on screen (2026-11-27,
+  // task-1795742359-a0a1us). A chip shows nothing while its read loads, so a
+  // row off screen looks the same.
+  // Compensates for: a row's live reads are the row's own `useLive` calls,
+  // which no list can bound (the DataView's `rowRead` bounds a field's, not a
+  // slot's) — task-1795743274-oyeezx.
+  const near = useNear(box, { scrollRoot: findScrollParent });
   if (items.length === 0) return null;
   // The chips are a single-line GROUP: a render slot adds no container of its own,
   // so without an explicit nowrap row the chips wrap. <Inline> (a non-wrapping
   // inline-flex row) keeps them on one line — the group-wrap axis is owned by
   // container choice, independent of the per-leaf single-line context.
   return (
-    <Inline gap="xs">
-      <Item.Chips.Render>
-        {(item) => <item.component conv={conv} />}
-      </Item.Chips.Render>
+    <Inline ref={box} gap="xs">
+      {near ? (
+        <Item.Chips.Render>
+          {(item) => <item.component conv={conv} />}
+        </Item.Chips.Render>
+      ) : null}
     </Inline>
   );
 }

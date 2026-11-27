@@ -20211,26 +20211,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Item.Chips` ← `tasks.decisions.item-count`
               - `Item.Avatar` ← `conversations.agents`
               - `Item.Avatar` ← `conversations.conversation-category`
-            - Uses:
+            - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-ui/plugins/item/REFERENCE.md`](../plugins/conversations/plugins/conversation-ui/plugins/item/REFERENCE.md)
+              - `primitives/css/fill` ×2
+              - `primitives/css/status-dot` ×2
+              - `primitives/css/ui-kit` ×2
+              - `primitives/slot-render` ×2
               - `primitives/avatar.Avatar`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/fill.fillClasses`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/status-dot.StatusDot`
-              - `primitives/css/status-dot.statusDotPaintClass`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/yield.yieldClass`
+              - `primitives/dom/auto-scroll.findScrollParent`
+              - `primitives/dom/in-view.useNear`
               - `primitives/relative-time.RelativeTime`
-              - `primitives/slot-render.defineDispatchSlot`
-              - `primitives/slot-render.defineRenderSlot`
             - Exports (types):
               - `ConversationItemConv`
               - `ConversationItemProps`
@@ -57077,10 +57075,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
               - `primitives` ×11
               - `apps` ×8
-              - `conversations` ×4
+              - `conversations` ×5
               - `apps-core/tab-surface`
               - `layouts/miller`
               - `page/editor`
@@ -57242,7 +57240,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/sortable-list`
           - Web:
             - Exports (values): `isChromeGesture`
-        - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element). <MountWhenNear fallback scrollRoot?> mounts a heavy section only once its box nears the visible part of its scroller, then keeps it (a dashboard pays for what is on screen, not for every section below the fold).
+        - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element). <MountWhenNear fallback scrollRoot?> mounts a heavy section only once its box nears the visible part of its scroller, then keeps it (a dashboard pays for what is on screen, not for every section below the fold). useNear(boxRef, {rootMargin?, scrollRoot?}) is the non-latching read: whether the box is near the visible part of its scroller now, following it both ways (false in a hidden subtree) — for what a list row holds only while it can be seen, such as its live reads.
           - Web:
             - Uses: `primitives/latest-ref.useEventCallback`
             - Exports (types):
@@ -57251,10 +57249,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InViewTarget`
               - `InViewWatcher`
               - `MountWhenNearProps`
+              - `UseNearOptions`
             - Exports (values):
               - `createInViewWatcher`
               - `MountWhenNear`
               - `useInView`
+              - `useNear`
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/analytics/collect`
@@ -57265,6 +57265,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/story/skills-graph`
               - `apps/website/pages/vision`
               - `conversations/agent-thread`
+              - `conversations/conversation-ui/item`
               - `conversations/conversation-view/jsonl-viewer`
               - `hints`
               - `media/player`

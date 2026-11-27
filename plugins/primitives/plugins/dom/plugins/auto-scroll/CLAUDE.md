@@ -366,10 +366,10 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses tokens:
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×11
     - `apps` ×8
-    - `conversations` ×4
+    - `conversations` ×5
     - `apps-core/tab-surface`
     - `layouts/miller`
     - `page/editor`

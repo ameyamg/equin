@@ -57,26 +57,24 @@ directly — it is no longer re-exported here.)
     - `Item.Chips` ← `tasks.decisions.item-count`
     - `Item.Avatar` ← `conversations.agents`
     - `Item.Avatar` ← `conversations.conversation-category`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/fill` ×2
+    - `primitives/css/status-dot` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/slot-render` ×2
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/status-dot.StatusDot`
-    - `primitives/css/status-dot.statusDotPaintClass`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/auto-scroll.findScrollParent`
+    - `primitives/dom/in-view.useNear`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/slot-render.defineDispatchSlot`
-    - `primitives/slot-render.defineRenderSlot`
   - Exports (types):
     - `ConversationItemConv`
     - `ConversationItemProps`
