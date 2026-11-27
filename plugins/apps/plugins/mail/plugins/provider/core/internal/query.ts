@@ -20,8 +20,10 @@ import type { MailboxId, ProviderQuery } from "./ids";
  *
  * - `mailboxes` — the message's mailboxes (role ids `role:<role>`, else the
  *   provider's own).
- * - `unread`, `starred`, `hasAttachment` — the message's flags (attachments by
- *   the provider's own test).
+ * - `unread`, `starred`, `hasAttachment` — the message's flags. An attachment
+ *   is a file the reader lists, never an inline `cid:` image, where the
+ *   provider's search can say so; Gmail's `has:attachment` cannot (it counts
+ *   inline images: providers/gmail, `compile-query.ts`).
  * - `date` — when the message was received, at whole seconds.
  * - `from`, `to`, `subject` — the provider's text match on that header (Gmail
  *   matches words, not substrings), so they are provider-evaluated: never

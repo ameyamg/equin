@@ -95,6 +95,16 @@ export function summaryOfThread(t: GmailThread): ThreadSummary {
     mailboxes: [...mailboxes].sort(),
     unread: has(FLAG_LABELS.unread),
     starred: has(FLAG_LABELS.starred),
+    // A file the reader lists, judged from the top-level type: a metadata
+    // read has no MIME tree (no parts, no dispositions), and `full` costs
+    // three times as much (120 vs 40 units a thread: a cold 25-row page
+    // ~3,085 units instead of ~1,085). Inline `cid:` images sit under
+    // `multipart/related`, so they are flagged only when a `multipart/mixed`
+    // wraps it. Measured on 80 messages of the real
+    // account (2026-11-27, scripts/attachment-probe.ts): agrees with the
+    // reader on 74; 1 `mixed` with no file, 5 files outside `mixed` (a
+    // calendar invite, a PGP signature, images marked `attachment` under
+    // `related`).
     hasAttachments: messages.some((m) => {
       const type =
         m.payload?.mimeType ?? header(m.payload?.headers, "Content-Type") ?? "";

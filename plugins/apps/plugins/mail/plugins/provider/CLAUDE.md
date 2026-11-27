@@ -20,8 +20,11 @@ only this; each provider (`mail/providers/*`) implements it. Design: §1–2 of
 - **`ThreadSummary`** is one list row (senders in `participants`, `To` in
   `recipients`). Its facts are unions / "any" over the
   thread's messages. `version` moves on any change, so a cached summary with
-  the same version is current (the fetch is skipped). `hasAttachments` is a
-  hint from headers; the content is exact. `messages` holds each message's
+  the same version is current (the fetch is skipped). `hasAttachments` means a
+  file the reader lists (an attachment not `inline`: a `cid:` image in the
+  body is none), exact where the provider holds the parts (local, the fake),
+  a header hint where its list read has no MIME tree (Gmail); the content is
+  exact. `messages` holds each message's
   own facts (`MessageFacts`: date, mailboxes, unread, starred, draft), so a
   query can be re-checked per message over a cached thread.
 - **`ThreadContent`** holds the messages, oldest first: headers parsed,

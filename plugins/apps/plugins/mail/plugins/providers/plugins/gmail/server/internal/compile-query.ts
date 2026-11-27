@@ -36,7 +36,12 @@ import {
 //   never its sub-labels' (measured). hasAny is an OR,
 //   hasAll an AND (one message carrying all), hasNone an AND of negations.
 // - unread / starred / hasAttachment: `is:unread`, `is:starred`,
-//   `has:attachment`, negated with `-`.
+//   `has:attachment`, negated with `-`. Gmail's `has:attachment` is broader
+//   than the contract's attachment (a file the reader lists): it also matches
+//   a message whose only parts besides the body are inline `cid:` images — 10
+//   of 40 matches in the account's latest mail (2026-11-27,
+//   scripts/attachment-probe.ts). No operator excludes them, so the
+//   "With attachments" view also lists such newsletters, without a paperclip.
 // - date: `after:<epoch s>` (at or after) / `before:<epoch s>` (strictly
 //   before), so operands must fall on a whole second. Gmail compares its own
 //   receipt time, which differs from internalDate (MessageFacts.date) by

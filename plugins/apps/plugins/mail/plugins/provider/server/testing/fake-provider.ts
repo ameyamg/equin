@@ -253,12 +253,17 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
     for (const m of t.messages) at = deliver(at, m).threadId;
   }
 
+  /** An inline `cid:` image is part of the body: the reader lists it as no file. */
+  const isInline = (a: FakeAttachment) => a.contentId !== undefined;
+  /** Whether the message carries a file the reader lists. */
+  const hasFiles = (m: FakeMessage) => m.attachments.some((a) => !isInline(a));
+
   function row(m: FakeMessage) {
     return {
       mailboxes: [...m.mailboxes],
       unread: m.unread,
       starred: m.starred,
-      hasAttachment: m.attachments.length > 0,
+      hasAttachment: hasFiles(m),
       date: m.date,
       from: addr(m.from),
       to: m.to.map(addr).join(", "),
@@ -284,7 +289,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
         unread: m.unread,
         starred: m.starred,
         isDraft: m.isDraft,
-        hasAttachments: m.attachments.length > 0,
+        hasAttachments: hasFiles(m),
       })),
     });
   }
@@ -314,7 +319,7 @@ export function createFakeMailProvider(opts: FakeMailProviderOptions = {}) {
         mimeType: a.mimeType,
         size: a.bytes.byteLength,
         contentId: a.contentId ?? null,
-        inline: a.contentId !== undefined,
+        inline: isInline(a),
       })),
     };
   }

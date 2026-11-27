@@ -7671,7 +7671,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --destructive`
                   - `ui/tokens/color-palette --muted-foreground`
               - Exemptions:
-                - Exempts itself from: `endpoints/no-raw-content-disposition` — `server/internal/content.ts` (sanctioned)
+                - Exempts itself from: `endpoints/no-raw-content-disposition` — `server/internal/content.ts`, `scripts/attachment-probe.ts` (sanctioned)
             - **`local`** (excluded) — The local mail provider's browser half: its connect surface for Mail — there is nothing to connect, so it says the server's sentence (no local mailbox on this device) where a list or thread would be. The local mail provider (id `local`, "This device"): a MailProvider whose mailbox lives in this host's own database (mail_local_* tables, every time a timestamptz) — no network, no computer, so it runs on every host (the website's demo serves it from PGlite). Its query is the contract's canonical filter, compiled to SQL by the filter language's SQL half; lists page by (date, id); summaries and counts derived in SQL; every write one atomic statement appending to the change log (its seq the cursor, a thread's latest seq its version); push in-process and always live; send parses the bytes back and stores the message in Sent, threaded by In-Reply-To / References (never delivered anywhere; to the account's own address, also its Inbox). localMail.deliver is the inbound write (mail arriving — no user endpoint makes one) and localMail.setAccount sets up the one account; both are what a fixture writer calls.
               - Web:
                 - Contributes: `MailProviderUi.Connect` "local" → `LocalMailConnect`

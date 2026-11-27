@@ -188,7 +188,8 @@ const QUERY_TARGETS: Readonly<Record<MailQueryColumn, SQL>> = {
   mailboxes: sql`${m.mailboxes}`,
   unread: sql`${m.unread}`,
   starred: sql`${m.starred}`,
-  hasAttachment: sql`EXISTS (SELECT 1 FROM ${att} WHERE ${att.messageId} = ${m.id})`,
+  // A file the reader lists: an inline `cid:` image is part of the body.
+  hasAttachment: sql`EXISTS (SELECT 1 FROM ${att} WHERE ${att.messageId} = ${m.id} AND NOT ${att.inline})`,
   date: sql`${m.date}`,
   from: fromSql,
   to: sql`coalesce(${toSql(", ")}, '')`,

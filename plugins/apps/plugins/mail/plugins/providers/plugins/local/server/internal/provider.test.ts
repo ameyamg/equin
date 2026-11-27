@@ -79,7 +79,13 @@ type Seed = { thread: string } & Required<
     FakeMessageInput,
     "id" | "from" | "to" | "subject" | "mailboxes" | "unread" | "starred"
   >
-> & { date: string; text: string; attachments: number };
+> & {
+    date: string;
+    text: string;
+    attachments: number;
+    /** Inline `cid:` images: part of the body, never an attachment. */
+    inlineImages?: number;
+  };
 
 const CORPUS: Seed[] = [
   {
@@ -160,6 +166,20 @@ const CORPUS: Seed[] = [
     starred: true,
     attachments: 0,
   },
+  {
+    thread: "t6",
+    id: "m7",
+    date: "2026-11-06T08:00:00.000Z",
+    from: { name: "Hall", address: "news@hall.test" },
+    to: [me],
+    subject: "This week's concerts",
+    text: "a logo, no file",
+    mailboxes: [],
+    unread: false,
+    starred: false,
+    attachments: 0,
+    inlineImages: 1,
+  },
 ];
 
 const bytes = new TextEncoder().encode("PDF");
@@ -169,11 +189,19 @@ async function seedBoth() {
     account: { accountId: LOCAL_ACCOUNT_ID, address: me.address },
   });
   for (const m of CORPUS) {
-    const files = Array.from({ length: m.attachments }, (_, i) => ({
-      filename: `f${i}.pdf`,
-      mimeType: "application/pdf",
-      bytes,
-    }));
+    const files = [
+      ...Array.from({ length: m.attachments }, (_, i) => ({
+        filename: `f${i}.pdf`,
+        mimeType: "application/pdf",
+        bytes,
+      })),
+      ...Array.from({ length: m.inlineImages ?? 0 }, (_, i) => ({
+        filename: `logo${i}.png`,
+        mimeType: "image/png",
+        bytes,
+        contentId: `logo${i}`,
+      })),
+    ];
     fake.deliver(m.thread, { ...m, attachments: files });
     await local.deliver({
       threadId: m.thread,
@@ -277,7 +305,7 @@ describe("the local provider", () => {
 
   test("summaries, content and attachments are the fake's", async () => {
     const fake = await seedBoth();
-    const ids = ["t1", "t2", "t3", "gone"].map(threadId);
+    const ids = ["t1", "t2", "t3", "t6", "gone"].map(threadId);
     const mine = await p.getThreads(ids);
     const theirs = await fake.provider.getThreads(ids);
     const strip = (r: (typeof mine)[number]) =>
@@ -285,6 +313,18 @@ describe("the local provider", () => {
         ? { ...r, summary: { ...r.summary, version: null } }
         : r;
     expect(mine.map(strip)).toEqual(theirs.map(strip));
+    // An inline image alone is no attachment: no paperclip, and not in the
+    // attachment filter (what the reader lists as files).
+    const flags = mine.map((r) =>
+      r.kind === "found" ? r.summary.hasAttachments : r.kind,
+    );
+    expect(flags).toEqual([true, false, true, false, "gone"]);
+    const withFiles = local.definition.compileQuery(
+      clause("hasAttachment", "eq", true) as MailQuery,
+      { mailboxes: await p.listMailboxes() },
+    );
+    if (withFiles.kind !== "query") throw new Error("not compiled");
+    expect(await list(p, withFiles.providerQuery)).toEqual(["t3/m4", "t1/m1"]);
     const content = await p.getThreadContent(threadId("t3"));
     if (content.kind !== "found") throw new Error("gone");
     const [msg] = content.content.messages;

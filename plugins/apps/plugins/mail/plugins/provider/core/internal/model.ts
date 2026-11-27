@@ -37,8 +37,11 @@ export type ThreadSummary = {
   unread: boolean;
   starred: boolean;
   /**
-   * Whether a message looks like it carries attachments, from its headers
-   * alone (a `multipart/mixed` body) — the content (`ThreadContent`) is exact.
+   * Whether some message carries a file the reader lists — an attachment
+   * that is not inline (`AttachmentMeta.inline`: a `cid:` image shown in the
+   * body is no attachment). A provider that holds the parts answers it
+   * exactly; one whose list read has no MIME tree (Gmail's metadata)
+   * approximates it from headers, and the content (`ThreadContent`) is exact.
    * The `hasAttachment` query column is the provider's own test, never this.
    */
   hasAttachments: boolean;
